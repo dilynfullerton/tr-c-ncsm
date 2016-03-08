@@ -10,9 +10,9 @@ from sys import argv
 from InvalidNumberOfArgumentsException import InvalidNumberOfArgumentsException
 
 
-def get_e0(aeff, he4_fname):
-    if he4_fname is not None:
-        fname = he4_fname
+def get_e0(aeff, fname_he4):
+    if fname_he4 is not None:
+        fname = fname_he4
     else:
         fname = 'he4_%d/he4_A%d.out' % (aeff, aeff)
     f = open(fname)
@@ -24,10 +24,10 @@ def get_e0(aeff, he4_fname):
     return e0
 
 
-def get_spe(aeff, e0, he5_fname):
+def get_spe(aeff, e0, fname_he5):
     np1, np3 = 999., 999.
-    if he5_fname is not None:
-        fname = he5_fname
+    if fname_he5 is not None:
+        fname = fname_he5
     else:
         fname = 'he5_%d/he5_A%d.out' % (aeff, aeff)
     f = open(fname)
@@ -57,19 +57,19 @@ def print_header(aeff, e0, spe, st='%d'):
     header_lines.append('!  2     0  1  3  1')
     header_lines.append('! ')
     header_lines.append(
-        '-999 ' + '  '.join(['%10.6f' % x for x in spe]) + '  4  6  0.000000')
+        '-999 ' + '  '.join(['%10.6f' % e for e in spe]) + '  4  6  0.000000')
     return '\n'.join(header_lines) + '\n'
 
 
-def get_tbme(aeff, e0, spe, out_fname, he6_fname, a_prescription=None):
+def get_tbme(aeff, e0, spe, fname_out, fname_he6, presc=None):
     write_lines = list()
-    if a_prescription is not None and (
-                    a_prescription[0] != aeff or a_prescription[1] != aeff):
-        write_lines.append(print_header(str(a_prescription), e0, spe, '%s'))
+    if presc is not None and (
+                    presc[0] != aeff or presc[1] != aeff):
+        write_lines.append(print_header(str(presc), e0, spe, '%s'))
     else:
         write_lines.append(print_header(aeff, e0, spe))
-    if he6_fname is not None:
-        fname = he6_fname
+    if fname_he6 is not None:
+        fname = fname_he6
     else:
         fname = 'he6_%d/Heff_OLS.dat' % aeff
     f = open(fname)
@@ -78,8 +78,8 @@ def get_tbme(aeff, e0, spe, out_fname, he6_fname, a_prescription=None):
     kets = []
     for i in range(dim):
         ldat = f.readline().split()
-        p, q = [int(x) for x in ldat[1:3]]
-        j, t = [int(x) for x in ldat[9:11]]
+        p, q = [int(dat) for dat in ldat[1:3]]
+        j, t = [int(dat) for dat in ldat[9:11]]
         kets.append({'p': p, 'q': q, 'J': j, 'T': t})
     for i in range(dim):
         ldat = f.readline().split()
@@ -94,16 +94,16 @@ def get_tbme(aeff, e0, spe, out_fname, he6_fname, a_prescription=None):
                 kets[i]['J'], kets[i]['T'], v)
             write_lines.append(next_line + '\n')
     # write the file
-    outfile = open(out_fname, 'w')
+    outfile = open(fname_out, 'w')
     for line in write_lines:
         outfile.write(line)
     outfile.close()
 
 
-def run(a_prescription, out_fname, he4_fname, he5_fname, he6_fname):
-    e0 = get_e0(a_prescription[0], he4_fname)
-    spe = get_spe(a_prescription[1], e0, he5_fname)
-    get_tbme(a_prescription[2], e0, spe, out_fname, he6_fname)
+def run(presc, fname_out, fname_he4, fname_he5, fname_he6):
+    e0 = get_e0(presc[0], fname_he4)
+    spe = get_spe(presc[1], e0, fname_he5)
+    get_tbme(presc[2], e0, spe, fname_out, fname_he6)
 
     # Do the inconsistent/universal way
     # Aeff = 6
@@ -130,5 +130,5 @@ if __name__ == "__main__":
         raise InvalidNumberOfArgumentsException(
             '\nFdoVCE.py called with %d arguments. ' % (len(argv)-1,) +
             'Please call with 2, 5, or 7 arguments.\n')
-    run(a_prescription=a_prescription, out_fname=out_fname,
-        he4_fname=he4_fname, he5_fname=he5_fname, he6_fname=he6_fname)
+    run(presc=a_prescription, fname_out=out_fname,
+        fname_he4=he4_fname, fname_he5=he5_fname, fname_he6=he6_fname)

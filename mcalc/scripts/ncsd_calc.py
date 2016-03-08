@@ -15,7 +15,6 @@ from FGetSmallerInteraction import run as truncate_interaction
 from FdoVCE import run as vce_calculation
 from InvalidNumberOfArgumentsException import InvalidNumberOfArgumentsException
 
-
 # CONSTANTS
 Z_NAME_MAP = {
     1: 'h_', 2: 'he', 3: 'li', 4: 'be', 5: 'b_', 6: 'c_', 7: 'n_', 8: 'o_',
@@ -44,13 +43,13 @@ N2 = 6
 
 
 # FUNCTIONS
-def generating_a_values(nshell):
+def generating_a_values(n_shell):
     """Based on the given major harmonic oscillator shell, gets the 3
     A values that are used to generate the effective Hamiltonian
-    :param nshell: major oscillator shell
+    :param n_shell: major oscillator shell
     """
-    a0 = int((nshell+2)*(nshell+1)*nshell/3 * 2)
-    return a0, a0+1, a0+2
+    a0 = int((n_shell + 2) * (n_shell + 1) * n_shell / 3 * 2)
+    return a0, a0 + 1, a0 + 2
 
 
 def get_name(z, z_name_map=Z_NAME_MAP, alt_name=ZNAME_FMT_ALT):
@@ -65,11 +64,11 @@ def get_name(z, z_name_map=Z_NAME_MAP, alt_name=ZNAME_FMT_ALT):
         return alt_name % z
 
 
-def make_base_directories(a_values, a_prescription, results_path, dir_nuc):
+def make_base_directories(a_values, presc, results_path, dir_nuc):
     """Makes directories for first 3 a values if they do not exist yet
     :param a_values: Values of A for which directories are made.
     Example: If in nshell1, would make directories for He4,5,6
-    :param a_prescription: Aeff prescription for VCE expansion
+    :param presc: Aeff prescription for VCE expansion
     :param results_path: Path to the directory into which these base
     directories are put
     :param dir_nuc: The directory name template which accepts one string and
@@ -78,15 +77,15 @@ def make_base_directories(a_values, a_prescription, results_path, dir_nuc):
     if not path.exists(results_path):
         call(['ls', '~/NCSM'])
         mkdir(results_path)
-    z = a_values[0]/2
-    for a, aeff in zip(a_values, a_prescription):
+    z = a_values[0] / 2
+    for a, aeff in zip(a_values, presc):
         dirname = dir_nuc % (str(get_name(z=z)), int(a), int(aeff))
         dirpath = path.join(results_path, dirname)
         if not path.exists(dirpath):
             mkdir(dirpath)
 
 
-def make_mfdp_file(z, a, aeff, nhw, n1, n2, path_elt,
+def make_mfdp_file(z, a, aeff, n_hw, n_1, n_2, path_elt,
                    outfile_name=FNAME_FMT_NCSD_OUT,
                    path_temp=PATH_TEMPLATES,
                    mfdp_name=FNAME_MFDP):
@@ -96,9 +95,9 @@ def make_mfdp_file(z, a, aeff, nhw, n1, n2, path_elt,
     :param z: Proton number
     :param a: Mass number
     :param aeff: Effective mass number for interaction
-    :param nhw: Something something something dark side
-    :param n1: Something something something dark side
-    :param n2: Something something something dark side
+    :param n_hw: Something something something dark side
+    :param n_1: Something something something dark side
+    :param n_2: Something something something dark side
     :param path_elt: The path to the directory into which the mfdp file is
     to be put
     :param outfile_name: The name of the written mfdp file
@@ -107,13 +106,13 @@ def make_mfdp_file(z, a, aeff, nhw, n1, n2, path_elt,
     """
     temp_mfdp_path = path.join(path_temp, mfdp_name)
     mfdp_path = path.join(path_elt, mfdp_name)
-    replace_map = get_mfdp_replace_map(outfile_name=outfile_name, z=z, a=a, 
-                                       nhw=nhw, n1=n1, n2=n2, aeff=aeff)
+    replace_map = get_mfdp_replace_map(outfile_name=outfile_name, z=z, a=a,
+                                       n_hw=n_hw, n_1=n_1, n_2=n_2, aeff=aeff)
     _rewrite_file(src=temp_mfdp_path, dst=mfdp_path,
                   replace_map=replace_map)
 
 
-def make_mfdp_files(z, a_range, a_presc, nhw, n1, n2,
+def make_mfdp_files(z, a_range, a_presc, n_hw, n_1, n_2,
                     results_path=PATH_RESULTS,
                     nuc_dir=DIR_FMT_NUC,
                     outfile_name=FNAME_FMT_NCSD_OUT,
@@ -122,12 +121,12 @@ def make_mfdp_files(z, a_range, a_presc, nhw, n1, n2,
     for a, aeff in zip(a_range, a_presc):
         dirname = nuc_dir % (get_name(z), a, aeff)
         dirpath = path.join(results_path, dirname)
-        make_mfdp_file(z=z, a=a, aeff=aeff, nhw=nhw, n1=n1, n2=n2,
+        make_mfdp_file(z=z, a=a, aeff=aeff, n_hw=n_hw, n_1=n_1, n_2=n_2,
                        path_elt=dirpath, outfile_name=outfile_name,
                        path_temp=path_temp, mfdp_name=mfdp_name)
 
 
-def get_mfdp_replace_map(outfile_name, z, a, nhw, n1, n2, aeff):
+def get_mfdp_replace_map(outfile_name, z, a, n_hw, n_1, n_2, aeff):
     outfile_name = outfile_name % (get_name(z), a, aeff)
     n = a - z
     if a % 2 == 0:
@@ -136,8 +135,8 @@ def get_mfdp_replace_map(outfile_name, z, a, nhw, n1, n2, aeff):
         tot2 = 1
     return {'<<OUTFILE>>': str(outfile_name),
             '<<Z>>': str(z), '<<N>>': str(n),
-            '<<NHW>>': str(nhw), '<<TOT2>>': str(tot2),
-            '<<N1>>': str(n1), '<<N2>>': str(n2),
+            '<<NHW>>': str(n_hw), '<<TOT2>>': str(tot2),
+            '<<N1>>': str(n_1), '<<N2>>': str(n_2),
             '<<AEFF>>': str(aeff)}
 
 
@@ -162,7 +161,7 @@ def make_trdens_file(z, a, aeff,
     dst = path.join(path_elt, trdens_name)
     rep_map = get_trdens_replace_map(z=z, a=a)
     _rewrite_file(src=src, dst=dst, replace_map=rep_map)
-    
+
 
 def get_trdens_replace_map(z, a):
     nnn, num_states = get_num_states(z, a)
@@ -207,7 +206,7 @@ def _rewrite_file(src, dst, replace_map):
     outfile.writelines(write_lines)
     outfile.close()
 
-    
+
 def truncate_space(n1, n2,
                    path_elt,
                    path_temp=PATH_TEMPLATES,
@@ -270,7 +269,7 @@ def rename_egv_file(a6_dir, egv_name_regex, next_egv_name, force):
     next_egv_name
     """
     next_egv_path = path.join(a6_dir, next_egv_name)
-    if path.lexists(next_egv_path): 
+    if path.lexists(next_egv_path):
         if not force:
             return 0
         else:
@@ -283,19 +282,19 @@ def rename_egv_file(a6_dir, egv_name_regex, next_egv_name, force):
     else:
         raise EgvFileNotFoundException()
     return 1
-    
+
 
 class EgvFileNotFoundException(Exception):
     pass
 
 
-def do_ncsd(a_values, a_prescription, a_dirpaths_map, a_outfile_map, force):
+def do_ncsd(a_values, presc, a_dirpaths_map, a_outfile_map, force):
     """Run the NCSD calculations. For each A value, does the NCSD calculation
     in each of its corresponding directories.
 
     :param a_values: 3-tuple of A values which generate the effective
     Hamiltonian
-    :param a_prescription: 3-tuple of Aeff values which, along with the
+    :param presc: 3-tuple of Aeff values which, along with the
     A values, are used to generate the effective Hamiltonian
     :param a_dirpaths_map: Map from A values to the path to the directory in
     which NCSD is to be performed
@@ -306,8 +305,8 @@ def do_ncsd(a_values, a_prescription, a_dirpaths_map, a_outfile_map, force):
     already exist.
     """
     main_dir = getcwd()
-    for a, aeff in zip(a_values, a_prescription):
-        if force or not path.exists(path.join(a_dirpaths_map[a], 
+    for a, aeff in zip(a_values, presc):
+        if force or not path.exists(path.join(a_dirpaths_map[a],
                                               a_outfile_map[a])):
             chdir(a_dirpaths_map[a])
             call(['NCSD'])
@@ -346,13 +345,13 @@ def do_vce(a_outfile_map, a_values, a6_dir, heff_fname, a_prescription,
     :param a6_dir: Directory for the 3rd A value
     :param heff_fname: Name of the effective Hamiltonian output file
     generated by the TRDENS calculation for the 3rd A value
-    :param a_prescription: Range of Aeff values to evaluate based on the effective
-    Hamiltonian
+    :param a_prescription: Range of Aeff values to evaluate based on
+    the effective Hamiltonian
     :param vce_int_fname: Filename template for generated interaction files
     :param vce_dirpath: Path to the directory in which to put generated
     interaction files
-    :param force: If True, force redoing the calculation even if output files
-    already exist
+    :param force: If True, force redoing the calculation even if
+    output files already exist
     """
     he4_fname = a_outfile_map[a_values[0]]
     he5_fname = a_outfile_map[a_values[1]]
@@ -384,12 +383,11 @@ def ncsd_vce_calculation(
         _fname_trdens_out=FNAME_TRDENS_OUT,
         _fname_egv_final=FNAME_EGV,
         _fname_heff=FNAME_HEFF,
-        ):
+):
     """Valence cluster expansion calculations within NCSM
 
     :param a_prescription: 3-tuple containing the Aeff values for use in
     constructing the effective interaction Hamiltonian
-    :param aeff_range: List of Aeff values for which to evaluate based on the
     effective Hamiltonian
     :param nshell: Major harmonic oscillator shell
     :param nhw: Something something something dark side
@@ -445,19 +443,19 @@ def ncsd_vce_calculation(
 
     # Make directories for base files
     make_base_directories(a_values=a_values,
-                          a_prescription=a_prescription,
+                          presc=a_prescription,
                           results_path=_path_results,
                           dir_nuc=_dir_fmt_nuc)
 
     # ncsd calculations: make mfdp files, perform truncation, and run NCSD
     make_mfdp_files(z=z, a_range=a_values, a_presc=a_prescription,
-                    nhw=nhw, n1=n1, n2=n2,
+                    n_hw=nhw, n_1=n1, n_2=n2,
                     outfile_name=_fname_fmt_ncsd_out,
                     mfdp_name=_fname_mfdp)
     truncate_spaces(n1=n1, n2=n2, dirpaths=a_dirpaths_map.values(),
                     path_temp=_path_temp,
                     tbme_name_regex=_fname_regex_tbme)
-    do_ncsd(a_values=a_values, a_prescription=a_prescription,
+    do_ncsd(a_values=a_values, presc=a_prescription,
             a_dirpaths_map=a_dirpaths_map, a_outfile_map=a_outfile_map,
             force=force_ncsd or force_all)
 
@@ -518,41 +516,41 @@ if __name__ == "__main__":
     else:
         f_ncsd, f_trdens, f_vce, f_all = (None,) * 4
         user_args = argv[1:]
-    a_prescription = tuple([int(x) for x in user_args[0:3]])
+    a_prescription0 = tuple([int(x) for x in user_args[0:3]])
     if len(user_args) == 3:
-        ncsd_vce_calculation(a_prescription=a_prescription,
+        ncsd_vce_calculation(a_prescription=a_prescription0,
                              force_ncsd=f_ncsd,
                              force_trdens=f_trdens,
                              force_vce=f_vce,
                              force_all=f_all)
     elif len(user_args) == 4:
-        nhw = argv[3]
-        ncsd_vce_calculation(a_prescription=a_prescription,
-                             nhw=nhw,
+        nhw0 = argv[3]
+        ncsd_vce_calculation(a_prescription=a_prescription0,
+                             nhw=nhw0,
                              force_ncsd=f_ncsd,
                              force_trdens=f_trdens,
                              force_vce=f_vce,
                              force_all=f_all)
     elif len(user_args) == 5:
-        n1, n2 = argv[3:5]
-        ncsd_vce_calculation(a_prescription=a_prescription,
-                             n1=n1, n2=n2,
+        n1_0, n2_0 = argv[3:5]
+        ncsd_vce_calculation(a_prescription=a_prescription0,
+                             n1=n1_0, n2=n2_0,
                              force_ncsd=f_ncsd,
                              force_trdens=f_trdens,
                              force_vce=f_vce,
                              force_all=f_all)
     elif len(user_args) == 6:
-        nhw, n1, n2 = argv[3:6]
-        ncsd_vce_calculation(a_prescription=a_prescription,
-                             nhw=nhw, n1=n1, n2=n2,
+        nhw_0, n1_0, n2_0 = argv[3:6]
+        ncsd_vce_calculation(a_prescription=a_prescription0,
+                             nhw=nhw_0, n1=n1_0, n2=n2_0,
                              force_ncsd=f_ncsd,
                              force_trdens=f_trdens,
                              force_vce=f_vce,
                              force_all=f_all)
     elif len(user_args) == 7:
-        nhw, n1, n2, nshell = argv[3:7]
-        ncsd_vce_calculation(a_prescription=a_prescription,
-                             nhw=nhw, n1=n1, n2=n2, nshell=nshell,
+        nhw_0, n1_0, n2_0, nshell_0 = argv[3:7]
+        ncsd_vce_calculation(a_prescription=a_prescription0,
+                             nhw=nhw_0, n1=n1_0, n2=n2_0, nshell=nshell_0,
                              force_ncsd=f_ncsd,
                              force_trdens=f_trdens,
                              force_vce=f_vce,

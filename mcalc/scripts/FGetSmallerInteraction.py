@@ -25,14 +25,14 @@ def run(fname, n1, n2, f_out_name=None):
     if f_out_name is not None and path.exists(f_out_name):
         # test whether the operation has already been done
         f = open(f_out_name, 'r')
-        n1_bef, n2_bef = [int(x) for x in f.readline().split()[1:3]] 
+        n1_bef, n2_bef = [int(item) for item in f.readline().split()[1:3]]
         if n1_bef == n1 and n2_bef == n2:
             return 0
     f = open(fname)
     
     line = f.readline()
     ldat = line.split()
-    hw, a_tbme = [float(x) for x in ldat[3:]]
+    hw, a_tbme = [float(item) for item in ldat[3:]]
 
     index_max = (n1+1)*(n1+2)/2
     
@@ -40,7 +40,7 @@ def run(fname, n1, n2, f_out_name=None):
     ntbme = 0
     for line in f:
         ldat = line.split()
-        a, b, c, d, j, t = [int(x) for x in ldat[:6]]
+        a, b, c, d, j, t = [int(item) for item in ldat[:6]]
         if a > index_max or b > index_max or c > index_max or d > index_max:
             continue
         if get_n(a)+get_n(b) > n2 or get_n(c)+get_n(d) > n2:
