@@ -1,0 +1,68 @@
+F
+1   10               ! ki,nki
+13
+1   10               ! kf,nkf
+9
+20                   ! jtotal2max
+0                   ! irestart
+2                   ! majortot
+F                   ! irem_cal
+F                   ! formfcal
+F                   ! radial
+F                   ! momdist
+F                   ! twobdcal
+1                   ! ipn
+/nfs/tmp2/navratil/eff/TBMEA2srg-n3lo2.020515505_10.20
+TBMEX.int
+F                   ! cluster
+F                   ! antoine
+20.d0              ! hbar*Omega for antoine file
+1                   ! #init states in antoine file
+0  0
+1                   ! #fin states in antoine file
+0  0
+F                   ! mbpt_ncsm
+F                   ! redstick
+F                   ! mfd_james
+F                   ! threebdcal
+F                   ! NCSMC_kernels
+3                   ! num_of_interaction_files
+vrelnp_rgm.int_H2srg-n3lo2.020515505_p2016
+vrelpp_rgm.int_H2srg-n3lo2.020515505_p2016
+vrelnn_rgm.int_H2srg-n3lo2.020515505_p2016
+F                   ! V3Nint
+14 14 14            ! N1_max,N12_max,N123_max
+chi2b3b400cD-02cE0098_srg0800ho40C_eMax14_EMax14_hwHO016.me3j_bin
+T
+<<NNN>>
+<<NUMSTATES>>
+
+
+
+chi2b3b400cD-02cE0098_srg0800ho40C_eMax12_EMax12_hwHO016.me3j_bin
+
+
+
+vrelnp_rgm.int_H2srg-n3lo1.88030154_1613
+vrelpp_rgm.int_H2srg-n3lo1.88030154_1613
+vrelnn_rgm.int_H2srg-n3lo1.88030154_1613
+v3trans_J3T3.int_N3LO3NF400_-0.2-srg1.88030154_330_141413.20
+
+v3trans_J3T3.int_N3LO3NF400_-0.2-srg2.0_330_161615.20
+
+v3trans_J3T3.int_N3LO3Nind-srg2.0_330_161615.20
+
+v3trans_J3T3.int_N3LO3NFind-srg2.0_330_141413.20
+
+vrelnp_rgm.int_H2srg-n3lo2.0_2015
+vrelpp_rgm.int_H2srg-n3lo2.0_2015
+vrelnn_rgm.int_H2srg-n3lo2.0_2015
+
+v3trans_J3T3.int_N3LO3NF400_-0.2-srg2.0_330_141413.20
+
+
+v3trans_J3T3.int_N3LO3NF500_-0.2-srg2.0_440_141312.20
+
+
+v3trans_J3T3.int_N3LO3NF500_-0.2-srg2.0_440_131211.20
+
