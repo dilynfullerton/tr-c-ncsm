@@ -7,6 +7,7 @@ output files.
 """
 
 from sys import argv
+from InvalidNumberOfArgumentsException import InvalidNumberOfArgumentsException
 
 
 def get_e0(aeff, he4_fname):
@@ -111,19 +112,23 @@ def run(a_prescription, out_fname, he4_fname, he5_fname, he6_fname):
     # GetTBME(Aeff,E0,SPE)
 
 
-# if len(argv) >= 3:  # running as a script
-#     if len(argv) == 3:
-#         a_prescription = (int(argv[1]),)*3
-#         out_fname = argv[2]
-#         he4_fname, he5_fname, he6_fname = (None,)*3
-#     if len(argv) == 6:
-#         a_prescription = (int(argv[1]),)*3
-#         out_fname, he4_fname, he5_fname, he6_fname = argv[2:6]
-#     elif len(argv) == 8:
-#         a_prescription = tuple([int(x) for x in argv[1:4]])
-#         out_fname = argv[4]
-#         he4_fname = argv[5]
-#         he5_fname = argv[6]
-#         he6_fname = argv[7]
-#     run(a_prescription=a_prescription, out_fname=out_fname,
-#         he4_fname=he4_fname, he5_fname=he5_fname, he6_fname=he6_fname)
+if __name__ == "__main__":
+    if len(argv) == 3:
+        a_prescription = (int(argv[1]),)*3
+        out_fname = argv[2]
+        he4_fname, he5_fname, he6_fname = (None,)*3
+    if len(argv) == 6:
+        a_prescription = (int(argv[1]),)*3
+        out_fname, he4_fname, he5_fname, he6_fname = argv[2:6]
+    elif len(argv) == 8:
+        a_prescription = tuple([int(x) for x in argv[1:4]])
+        out_fname = argv[4]
+        he4_fname = argv[5]
+        he5_fname = argv[6]
+        he6_fname = argv[7]
+    else:
+        raise InvalidNumberOfArgumentsException(
+            '\nFdoVCE.py called with %d arguments. ' % (len(argv)-1,) +
+            'Please call with 2, 5, or 7 arguments.\n')
+    run(a_prescription=a_prescription, out_fname=out_fname,
+        he4_fname=he4_fname, he5_fname=he5_fname, he6_fname=he6_fname)

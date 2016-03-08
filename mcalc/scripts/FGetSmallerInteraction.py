@@ -11,6 +11,7 @@ the final line needs to be moved to the top.
 
 from sys import argv
 from os import path
+from InvalidNumberOfArgumentsException import InvalidNumberOfArgumentsException
 
 
 def get_n(indx):
@@ -63,11 +64,18 @@ def run(fname, n1, n2, f_out_name=None):
     return 1
 
 
-# if len(argv) >= 4:
-#     fname0 = argv[1]
-#     n1_0, n2_0 = [int(x) for x in argv[2:4]]
-#     if len(argv) >= 5:
-#         f_out_name0 = argv[4]
-#     else:
-#         f_out_name0 = None
-#     run(fname=fname0, n1=n1_0, n2=n2_0, f_out_name=f_out_name0)
+if __name__ == "__main__":
+    if len(argv) >= 4:
+        fname0 = argv[1]
+        n1_0, n2_0 = [int(x) for x in argv[2:4]]
+        if len(argv) >= 5:
+            f_out_name0 = argv[4]
+        else:
+            f_out_name0 = None
+        run(fname=fname0, n1=n1_0, n2=n2_0, f_out_name=f_out_name0)
+    else:
+        raise InvalidNumberOfArgumentsException(
+            '\nFGetSmallerInteraction.py called with ' +
+            '%d arguments.' % (len(argv)-1,) +
+            'Please call with 3 arguments.\n'
+        )

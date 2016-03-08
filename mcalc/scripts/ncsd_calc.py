@@ -5,12 +5,16 @@ $ ncsd_calc.py [-F | -f[ntv]] Aeff4 Aeff5 Aeff6 [nhw [n1 n2 [nshell]] | n1 n2]
 """
 
 from __future__ import division
-from sys import argv
+
+import re
 from os import getcwd, path, walk, mkdir, chdir, symlink, remove
 from subprocess import call
+from sys import argv
+
 from FGetSmallerInteraction import run as truncate_interaction
 from FdoVCE import run as vce_calculation
-import re
+from InvalidNumberOfArgumentsException import InvalidNumberOfArgumentsException
+
 
 # CONSTANTS
 Z_NAME_MAP = {
@@ -507,11 +511,7 @@ def _force_from_argv0(argv0):
         return (False,) * 4
 
 
-class InvalidNumberOfArgumentsException(Exception):
-    pass
-
-
-if len(argv) - 1 >= 3:
+if __name__ == "__main__":
     if '-' in argv[1]:
         f_ncsd, f_trdens, f_vce, f_all = _force_from_argv0(argv[1])
         user_args = argv[2:]
