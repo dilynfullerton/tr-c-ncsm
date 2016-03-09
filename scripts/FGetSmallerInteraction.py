@@ -1,12 +1,13 @@
 #!/usr/bin/python
 """
-$ python GetSmallerInteraction.py <fname> <n1> <n2> <outfile_name>
+To run as a script:
+
+    $ FGetSmallerInteraction.py infile n1 n2 [outfile]
 
 Reads the TBME file and removes elements beyond the
-cutoff given by n1. 
-NOTE: These are printed out, so the
-result should be piped to the desired file. Then,
-the final line needs to be moved to the top.
+cutoff given by n1.
+
+If outfile is not specified, prints to standard out
 """
 
 from sys import argv
@@ -77,5 +78,5 @@ if __name__ == "__main__":
         raise InvalidNumberOfArgumentsException(
             '\nFGetSmallerInteraction.py called with ' +
             '%d arguments.' % (len(argv)-1,) +
-            'Please call with 3 arguments.\n'
+            'Please call with 3 or 4 arguments.\n'
         )

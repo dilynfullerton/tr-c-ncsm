@@ -1,7 +1,28 @@
 #!/usr/bin/python
 """ncsd_calc.py
 
-$ ncsd_calc.py [-F | -f[ntv]] Aeff4 Aeff5 Aeff6 [nhw [n1 n2 [nshell]] | n1 n2]
+To run as a script:
+
+    $ ncsd_calc.py [-F | -f[ntv]*] Aeff4 Aeff5 Aeff6
+    [nhw [n1 n2 [nshell]] | n1 n2]
+
+In the current directory, creates a RESULTS directory in which the
+Valence Cluster Expansion is performed according to the A-prescription
+given by Aeff4, Aeff5, and Aeff6.
+
+Requires Aeff4, Aeff5, Aeff6 as arguments.
+If 1 additional argument is given, this is assumed to be nhw.
+If 2 additional arguments are given, these are assumed to be n1 n2.
+If 3 additional arguments are given, these are assumed to be nhw n1 n2.
+If 4 additional arguments are given, these are assumed to be nhw n1 n2 nshell.
+If -F or -f precedes the arguments, force recalculation of all steps
+    (NCSD, TRDENS, and VCE)
+If -f[ntv]* precedes the arguments...
+    If n, force recalculation of NCSD.
+    If t, force recalculation of TRDENS.
+    If v, force recalculation of VCE.
+If no preceding argument is given, calculations that have already been done
+(i.e. outfiles are present) will not be redone.
 """
 
 from __future__ import division

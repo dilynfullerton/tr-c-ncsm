@@ -1,9 +1,15 @@
 #!/usr/bin/python
 """
-$ python doVCE.py <Aeff> <outfile> [<he4_fname> <he5_fname> <he6_fname>]
+To run as a script:
 
-Generates an interaction file based on He4, He5, and He6
-output files.
+    $ FdoVCE.py Aeff4 [Aeff5 Aeff6] outfile [he4fname he5fname he6fname]
+
+Generates an interaction file based on He4, He5, and He6 output files.
+
+If Aeff5 and Aeff6 are not specified, asssumes they are the same as Aeff4.
+If filenames for he 4, 5, and 6 are not specified, assumes the convention
+he[i]_[Aeff_i]/he[i]_A[Aeff_i].out is used, in which [i] is 4, 5, 6 and
+[Aeff_i] is Aeff4, Aeff5, Aeff6.
 """
 
 from sys import argv
@@ -103,7 +109,7 @@ def get_tbme(aeff, e0, spe, fname_out, fname_he6, presc=None):
 def run(presc, fname_out, fname_he4, fname_he5, fname_he6):
     e0 = get_e0(presc[0], fname_he4)
     spe = get_spe(presc[1], e0, fname_he5)
-    get_tbme(presc[2], e0, spe, fname_out, fname_he6)
+    get_tbme(presc[2], e0, spe, fname_out, fname_he6, presc)
 
     # Do the inconsistent/universal way
     # Aeff = 6
