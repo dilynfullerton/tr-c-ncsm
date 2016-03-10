@@ -1,9 +1,9 @@
 #!/usr/bin/python
-"""ncsd_calc.py
+"""ncsm_vce_calc.py
 
 To run as a script:
 
-    $ ncsd_calc.py [-F | -f[ntv]*] Aeff4 Aeff5 Aeff6
+    $ ncsm_vce_calc.py [-F | -f[ntv]*] Aeff4 Aeff5 Aeff6
     [nhw [n1 n2 [nshell]] | n1 n2]
 
 In the current directory, creates a RESULTS directory in which the
@@ -48,7 +48,7 @@ PATH_TEMPLATES = path.join(PATH_MAIN, 'templates')
 PATH_RESULTS = path.join(PATH_MAIN, 'results')
 DIR_FMT_NUC = '%s%d_%d'  # name, A, Aeff
 DIR_VCE = 'vce'
-FNAME_FMT_VCE = 'vce_presc%s.int'  # A prescription
+FNAME_FMT_VCE = 'vce_presc%s_A%d.int'  # A prescription, Aeff6
 FNAME_FMT_NCSD_OUT = '%s%d_%d.out'  # name, A, Aeff
 FNAME_MFDP = 'mfdp.dat'
 FNAME_TRDENS_IN = 'trdens.in'
@@ -85,20 +85,19 @@ def get_name(z, z_name_map=Z_NAME_MAP, alt_name=ZNAME_FMT_ALT):
         return alt_name % z
 
 
-def make_base_directories(a_values, presc, results_path, dir_nuc):
+def make_base_directories(a_values, presc, z, results_path, dir_nuc):
     """Makes directories for first 3 a values if they do not exist yet
     :param a_values: Values of A for which directories are made.
     Example: If in nshell1, would make directories for He4,5,6
     :param presc: Aeff prescription for VCE expansion
+    :param z: proton number
     :param results_path: Path to the directory into which these base
     directories are put
     :param dir_nuc: The directory name template which accepts one string and
     two integers as format parameters. (Name, A, Aeff)
     """
     if not path.exists(results_path):
-        call(['ls', '~/NCSM'])
         mkdir(results_path)
-    z = a_values[0] / 2
     for a, aeff in zip(a_values, presc):
         dirname = dir_nuc % (str(get_name(z=z)), int(a), int(aeff))
         dirpath = path.join(results_path, dirname)
@@ -377,7 +376,7 @@ def do_vce(a_outfile_map, a_values, a6_dir, heff_fname, a_prescription,
     he4_fname = a_outfile_map[a_values[0]]
     he5_fname = a_outfile_map[a_values[1]]
     he6_fname = path.join(a6_dir, heff_fname)
-    fname = vce_int_fname % str(a_prescription)
+    fname = vce_int_fname % (str(a_prescription), a_prescription[2])
     fpath = path.join(vce_dirpath, fname)
     if force or not path.exists(fpath):
         vce_calculation(a_prescription, fpath, he4_fname, he5_fname, he6_fname)
@@ -464,7 +463,7 @@ def ncsd_vce_calculation(
 
     # Make directories for base files
     make_base_directories(a_values=a_values,
-                          presc=a_prescription,
+                          presc=a_prescription, z=z,
                           results_path=_path_results,
                           dir_nuc=_dir_fmt_nuc)
 
@@ -578,6 +577,6 @@ if __name__ == "__main__":
                              force_all=f_all)
     else:
         raise InvalidNumberOfArgumentsException(
-            '\n%d' % (len(argv) - 1,) +
-            ' is not a valid number of arguments for ncsd_calc.py.' +
-            'Please enter 3-7 arguments.\n')
+            '%d' % (len(argv) - 1,) +
+            ' is not a valid number of arguments for ncsm_vce_calc.py.' +
+            'Please enter 3-7 arguments.')
