@@ -46,13 +46,14 @@ ZNAME_FMT_ALT = '%d-'
 PATH_MAIN = getcwd()
 PATH_TEMPLATES = path.join(PATH_MAIN, 'templates')
 PATH_RESULTS = path.join(PATH_MAIN, 'results')
-DIR_FMT_NUC = '%s%d_%d'  # name, A, Aeff
+DIR_FMT_NUC = '%s%d_%d_Nhw%d_%d_%d'  # name, A, Aeff
 DIR_VCE = 'vce'
-REGEX_TBME = 'TBMEA2-n3lo2\.O_\d+\.24'
+REGEX_TBME = 'TBME'
 REGEX_EGV = 'mfdp_*\d+\.egv'
-FNAME_FMT_VCE = 'vce_presc%s_A%d.int'  # A prescription, Aeff6
-FNAME_FMT_NCSD_OUT = '%s%d_%d.out'  # name, A, Aeff
-FNAME_FMT_TBME = 'TBMEA2-n3lo2\.O_%d.24'  # n1
+FNAME_FMT_VCE = 'vce_presc%d,%d,%d_Nhw%d_%d_%d_A%d.int'
+# A prescription, Nhw, n1, n2, Aeff6
+FNAME_FMT_NCSD_OUT = '%s%d_%d_Nhw%d_%d_%d.out'  # name, A, Aeff, Nhw, n1, n2
+FNAME_FMT_TBME = 'TBMEA2srg-n3lo2.O_%d.24'  # n1
 FNAME_MFDP = 'mfdp.dat'
 FNAME_TRDENS_IN = 'trdens.in'
 FNAME_EGV = 'mfdp.egv'
@@ -88,28 +89,25 @@ def get_name(z, z_name_map=Z_NAME_MAP, alt_name=ZNAME_FMT_ALT):
         return alt_name % z
 
 
-def make_base_directories(a_values, presc, z, results_path, dir_nuc):
+def make_base_directories(a_values, presc, results_path, a_dirpaths_map):
     """Makes directories for first 3 a values if they do not exist yet
     :param a_values: Values of A for which directories are made.
     Example: If in nshell1, would make directories for He4,5,6
     :param presc: Aeff prescription for VCE expansion
-    :param z: proton number
     :param results_path: Path to the directory into which these base
+    :param a_dirpaths_map: map from A value to directory path
     directories are put
-    :param dir_nuc: The directory name template which accepts one string and
-    two integers as format parameters. (Name, A, Aeff)
     """
     if not path.exists(results_path):
         mkdir(results_path)
     for a, aeff in zip(a_values, presc):
-        dirname = dir_nuc % (str(get_name(z=z)), int(a), int(aeff))
-        dirpath = path.join(results_path, dirname)
+        dirpath = a_dirpaths_map[a]
         if not path.exists(dirpath):
             mkdir(dirpath)
 
 
-def make_mfdp_file(z, a, aeff, n_hw, n_1, n_2, path_elt,
-                   outfile_name=FNAME_FMT_NCSD_OUT,
+def make_mfdp_file(z, a, aeff, n_hw, n_1, n_2, path_elt, outfile_name,
+                   fname_fmt_tbme=FNAME_FMT_TBME,
                    path_temp=PATH_TEMPLATES,
                    mfdp_name=FNAME_MFDP):
     """Reads the mfdp file from path_temp 
@@ -119,49 +117,50 @@ def make_mfdp_file(z, a, aeff, n_hw, n_1, n_2, path_elt,
     :param a: Mass number
     :param aeff: Effective mass number for interaction
     :param n_hw: Something something something dark side
-    :param n_1: Something something something dark side
-    :param n_2: Something something something dark side
-    :param path_elt: The path to the directory into which the mfdp file is
+    :param n_1: Number of allowed states for single particles
+    :param n_2: Number of allowed states for two particles
+    :param path_elt: path to the directory into which the mfdp file is
     to be put
-    :param outfile_name: The name of the written mfdp file
-    :param path_temp: The path to the template directory
-    :param mfdp_name: The name of the mfdp file
+    :param outfile_name: name of the outfile
+    :param fname_fmt_tbme: Format string for tbme filename to be formatted
+    with n1
+    :param path_temp: path to the template directory
+    :param mfdp_name: name of the mfdp file
     """
     temp_mfdp_path = path.join(path_temp, mfdp_name)
     mfdp_path = path.join(path_elt, mfdp_name)
-    replace_map = get_mfdp_replace_map(outfile_name=outfile_name, z=z, a=a,
-                                       n_hw=n_hw, n_1=n_1, n_2=n_2, aeff=aeff)
+    replace_map = get_mfdp_replace_map(
+        fname_tbme=fname_fmt_tbme % n_1,
+        outfile_name=outfile_name, z=z, a=a,
+        n_hw=n_hw, n_1=n_1, n_2=n_2, aeff=aeff)
     _rewrite_file(src=temp_mfdp_path, dst=mfdp_path,
                   replace_map=replace_map)
 
 
 def make_mfdp_files(z, a_range, a_presc, n_hw, n_1, n_2,
-                    results_path=PATH_RESULTS,
-                    nuc_dir=DIR_FMT_NUC,
-                    outfile_name=FNAME_FMT_NCSD_OUT,
+                    a_dirpath_map, a_outfile_map,
                     path_temp=PATH_TEMPLATES,
                     mfdp_name=FNAME_MFDP):
     for a, aeff in zip(a_range, a_presc):
-        dirname = nuc_dir % (get_name(z), a, aeff)
-        dirpath = path.join(results_path, dirname)
         make_mfdp_file(z=z, a=a, aeff=aeff, n_hw=n_hw, n_1=n_1, n_2=n_2,
-                       path_elt=dirpath, outfile_name=outfile_name,
+                       path_elt=a_dirpath_map[a],
+                       outfile_name=a_outfile_map[a],
                        path_temp=path_temp, mfdp_name=mfdp_name)
 
 
-def get_mfdp_replace_map(outfile_name, z, a, n_hw, n_1, n_2, aeff):
-    outfile_name = outfile_name % (get_name(z), a, aeff)
+def get_mfdp_replace_map(fname_tbme, outfile_name, z, a, n_hw, n_1, n_2, aeff):
     n = a - z
     if a % 2 == 0:
         tot2 = 0
     else:
         tot2 = 1
     rest_lines = get_mfdp_restrictions_lines(nmax=max(n_1, n_2))
-    return {'<<OUTFILE>>': str(outfile_name),
+    return {'<<TBMEFILE>>': str(fname_tbme),
+            '<<OUTFILE>>': str(outfile_name),
             '<<Z>>': str(z), '<<N>>': str(n),
             '<<NHW>>': str(n_hw), '<<TOT2>>': str(tot2),
             '<<N1>>': str(n_1), '<<N2>>': str(n_2),
-            '<<RESTRICTIONS>>': rest_lines,
+            '<<RESTRICTIONS>>': str(rest_lines),
             '<<AEFF>>': str(aeff)}
 
 
@@ -175,23 +174,20 @@ def get_mfdp_restrictions_lines(nmax,
     return '\n'.join(lines)
 
 
-def make_trdens_file(z, a, aeff,
-                     nuc_dir=DIR_FMT_NUC,
+def make_trdens_file(z, a, nuc_dir,
                      path_results=PATH_RESULTS,
                      path_temp=PATH_TEMPLATES,
                      trdens_name=FNAME_TRDENS_IN):
     """Reads the trdens.in file from path_temp and rewrites it 
     into path_elt in accordance with the given z, a
-    :param z: The proton number
-    :param a: The mass number
-    :param aeff: The effective mass number (to specify the interaction)
-    :param nuc_dir: The directory name template
-    :param path_results: The path to the results directory
-    :param path_temp: The path to the templates directory
-    :param trdens_name: The name of the trdens file in the templates dir
+    :param z: proton number
+    :param a: mass number
+    :param nuc_dir: directory name
+    :param path_results: path to the results directory
+    :param path_temp: path to the templates directory
+    :param trdens_name: name of the trdens file in the templates dir
     """
     src = path.join(path_temp, trdens_name)
-    nuc_dir = nuc_dir % (get_name(z), a, aeff)
     path_elt = path.join(path_results, nuc_dir)
     dst = path.join(path_elt, trdens_name)
     rep_map = get_trdens_replace_map(z=z, a=a)
@@ -245,18 +241,21 @@ def _rewrite_file(src, dst, replace_map):
 def truncate_space(n1, n2,
                    path_elt,
                    path_temp=PATH_TEMPLATES,
-                   tbme_name_regex=REGEX_TBME):
+                   tbme_name_regex=REGEX_TBME,
+                   fname_fmt_tbme=FNAME_FMT_TBME):
     """Run the script that truncates the space by removing extraneous
     interactions from the TBME file
 
-    :param n1: something
-    :param n2: something
+    :param n1: Maximum state for single particle
+    :param n2: Maximum state for two particles
     :param path_elt: Path to the directory in which the resultant TBME file
     is to be put
     :param path_temp: Path to the templates directory in which the full TBME
     files resides
     :param tbme_name_regex: Regular expression that matches only the TBME file
     in the templates directory
+    :param fname_fmt_tbme: Format string for the TBME file to be formatted
+    with n1
     """
     w = walk(path_temp)
     dirpath, dirnames, filenames = w.next()
@@ -267,7 +266,7 @@ def truncate_space(n1, n2,
     else:
         raise TBMEFileNotFoundException()
     src_path = path.join(dirpath, tbme_filename)
-    dst_path = path.join(path_elt, tbme_filename)
+    dst_path = path.join(path_elt, fname_fmt_tbme % n1)
     truncate_interaction(src_path, n1, n2, dst_path)
 
 
@@ -370,7 +369,8 @@ def do_trdens(a6_dir, force, outfile):
     return 1
 
 
-def do_vce(a_outfile_map, a_values, a6_dir, heff_fname, a_prescription,
+def do_vce(a_outfile_map, a_values, a6_dir, heff_fname,
+           a_prescription, nhw, n1, n2,
            vce_int_fname, vce_dirpath, force):
     """Do the VCE expansion calculation for each Aeff value in aeff_range
 
@@ -382,6 +382,9 @@ def do_vce(a_outfile_map, a_values, a6_dir, heff_fname, a_prescription,
     generated by the TRDENS calculation for the 3rd A value
     :param a_prescription: Range of Aeff values to evaluate based on
     the effective Hamiltonian
+    :param nhw: nhw value
+    :param n1: n1 value
+    :param n2: n2 value
     :param vce_int_fname: Filename template for generated interaction files
     :param vce_dirpath: Path to the directory in which to put generated
     interaction files
@@ -391,7 +394,8 @@ def do_vce(a_outfile_map, a_values, a6_dir, heff_fname, a_prescription,
     he4_fname = a_outfile_map[a_values[0]]
     he5_fname = a_outfile_map[a_values[1]]
     he6_fname = path.join(a6_dir, heff_fname)
-    fname = vce_int_fname % (str(a_prescription), a_prescription[2])
+    fmt_tuple = tuple(a_prescription) + (nhw, n1, n2, a_prescription[2])
+    fname = vce_int_fname % fmt_tuple
     fpath = path.join(vce_dirpath, fname)
     if force or not path.exists(fpath):
         vce_calculation(a_prescription, fpath, he4_fname, he5_fname, he6_fname)
@@ -446,8 +450,9 @@ def ncsd_vce_calculation(
     as the dir_fmt_nuc, so a natural choice for this string would be appending
     '.out' to the dir_fmt_nuc).
     :param _fname_fmt_vce: Template string for the name to be given to the
-    .int file generated by running the FdoVCE script. Should accept a single
-    integer as an argument (Aeff).
+    .int file generated by running the FdoVCE script.
+    Must accept 7 integer arguments:
+        Aeff4 Aeff5 Aeff6 Nhw n1 n2 Aeff6
     :param _fname_mfdp: Name of the mfdp file in the templates directory
     :param _fname_trdens_in: Name of the trdens input file in the templates
     directory
@@ -469,23 +474,26 @@ def ncsd_vce_calculation(
     z = a_values[0] / 2
     a_dirpaths_map = dict()
     for a, aeff in zip(a_values, a_prescription):
-        a_dirpaths_map[a] = path.join(_path_results,
-                                      _dir_fmt_nuc % (get_name(z), a, aeff))
+        a_dirpaths_map[a] = path.join(
+            _path_results,
+            _dir_fmt_nuc % (get_name(z), a, aeff, nhw, n1, n2))
     a_outfile_map = dict()
     for a, aeff in zip(a_values, a_prescription):
         a_outfile_map[a] = path.join(
-            a_dirpaths_map[a], _fname_fmt_ncsd_out % (get_name(z), a, aeff))
+            a_dirpaths_map[a],
+            _fname_fmt_ncsd_out % (get_name(z), a, aeff, nhw, n1, n2))
 
     # Make directories for base files
     make_base_directories(a_values=a_values,
-                          presc=a_prescription, z=z,
+                          presc=a_prescription,
                           results_path=_path_results,
-                          dir_nuc=_dir_fmt_nuc)
+                          a_dirpaths_map=a_dirpaths_map)
 
     # ncsd calculations: make mfdp files, perform truncation, and run NCSD
-    make_mfdp_files(z=z, a_range=a_values, a_presc=a_prescription,
-                    n_hw=nhw, n_1=n1, n_2=n2,
-                    outfile_name=_fname_fmt_ncsd_out,
+    make_mfdp_files(z=z, a_range=a_values,
+                    a_dirpath_map=a_dirpaths_map,
+                    a_outfile_map=a_outfile_map,
+                    a_presc=a_prescription, n_hw=nhw, n_1=n1, n_2=n2,
                     mfdp_name=_fname_mfdp)
     truncate_spaces(n1=n1, n2=n2, dirpaths=a_dirpaths_map.values(),
                     path_temp=_path_temp,
@@ -495,8 +503,8 @@ def ncsd_vce_calculation(
             force=force_ncsd or force_all)
 
     # for the 3rd a value, make trdens file and run TRDENS
-    make_trdens_file(z=z, a=a_values[2], aeff=a_prescription[2],
-                     nuc_dir=_dir_fmt_nuc,
+    make_trdens_file(z=z, a=a_values[2],
+                     nuc_dir=a_dirpaths_map[a_values[2]],
                      path_results=_path_results,
                      path_temp=_path_temp,
                      trdens_name=_fname_trdens_in)
@@ -511,8 +519,9 @@ def ncsd_vce_calculation(
     vce_dirpath = path.join(_path_results, _dir_vce)
     if not path.exists(vce_dirpath):
         mkdir(vce_dirpath)
-    do_vce(a_outfile_map=a_outfile_map, a_values=a_values, a6_dir=a6_dir,
-           heff_fname=_fname_heff, a_prescription=a_prescription,
+    do_vce(a_outfile_map=a_outfile_map, a_values=a_values,
+           a6_dir=a6_dir, heff_fname=_fname_heff,
+           a_prescription=a_prescription, nhw=nhw, n1=n1, n2=n2,
            vce_int_fname=_fname_fmt_vce, vce_dirpath=vce_dirpath,
            force=force_vce or force_all)
 
@@ -559,7 +568,7 @@ if __name__ == "__main__":
                              force_vce=f_vce,
                              force_all=f_all)
     elif len(user_args) == 4:
-        nhw0 = argv[3]
+        nhw0 = int(user_args[3])
         ncsd_vce_calculation(a_prescription=a_prescription0,
                              nhw=nhw0,
                              force_ncsd=f_ncsd,
@@ -567,7 +576,7 @@ if __name__ == "__main__":
                              force_vce=f_vce,
                              force_all=f_all)
     elif len(user_args) == 5:
-        n1_0, n2_0 = argv[3:5]
+        n1_0, n2_0 = [int(x) for x in user_args[3:5]]
         ncsd_vce_calculation(a_prescription=a_prescription0,
                              n1=n1_0, n2=n2_0,
                              force_ncsd=f_ncsd,
@@ -575,7 +584,7 @@ if __name__ == "__main__":
                              force_vce=f_vce,
                              force_all=f_all)
     elif len(user_args) == 6:
-        nhw_0, n1_0, n2_0 = argv[3:6]
+        nhw_0, n1_0, n2_0 = [int(x) for x in user_args[3:6]]
         ncsd_vce_calculation(a_prescription=a_prescription0,
                              nhw=nhw_0, n1=n1_0, n2=n2_0,
                              force_ncsd=f_ncsd,
@@ -583,7 +592,7 @@ if __name__ == "__main__":
                              force_vce=f_vce,
                              force_all=f_all)
     elif len(user_args) == 7:
-        nhw_0, n1_0, n2_0, nshell_0 = argv[3:7]
+        nhw_0, n1_0, n2_0, nshell_0 = [int(x) for x in user_args[3:7]]
         ncsd_vce_calculation(a_prescription=a_prescription0,
                              nhw=nhw_0, n1=n1_0, n2=n2_0, nshell=nshell_0,
                              force_ncsd=f_ncsd,

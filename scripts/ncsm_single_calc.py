@@ -38,27 +38,29 @@ def ncsm_single_calculation(
         _fname_mfdp=FNAME_MFDP,
         force=False):
     # get directory path
-    dirpath_nuc = path.join(_path_results,
-                            _dir_fmt_nuc % (get_name(z=z),
-                                            a, aeff))
-    outfile_ncsd = path.join(dirpath_nuc,
-                             _fname_fmt_ncsd_out % (get_name(z=z), a, aeff))
+    dirpath_nuc = path.join(
+        _path_results,
+        _dir_fmt_nuc % (get_name(z=z), a, aeff, nhw, n1, n2))
+    outfile_ncsd = path.join(
+        dirpath_nuc,
+        _fname_fmt_ncsd_out % (get_name(z=z), a, aeff, nhw, n1, n2))
     # make directory
-    make_base_directories(a_values=[a], presc=[aeff], z=z,
+    make_base_directories(a_values=[a], presc=[aeff],
                           results_path=_path_results,
-                          dir_nuc=_dir_fmt_nuc)
+                          a_dirpaths_map={a: dirpath_nuc})
 
     # ncsm calculations: make mfdp file, perform truncation, and run NCSD
     make_mfdp_files(z=z, a_range=[a], a_presc=[aeff],
+                    a_dirpath_map={a: dirpath_nuc},
+                    a_outfile_map={a: outfile_ncsd},
                     n_hw=nhw, n_1=n1, n_2=n2,
-                    outfile_name=_fname_fmt_ncsd_out,
                     mfdp_name=_fname_mfdp)
     truncate_spaces(n1=n1, n2=n2, dirpaths=[dirpath_nuc],
                     path_temp=_path_temp,
                     tbme_name_regex=_fname_regex_tbme)
     do_ncsd(a_values=[a], presc=[aeff],
             a_dirpaths_map={a: dirpath_nuc},
-            a_outfile_map={a:outfile_ncsd},
+            a_outfile_map={a: outfile_ncsd},
             force=force)
 
 
