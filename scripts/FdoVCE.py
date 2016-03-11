@@ -66,7 +66,7 @@ def print_header(aeff, e0, spe, st='%d'):
     header_lines.append('! ')
     header_lines.append(
         '-999 ' + '  '.join(['%10.6f' % e for e in spe]) + '  4  6  0.000000')
-    return '\n'.join(header_lines) + '\n'
+    return '\n'.join(header_lines)
 
 
 def get_tbme(aeff, e0, spe, fname_out, fname_he6, presc=None):
@@ -100,12 +100,11 @@ def get_tbme(aeff, e0, spe, fname_out, fname_he6, presc=None):
             next_line = '%3d %3d %3d %3d  %3d %3d  %10.6f' % (
                 kets[i]['p'], kets[i]['q'], kets[j]['p'], kets[j]['q'],
                 kets[i]['J'], kets[i]['T'], v)
-            write_lines.append(next_line + '\n')
+            write_lines.append(next_line)
     f.close()
     # write the file
     outfile = open(fname_out, 'w')
-    for line in write_lines:
-        outfile.write(line)
+    outfile.writelines(write_lines)
     outfile.close()
 
 

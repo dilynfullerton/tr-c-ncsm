@@ -220,10 +220,8 @@ def _rewrite_file(src, dst, replace_map):
        on the replace map, writes the file into dst.
     """
     # read the src file
-    read_lines = list()
     infile = open(src, 'r')
-    for line in infile:
-        read_lines.append(line)
+    read_lines = infile.readlines()
     infile.close()
     # replace strings
     write_lines = list()
