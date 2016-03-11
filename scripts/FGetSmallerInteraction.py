@@ -27,6 +27,7 @@ def run(fname, n1, n2, f_out_name=None):
         # test whether the operation has already been done
         f = open(f_out_name, 'r')
         n1_bef, n2_bef = [int(item) for item in f.readline().split()[1:3]]
+        f.close()
         if n1_bef == n1 and n2_bef == n2:
             return 0
     f = open(fname)

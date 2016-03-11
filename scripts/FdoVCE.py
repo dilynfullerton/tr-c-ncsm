@@ -25,6 +25,7 @@ def get_e0(aeff, fname_he4):
     line = f.readline()
     while 'State # 1   Energy' not in line:
         line = f.readline()
+    f.close()
     ldat = line.split()
     e0 = float(ldat[5])
     return e0
@@ -49,6 +50,7 @@ def get_spe(aeff, e0, fname_he5):
             np3 = e - e0
         if np1 != 999. and np3 != 999.:
             break
+    f.close()
     return np1, np3
 
 
@@ -99,6 +101,7 @@ def get_tbme(aeff, e0, spe, fname_out, fname_he6, presc=None):
                 kets[i]['p'], kets[i]['q'], kets[j]['p'], kets[j]['q'],
                 kets[i]['J'], kets[i]['T'], v)
             write_lines.append(next_line + '\n')
+    f.close()
     # write the file
     outfile = open(fname_out, 'w')
     for line in write_lines:
