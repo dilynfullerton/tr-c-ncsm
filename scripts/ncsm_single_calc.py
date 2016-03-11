@@ -65,31 +65,33 @@ def ncsm_single_calculation(
 
 
 if __name__ == "__main__":
-    force = False
     if '-' in argv[1]:
         if 'f' in argv[1] or 'F' in argv[1]:
-            force = True
+            force0 = True
+        else:
+            force0 = False
         user_args = argv[2:]
     else:
+        force0 = False
         user_args = argv[1:]
     if len(user_args) == 2:
         z0, a0 = [int(x) for x in user_args]
-        ncsm_single_calculation(z=z0, a=a0, aeff=a0)
+        ncsm_single_calculation(z=z0, a=a0, aeff=a0, force=force0)
     elif len(user_args) == 3:
         z0, a0, aeff0 = [int(x) for x in user_args]
-        ncsm_single_calculation(z=z0, a=a0, aeff=aeff0)
+        ncsm_single_calculation(z=z0, a=a0, aeff=aeff0, force=force0)
     elif len(user_args) == 4:
         z0, a0, aeff0, nhw0 = [int(x) for x in user_args]
         ncsm_single_calculation(z=z0, a=a0, aeff=aeff0,
-                                nhw=nhw0)
+                                nhw=nhw0, force=force0)
     elif len(user_args) == 5:
         z0, a0, aeff0, n1_0, n2_0 = [int(x) for x in user_args]
         ncsm_single_calculation(z=z0, a=a0, aeff=aeff0,
-                                n1=n1_0, n2=n2_0)
+                                n1=n1_0, n2=n2_0, force=force0)
     elif len(user_args) == 6:
         z0, a0, aeff0, nhw0, n1_0, n2_0 = [int(x) for x in user_args]
         ncsm_single_calculation(z=z0, a=a0, aeff=aeff0,
-                                nhw=nhw0, n1=n1_0, n2=n2_0)
+                                nhw=nhw0, n1=n1_0, n2=n2_0, force=force0)
     else:
         raise InvalidNumberOfArgumentsException(
             '%d' % len(user_args) +

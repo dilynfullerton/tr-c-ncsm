@@ -104,7 +104,7 @@ def get_tbme(aeff, e0, spe, fname_out, fname_he6, presc=None):
     f.close()
     # write the file
     outfile = open(fname_out, 'w')
-    outfile.writelines(write_lines)
+    outfile.write('\n'.join(write_lines))
     outfile.close()
 
 
