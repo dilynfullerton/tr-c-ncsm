@@ -560,43 +560,35 @@ if __name__ == "__main__":
         user_args = argv[1:]
     a_prescription0 = tuple([int(x) for x in user_args[0:3]])
     if len(user_args) == 3:
-        ncsd_vce_calculation(a_prescription=a_prescription0,
-                             force_ncsd=f_ncsd,
-                             force_trdens=f_trdens,
-                             force_vce=f_vce,
-                             force_all=f_all)
+        ncsd_vce_calculation(
+            a_prescription=a_prescription0,
+            force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
+            force_all=f_all)
     elif len(user_args) == 4:
         nhw0 = int(user_args[3])
-        ncsd_vce_calculation(a_prescription=a_prescription0,
-                             nhw=nhw0,
-                             force_ncsd=f_ncsd,
-                             force_trdens=f_trdens,
-                             force_vce=f_vce,
-                             force_all=f_all)
+        ncsd_vce_calculation(
+            a_prescription=a_prescription0, nhw=nhw0,
+            force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
+            force_all=f_all)
     elif len(user_args) == 5:
         n1_0, n2_0 = [int(x) for x in user_args[3:5]]
-        ncsd_vce_calculation(a_prescription=a_prescription0,
-                             n1=n1_0, n2=n2_0,
-                             force_ncsd=f_ncsd,
-                             force_trdens=f_trdens,
-                             force_vce=f_vce,
-                             force_all=f_all)
+        ncsd_vce_calculation(
+            a_prescription=a_prescription0, n1=n1_0, n2=n2_0,
+            force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
+            force_all=f_all)
     elif len(user_args) == 6:
         nhw_0, n1_0, n2_0 = [int(x) for x in user_args[3:6]]
-        ncsd_vce_calculation(a_prescription=a_prescription0,
-                             nhw=nhw_0, n1=n1_0, n2=n2_0,
-                             force_ncsd=f_ncsd,
-                             force_trdens=f_trdens,
-                             force_vce=f_vce,
-                             force_all=f_all)
+        ncsd_vce_calculation(
+            a_prescription=a_prescription0, nhw=nhw_0, n1=n1_0, n2=n2_0,
+            force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
+            force_all=f_all)
     elif len(user_args) == 7:
         nhw_0, n1_0, n2_0, nshell_0 = [int(x) for x in user_args[3:7]]
-        ncsd_vce_calculation(a_prescription=a_prescription0,
-                             nhw=nhw_0, n1=n1_0, n2=n2_0, nshell=nshell_0,
-                             force_ncsd=f_ncsd,
-                             force_trdens=f_trdens,
-                             force_vce=f_vce,
-                             force_all=f_all)
+        ncsd_vce_calculation(
+            a_prescription=a_prescription0,
+            nhw=nhw_0, n1=n1_0, n2=n2_0, nshell=nshell_0,
+            force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
+            force_all=f_all)
     else:
         raise InvalidNumberOfArgumentsException(
             '%d' % (len(argv) - 1,) +
