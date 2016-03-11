@@ -48,19 +48,22 @@ PATH_TEMPLATES = path.join(PATH_MAIN, 'templates')
 PATH_RESULTS = path.join(PATH_MAIN, 'results')
 DIR_FMT_NUC = '%s%d_%d'  # name, A, Aeff
 DIR_VCE = 'vce'
+REGEX_TBME = 'TBMEA2-n3lo2\.O_\d+\.24'
+REGEX_EGV = 'mfdp_*\d+\.egv'
 FNAME_FMT_VCE = 'vce_presc%s_A%d.int'  # A prescription, Aeff6
 FNAME_FMT_NCSD_OUT = '%s%d_%d.out'  # name, A, Aeff
+FNAME_FMT_TBME = 'TBMEA2-n3lo2\.O_%d.24'  # n1
 FNAME_MFDP = 'mfdp.dat'
 FNAME_TRDENS_IN = 'trdens.in'
 FNAME_EGV = 'mfdp.egv'
 FNAME_TRDENS_OUT = 'trdens.out'
 FNAME_HEFF = 'Heff_OLS.dat'
-REGEX_TBME = 'TBME'
-REGEX_EGV = 'mfdp_*\d+\.egv'
+LINE_FMT_MFDP_RESTR = ' %d %-2d %d %-2d %d %-4d ! N=%d'
 N_SHELL = 1
 NHW = 6
 N1 = 15
-N2 = 6
+N2 = 15
+MAX_NMAX = 15
 
 
 # FUNCTIONS
@@ -153,11 +156,23 @@ def get_mfdp_replace_map(outfile_name, z, a, n_hw, n_1, n_2, aeff):
         tot2 = 0
     else:
         tot2 = 1
+    rest_lines = get_mfdp_restrictions_lines(nmax=max(n_1, n_2))
     return {'<<OUTFILE>>': str(outfile_name),
             '<<Z>>': str(z), '<<N>>': str(n),
             '<<NHW>>': str(n_hw), '<<TOT2>>': str(tot2),
             '<<N1>>': str(n_1), '<<N2>>': str(n_2),
+            '<<RESTRICTIONS>>': rest_lines,
             '<<AEFF>>': str(aeff)}
+
+
+def get_mfdp_restrictions_lines(nmax,
+                                _max_allowed_nmax=MAX_NMAX,
+                                _str_rest_line=LINE_FMT_MFDP_RESTR):
+    lines = list()
+    for n in range(min(nmax, _max_allowed_nmax) + 1):
+        i = (n + 1) * (n + 2)
+        lines.append(_str_rest_line % (0, i, 0, i, 0, 2 * i, n))
+    return '\n'.join(lines)
 
 
 def make_trdens_file(z, a, aeff,
