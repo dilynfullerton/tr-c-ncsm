@@ -23,7 +23,7 @@ from InvalidNumberOfArgumentsException import InvalidNumberOfArgumentsException
 from ncsm_vce_calc import get_name, make_base_directories, make_mfdp_files
 from ncsm_vce_calc import truncate_spaces, do_ncsd
 from ncsm_vce_calc import NHW, N1, N2
-from ncsm_vce_calc import PATH_RESULTS, PATH_TEMPLATES, DIR_FMT_NUC
+from ncsm_vce_calc import PATH_RESULTS, PATH_TEMPLATES, DNAME_FMT_NUC
 from ncsm_vce_calc import REGEX_TBME, FNAME_FMT_NCSD_OUT, FNAME_MFDP
 
 
@@ -32,7 +32,7 @@ def ncsm_single_calculation(
         nhw=NHW, n1=N1, n2=N2,
         _path_results=PATH_RESULTS,
         _path_temp=PATH_TEMPLATES,
-        _dir_fmt_nuc=DIR_FMT_NUC,
+        _dir_fmt_nuc=DNAME_FMT_NUC,
         _fname_regex_tbme=REGEX_TBME,
         _fname_fmt_ncsd_out=FNAME_FMT_NCSD_OUT,
         _fname_mfdp=FNAME_MFDP,
