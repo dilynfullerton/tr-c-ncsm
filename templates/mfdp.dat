@@ -1,6 +1,6 @@
 ==== Input file for the shell model code ===== 
 INT filename and output file name:
-TBMEA2srg-n3lo2.0_15.24
+<<TBMEFILE>>
 2     <- TBME file: a b c d  J T  Trel  Hrel  Clmb   V ...
 <<OUTFILE>>
   <<Z>>   <<N>>  24.0   ! Z, N, hbar*Omega
@@ -11,22 +11,7 @@ TBMEA2srg-n3lo2.0_15.24
   2            ! major=2 do not change
   0            ! nshll/jorder do not change
 Major or subshell occupation restrictions for protons, neutrons and (p+n):
- 0 2  0 2  0 4    ! N=0
- 0 6  0 6  0 12   ! N=1
- 0 12 0 12 0 24   ! N=2
- 0 20 0 20 0 40   ! N=3
- 0 3 0 3 0 6   ! N=4
- 0 3 0 3 0 6   ! N=5
- 0 3 0 3 0 6   ! N=6
- 0 3 0 3 0 6   ! N=7
- 0 3 0 3 0 6   ! N=8
- 0 3 0 3 0 6   ! N=9
- 0 3 0 3 0 6   ! N=10
- 0 3 0 3 0 6   ! N=11
- 0 3 0 3 0 6   ! N=12
- 0 3 0 3 0 6   ! N=13
- 0 3 0 3 0 6   ! N=14
- 0 3 0 3 0 6   ! N=15
+<<RESTRICTIONS>>
 Control parameters for multiple-G calculations:
   3  0  0  0   ! nsets (# of G's), min(nesp), nskip, iset1 (see below)
 Control parameters for initial and final state vectors:
@@ -39,7 +24,7 @@ Restart option:
   0            ! irest = 4 to restart, = 0 not to.
   0            ! memsave = 1 for a memory saving
 Importance truncation:
-  <<NHW>>  10  <<NHW>>  -1  ! nhw0, nhw_min (start IT), nhw_max=nhw, nhw_restart
+  <<NHW>>  34  <<NHW>>  -1  ! nhw0, nhw_min (start IT), nhw_max=nhw, nhw_restart
   1  0.0  1  !kappa_points,cmin=factor*kappa,kappa_restart
  1.5 10.0 20.0 40.0 1.0 2.0 5.0 10.0 25.0 50.0        ! kappa(1E-5)
   1.0           ! convergence delta in keV (not implemented)
