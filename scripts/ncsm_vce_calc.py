@@ -48,12 +48,12 @@ PATH_MAIN = getcwd()
 PATH_TEMPLATES = path.join(PATH_MAIN, 'templates')
 PATH_RESULTS = path.join(PATH_MAIN, 'results')
 DNAME_FMT_NUC = '%s%d_%d_Nhw%d_%d_%d'  # name, A, Aeff
-DNAME_FMT_VCE = 'vce_presc%d,%d,%d_Nhw%d_%d_%d_A%d'
-# A prescription, Nhw, n1, n2, Aeff6
+DNAME_FMT_VCE = 'vce_presc%d,%d,%d_Nhw%d_%d_%d'
+# A prescription, Nhw, n1, n2
 DIR_VCE = 'vce'
 REGEX_TBME = 'TBME'
 REGEX_EGV = 'mfdp_*\d+\.egv'
-FNAME_FMT_VCT = 'A%d.int'  # A value
+FNAME_FMT_VCE = 'A%d.int'  # A value
 FNAME_FMT_NCSD_OUT = '%s%d_%d_Nhw%d_%d_%d.out'  # name, A, Aeff, Nhw, n1, n2
 FNAME_FMT_TBME = 'TBMEA2srg-n3lo2.O_%d.24'  # n1
 FNAME_MFDP = 'mfdp.dat'
@@ -405,7 +405,12 @@ def do_vce(
         vce_calculation(a_prescription, fpath, he4_fname, he5_fname, he6_fname)
     if len(a_range) > 1:
         for a in a_range[1:]:
-            link(fpath, fpath_fmt % a)
+            next_fpath = fpath_fmt % a
+            if path.exists(next_fpath) and force:
+                remove(next_fpath)
+                link(fpath, next_fpath)
+            elif not path.exists(next_fpath):
+                link(fpath, next_fpath)
 
 
 def ncsd_vce_calculation(
@@ -423,7 +428,7 @@ def ncsd_vce_calculation(
         _fname_regex_tbme=REGEX_TBME,
         _fname_regex_egv=REGEX_EGV,
         _fname_fmt_ncsd_out=FNAME_FMT_NCSD_OUT,
-        _fname_fmt_vce=DNAME_FMT_VCE,
+        _fname_fmt_vce=FNAME_FMT_VCE,
         _fname_mfdp=FNAME_MFDP,
         _fname_trdens_in=FNAME_TRDENS_IN,
         _fname_trdens_out=FNAME_TRDENS_OUT,
@@ -541,7 +546,7 @@ def ncsd_vce_calculation(
         mkdir(_dir_vce)
     vce_dirpath = path.join(
         _path_results, _dir_vce,
-        _dir_fmt_vce % (a_prescription, nhw, n1, n2, a_prescription[2])
+        _dir_fmt_vce % tuple(a_prescription + (nhw, n1, n2))
     )
     if not path.exists(vce_dirpath):
         mkdir(vce_dirpath)
@@ -600,27 +605,27 @@ if __name__ == "__main__":
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all)
     elif len(user_args) == 5:
-        a_range0 = list(range(int(user_args[3]), int(user_args[4])))
+        a_range0 = list(range(int(user_args[3]), int(user_args[4])+1))
         ncsd_vce_calculation(
             a_prescription=a_prescription0, a_range=a_range0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all)
     elif len(user_args) == 6:
-        a_range0 = list(range(int(user_args[3]), int(user_args[4])))
+        a_range0 = list(range(int(user_args[3]), int(user_args[4])+1))
         nhw_0 = int(user_args[5])
         ncsd_vce_calculation(
             a_prescription=a_prescription0, a_range=a_range0, nhw=nhw_0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all)
     elif len(user_args) == 7:
-        a_range0 = list(range(int(user_args[3]), int(user_args[4])))
+        a_range0 = list(range(int(user_args[3]), int(user_args[4])+1))
         n1_0, n2_0 = [int(x) for x in user_args[5:7]]
         ncsd_vce_calculation(
             a_prescription=a_prescription0, a_range=a_range0, n1=n1_0, n2=n2_0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all)
     elif len(user_args) == 8:
-        a_range0 = list(range(int(user_args[3]), int(user_args[4])))
+        a_range0 = list(range(int(user_args[3]), int(user_args[4])+1))
         nhw_0, n1_0, n2_0 = [int(x) for x in user_args[5:8]]
         ncsd_vce_calculation(
             a_prescription=a_prescription0, a_range=a_range0,
@@ -628,7 +633,7 @@ if __name__ == "__main__":
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all)
     elif len(user_args) == 9:
-        a_range0 = list(range(int(user_args[3]), int(user_args[4])))
+        a_range0 = list(range(int(user_args[3]), int(user_args[4])+1))
         nhw_0, n1_0, n2_0, nshell_0 = [int(x) for x in user_args[5:9]]
         ncsd_vce_calculation(
             a_prescription=a_prescription0, a_range=a_range0,
