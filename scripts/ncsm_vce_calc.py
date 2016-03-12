@@ -234,7 +234,7 @@ def _rewrite_file(src, dst, replace_map):
         write_lines.append(line)
     # write to the dst file
     outfile = open(dst, 'w')
-    outfile.writelines(write_lines)
+    outfile.write('\n'.join(write_lines))
     outfile.close()
 
 

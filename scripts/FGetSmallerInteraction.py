@@ -56,7 +56,7 @@ def run(fname, n1, n2, f_out_name=None):
     
     if f_out_name is not None:
         f_out = open(f_out_name, 'w')
-        f_out.writelines(next_lines)
+        f_out.write('\n'.join(next_lines))
         f_out.close()
     else:
         for line in next_lines:
