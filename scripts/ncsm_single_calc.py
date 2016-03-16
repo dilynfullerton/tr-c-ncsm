@@ -65,11 +65,8 @@ def ncsm_single_calculation(
 
 
 if __name__ == "__main__":
-    if '-' in argv[1]:
-        if 'f' in argv[1] or 'F' in argv[1]:
-            force0 = True
-        else:
-            force0 = False
+    if '-f' == argv[1].lower():
+        force0 = True
         user_args = argv[2:]
     else:
         force0 = False

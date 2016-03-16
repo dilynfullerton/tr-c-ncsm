@@ -3,27 +3,37 @@
 
 To run as a script:
 
-    $ ncsm_vce_calc.py [-F | -f[ntv]*] Aeff4 Aeff5 Aeff6 Amin
+    $ ncsm_vce_calc.py [-f[ntv]{0,3}]
+    [ Aeff4 Aeff5 Aeff6 | [-m|-M] Ap_min Ap_max] Amin
     [Amax [nhw [n1 n2 [nshell]] | n1 n2]]
 
 In the current directory, creates a RESULTS directory in which the
-Valence Cluster Expansion is performed according to the A-prescription
-given by Aeff4, Aeff5, and Aeff6.
+Valence Cluster Expansion is performed according to the A-prescription(s)
+given by (Aeff4, Aeff5, and Aeff6) or the range of A prescriptions
+specified by Ap_min and Ap_max if -m or -M precedes the arguments.
 
-Requires Aeff4, Aeff5, Aeff6, Amin as arguments.
+If -F or -f precedes the arguments:
+    force recalculation of all steps (NCSD, TRDENS, and VCE)
+Else if -f[ntv]* precedes the arguments:
+    If n, force recalculation of NCSD.
+    If t, force recalculation of TRDENS.
+    If v, force recalculation of VCE.
+Otherwise:
+    Calculations are not done if outfiles are present
+If -m or -M precedes the arguments:
+    The first two arguments are used to determine a range of A prescriptions
+    -m --> Prescriptions are all increasing length-3 combinations of
+        integers in the range [Ap_min, Ap_max]
+    -M --> Prescriptions are all increasing length-3 combinations of
+        numbers with repetition in the range [Ap_min, Ap_max]
+Otherwise:
+    The first three arguments are used to explicitly express the A
+        prescription
 If 1 additional argument given,   this is assumed to be Amax.
 If 2 additional arguments given, they are assumed to be Amax nhw.
 If 3 additional arguments given, they are assumed to be Amax n1 n2.
 If 4 additional arguments given, they are assumed to be Amax nhw n1 n2.
 If 5 additional arguments given, they are assumed to be Amax nhw n1 n2 nshell.
-If -F or -f precedes the arguments, force recalculation of all steps
-    (NCSD, TRDENS, and VCE)
-If -f[ntv]* precedes the arguments...
-    If n, force recalculation of NCSD.
-    If t, force recalculation of TRDENS.
-    If v, force recalculation of VCE.
-If no preceding argument is given, calculations that have already been done
-(i.e. outfiles are present) will not be redone.
 """
 
 from __future__ import division
@@ -572,77 +582,111 @@ def ncsd_vce_calculation(
     return 1
 
 
-def ncsd_vce_calculations(a_prescriptions, **kwargs):
-    for presc in a_prescriptions:
-        ncsd_vce_calculation(a_prescription=presc, **kwargs)
+def ncsd_vce_calculations(a_prescription, a_range, **kwargs):
+    for presc in a_prescription:
+        ncsd_vce_calculation(a_prescription=presc, a_range=a_range, **kwargs)
 
 
 # SCRIPT
-def _force_from_argv0(argv0):
-    if len(argv0) == 0:
-        return (False,) * 4
-    elif 'f' in argv0:
-        force_ncsd, force_trdens, force_vce = (False,) * 3
-        if 'fn' in argv0:
-            force_ncsd = True
-        if 'ft' in argv0:
-            force_trdens = True
-        if 'fv' in argv0:
-            force_vce = True
-        force_all = not (force_ncsd or force_trdens or force_vce)
-        return force_ncsd, force_trdens, force_vce, force_all
-    elif 'F' in argv0:
-        return (False,) * 3 + (True,)
+def _combinations(sequence, r):
+    if r == 0:
+        yield []
     else:
-        return (False,) * 4
+        n = len(sequence)
+        for i in range(n):
+            m = _combinations(sequence[i+1:], r-1)
+            for mi in m:
+                yield [sequence[i]] + mi
+
+
+def _multicombinations(sequence, r):
+    if r == 0:
+        yield []
+    else:
+        n = len(sequence)
+        for i in range(n):
+            m = _multicombinations(sequence[i:], r-1)
+            for mi in m:
+                yield [sequence[i]] + mi
+
+
+def _force_from_argv0(argv0):
+    force_ncsd, force_trdens, force_vce, force_all = (False,) * 4
+    if 'n' in argv0:
+        force_ncsd = True
+    if 't' in argv0:
+        force_trdens = True
+    if 'v' in argv0:
+        force_vce = True
+    force_all = not (force_ncsd or force_trdens or force_vce)
+    return force_ncsd, force_trdens, force_vce, force_all
 
 
 if __name__ == "__main__":
-    if '-' in argv[1]:
-        f_ncsd, f_trdens, f_vce, f_all = _force_from_argv0(argv[1])
-        user_args = argv[2:]
+    user_args = argv
+    f_ncsd, f_trdens, f_vce, f_all = (False,) * 4
+    multicom, com = False, False
+    while True:
+        user_args = user_args[1:]
+        a0 = user_args[0]
+        if re.match('^-f[ntv]{0,3}$', a0.lower()):
+            f_ncsd, f_trdens, f_vce, f_all = _force_from_argv0(a0)
+        elif re.match('^-m$', a0):
+            com = True
+        elif re.match('^-M$', a0):
+            multicom = True
+        else:
+            break
+    if com or multicom:
+        ap_min, ap_max = [int(x) for x in user_args[0:2]]
+        fn = ncsd_vce_calculations
+        if com:
+            a_prescription0 = _combinations(range(ap_min, ap_max+1), 3)
+        else:
+            a_prescription0 = _multicombinations(range(ap_min, ap_max+1), 3)
+        other_args = user_args[2:]
     else:
-        f_ncsd, f_trdens, f_vce, f_all = (None,) * 4
-        user_args = argv[1:]
-    a_prescription0 = tuple([int(x) for x in user_args[0:3]])
-    if len(user_args) == 4:
-        a_range0 = [int(user_args[3])]
-        ncsd_vce_calculation(
+        fn = ncsd_vce_calculation
+        a_prescription0 = tuple([int(x) for x in user_args[0:3]])
+        other_args = user_args[3:]
+    if len(other_args) == 1:
+        a_range0 = [int(other_args[0])]
+        fn(
             a_prescription=a_prescription0, a_range=a_range0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all)
-    elif len(user_args) == 5:
-        a_range0 = list(range(int(user_args[3]), int(user_args[4])+1))
-        ncsd_vce_calculation(
+    elif len(other_args) == 2:
+        a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
+        fn(
             a_prescription=a_prescription0, a_range=a_range0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all)
-    elif len(user_args) == 6:
-        a_range0 = list(range(int(user_args[3]), int(user_args[4])+1))
-        nhw_0 = int(user_args[5])
-        ncsd_vce_calculation(
+    elif len(other_args) == 3:
+        a_range0 = list(range(int(other_args[0]), int(user_args[1])+1))
+        nhw_0 = int(other_args[2])
+        fn(
             a_prescription=a_prescription0, a_range=a_range0, nhw=nhw_0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all)
-    elif len(user_args) == 7:
-        a_range0 = list(range(int(user_args[3]), int(user_args[4])+1))
-        n1_0, n2_0 = [int(x) for x in user_args[5:7]]
-        ncsd_vce_calculation(
+    elif len(other_args) == 4:
+        a_range0 = list(range(int(other_args[0]), int(user_args[1])+1))
+        n1_0, n2_0 = [int(x) for x in other_args[2:4]]
+        fn(
             a_prescription=a_prescription0, a_range=a_range0, n1=n1_0, n2=n2_0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all)
-    elif len(user_args) == 8:
-        a_range0 = list(range(int(user_args[3]), int(user_args[4])+1))
-        nhw_0, n1_0, n2_0 = [int(x) for x in user_args[5:8]]
-        ncsd_vce_calculation(
+    elif len(other_args) == 5:
+        a_range0 = list(range(int(other_args[0]), int(user_args[1])+1))
+        nhw_0, n1_0, n2_0 = [int(x) for x in other_args[2:5]]
+        fn(
             a_prescription=a_prescription0, a_range=a_range0,
             nhw=nhw_0, n1=n1_0, n2=n2_0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all)
-    elif len(user_args) == 9:
-        a_range0 = list(range(int(user_args[3]), int(user_args[4])+1))
-        nhw_0, n1_0, n2_0, nshell_0 = [int(x) for x in user_args[5:9]]
-        ncsd_vce_calculation(
+    elif len(other_args) == 6:
+        a_range0 = list(range(int(other_args[0]), int(user_args[1])+1))
+        nhw_0, n1_0, n2_0, nshell_0 = [int(x) for x in other_args[2:6]]
+        fn(
             a_prescription=a_prescription0, a_range=a_range0,
             nhw=nhw_0, n1=n1_0, n2=n2_0, nshell=nshell_0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
@@ -651,4 +695,4 @@ if __name__ == "__main__":
         raise InvalidNumberOfArgumentsException(
             '%d' % (len(argv) - 1,) +
             ' is not a valid number of arguments for ncsm_vce_calc.py.' +
-            'Please enter 4-9 arguments.')
+            'Please enter 3-9 arguments.')
