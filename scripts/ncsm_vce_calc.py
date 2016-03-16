@@ -38,35 +38,41 @@ from FdoVCE import run as vce_calculation
 from InvalidNumberOfArgumentsException import InvalidNumberOfArgumentsException
 
 # CONSTANTS
-Z_NAME_MAP = {
-    1: 'h_', 2: 'he', 3: 'li', 4: 'be', 5: 'b_', 6: 'c_', 7: 'n_', 8: 'o_',
-    9: 'f_', 10: 'ne', 11: 'na', 12: 'mg', 13: 'al', 14: 'si', 15: 'p_',
-    16: 's_', 17: 'cl', 18: 'ar', 19: 'k_', 20: 'ca'
-}
-ZNAME_FMT_ALT = '%d-'
-PATH_MAIN = getcwd()
-PATH_TEMPLATES = path.join(PATH_MAIN, 'templates')
-PATH_RESULTS = path.join(PATH_MAIN, 'results')
-DNAME_FMT_NUC = '%s%d_%d_Nhw%d_%d_%d'  # name, A, Aeff
-DNAME_FMT_VCE = 'vce_presc%d,%d,%d_Nhw%d_%d_%d'
-# A prescription, Nhw, n1, n2
-DIR_VCE = 'vce'
-REGEX_TBME = 'TBME'
-REGEX_EGV = 'mfdp_*\d+\.egv'
-FNAME_FMT_VCE = 'A%d.int'  # A value
-FNAME_FMT_NCSD_OUT = '%s%d_%d_Nhw%d_%d_%d.out'  # name, A, Aeff, Nhw, n1, n2
-FNAME_FMT_TBME = 'TBMEA2srg-n3lo2.O_%d.24'  # n1
-FNAME_MFDP = 'mfdp.dat'
-FNAME_TRDENS_IN = 'trdens.in'
-FNAME_EGV = 'mfdp.egv'
-FNAME_TRDENS_OUT = 'trdens.out'
-FNAME_HEFF = 'Heff_OLS.dat'
-LINE_FMT_MFDP_RESTR = ' %d %-2d %d %-2d %d %-4d ! N=%d'
 N_SHELL = 1
 NHW = 6
 N1 = 15
 N2 = 15
 MAX_NMAX = 15
+
+# Directories
+_PATH_MAIN = getcwd()
+_PATH_TEMPLATES = path.join(_PATH_MAIN, 'templates')
+_PATH_RESULTS = path.join(_PATH_MAIN, 'results')
+_DNAME_FMT_NUC = '%s%d_%d_Nhw%d_%d_%d'  # name, A, Aeff
+_DNAME_FMT_VCE = 'vce_presc%d,%d,%d_Nhw%d_%d_%d'  # A presc, Nhw, n1, n2
+_DNAME_FMT_VCE_SF = _DNAME_FMT_VCE + '_sf%f.2'
+_DIR_VCE = 'vce'
+# Files
+_REGEX_TBME = 'TBME'
+_REGEX_EGV = 'mfdp_*\d+\.egv'
+_FNAME_FMT_VCE = 'A%d.int'  # A value
+_FNAME_FMT_NCSD_OUT = '%s%d_%d_Nhw%d_%d_%d.out'  # name, A, Aeff, Nhw, n1, n2
+_FNAME_FMT_NCSD_OUT_SF = _FNAME_FMT_NCSD_OUT[:-4] + '_sf%f.2' + '.out'
+_FNAME_FMT_TBME = 'TBMEA2srg-n3lo2.O_%d.24'  # n1
+_FNAME_FMT_TBME_SF = _FNAME_FMT_TBME + '_sf%f.2'  # n1 scalefactor
+_FNAME_MFDP = 'mfdp.dat'
+_FNAME_TRDENS_IN = 'trdens.in'
+_FNAME_EGV = 'mfdp.egv'
+_FNAME_TRDENS_OUT = 'trdens.out'
+_FNAME_HEFF = 'Heff_OLS.dat'
+_LINE_FMT_MFDP_RESTR = ' %d %-2d %d %-2d %d %-4d ! N=%d'
+# other
+_Z_NAME_MAP = {
+    1: 'h_', 2: 'he', 3: 'li', 4: 'be', 5: 'b_', 6: 'c_', 7: 'n_', 8: 'o_',
+    9: 'f_', 10: 'ne', 11: 'na', 12: 'mg', 13: 'al', 14: 'si', 15: 'p_',
+    16: 's_', 17: 'cl', 18: 'ar', 19: 'k_', 20: 'ca'
+}
+_ZNAME_FMT_ALT = '%d-'
 
 
 # FUNCTIONS
@@ -79,7 +85,7 @@ def generating_a_values(n_shell):
     return a0, a0 + 1, a0 + 2
 
 
-def get_name(z, z_name_map=Z_NAME_MAP, alt_name=ZNAME_FMT_ALT):
+def get_name(z, z_name_map=_Z_NAME_MAP, alt_name=_ZNAME_FMT_ALT):
     """Given the proton number, return the short element name
     :param z: number of protons
     :param z_name_map: map from proton number to abbreviated name
@@ -109,9 +115,9 @@ def make_base_directories(a_values, presc, results_path, a_dirpaths_map):
 
 
 def make_mfdp_file(z, a, aeff, n_hw, n_1, n_2, path_elt, outfile_name,
-                   fname_fmt_tbme=FNAME_FMT_TBME,
-                   path_temp=PATH_TEMPLATES,
-                   mfdp_name=FNAME_MFDP):
+                   fname_fmt_tbme=_FNAME_FMT_TBME,
+                   path_temp=_PATH_TEMPLATES,
+                   mfdp_name=_FNAME_MFDP):
     """Reads the mfdp file from path_temp 
     and rewrites it into path_elt in accordance
     ith the given z, a, aeff, nhw, n1, n2, and outfile name
@@ -141,8 +147,8 @@ def make_mfdp_file(z, a, aeff, n_hw, n_1, n_2, path_elt, outfile_name,
 
 def make_mfdp_files(z, a_range, a_presc, n_hw, n_1, n_2,
                     a_dirpath_map, a_outfile_map,
-                    path_temp=PATH_TEMPLATES,
-                    mfdp_name=FNAME_MFDP):
+                    path_temp=_PATH_TEMPLATES,
+                    mfdp_name=_FNAME_MFDP):
     for a, aeff in zip(a_range, a_presc):
         make_mfdp_file(z=z, a=a, aeff=aeff, n_hw=n_hw, n_1=n_1, n_2=n_2,
                        path_elt=a_dirpath_map[a],
@@ -152,6 +158,7 @@ def make_mfdp_files(z, a_range, a_presc, n_hw, n_1, n_2,
 
 def get_mfdp_replace_map(fname_tbme, outfile_name, z, a, n_hw, n_1, n_2, aeff):
     n = a - z
+    par = 0
     if a % 2 == 0:
         tot2 = 0
     else:
@@ -160,7 +167,7 @@ def get_mfdp_replace_map(fname_tbme, outfile_name, z, a, n_hw, n_1, n_2, aeff):
     return {'<<TBMEFILE>>': str(fname_tbme),
             '<<OUTFILE>>': str(outfile_name),
             '<<Z>>': str(z), '<<N>>': str(n),
-            '<<NHW>>': str(n_hw), '<<TOT2>>': str(tot2),
+            '<<NHW>>': str(n_hw), '<<PAR>>': str(par), '<<TOT2>>': str(tot2),
             '<<N1>>': str(n_1), '<<N2>>': str(n_2),
             '<<RESTRICTIONS>>': str(rest_lines),
             '<<AEFF>>': str(aeff)}
@@ -168,7 +175,7 @@ def get_mfdp_replace_map(fname_tbme, outfile_name, z, a, n_hw, n_1, n_2, aeff):
 
 def get_mfdp_restrictions_lines(nmax,
                                 _max_allowed_nmax=MAX_NMAX,
-                                _str_rest_line=LINE_FMT_MFDP_RESTR):
+                                _str_rest_line=_LINE_FMT_MFDP_RESTR):
     lines = list()
     for n in range(min(nmax, _max_allowed_nmax) + 1):
         i = (n + 1) * (n + 2)
@@ -177,9 +184,9 @@ def get_mfdp_restrictions_lines(nmax,
 
 
 def make_trdens_file(z, a, nuc_dir,
-                     path_results=PATH_RESULTS,
-                     path_temp=PATH_TEMPLATES,
-                     trdens_name=FNAME_TRDENS_IN):
+                     path_results=_PATH_RESULTS,
+                     path_temp=_PATH_TEMPLATES,
+                     trdens_name=_FNAME_TRDENS_IN):
     """Reads the trdens.in file from path_temp and rewrites it 
     into path_elt in accordance with the given z, a
     :param z: proton number
@@ -240,9 +247,9 @@ def _rewrite_file(src, dst, replace_map):
 
 def truncate_space(n1, n2,
                    path_elt,
-                   path_temp=PATH_TEMPLATES,
-                   tbme_name_regex=REGEX_TBME,
-                   fname_fmt_tbme=FNAME_FMT_TBME):
+                   path_temp=_PATH_TEMPLATES,
+                   tbme_name_regex=_REGEX_TBME,
+                   fname_fmt_tbme=_FNAME_FMT_TBME):
     """Run the script that truncates the space by removing extraneous
     interactions from the TBME file
 
@@ -420,20 +427,20 @@ def ncsd_vce_calculation(
         force_trdens=False,
         force_vce=False,
         force_all=False,
-        _path_results=PATH_RESULTS,
-        _path_temp=PATH_TEMPLATES,
-        _dir_fmt_nuc=DNAME_FMT_NUC,
-        _dir_fmt_vce=DNAME_FMT_VCE,
-        _dir_vce=DIR_VCE,
-        _fname_regex_tbme=REGEX_TBME,
-        _fname_regex_egv=REGEX_EGV,
-        _fname_fmt_ncsd_out=FNAME_FMT_NCSD_OUT,
-        _fname_fmt_vce=FNAME_FMT_VCE,
-        _fname_mfdp=FNAME_MFDP,
-        _fname_trdens_in=FNAME_TRDENS_IN,
-        _fname_trdens_out=FNAME_TRDENS_OUT,
-        _fname_egv_final=FNAME_EGV,
-        _fname_heff=FNAME_HEFF,
+        _path_results=_PATH_RESULTS,
+        _path_temp=_PATH_TEMPLATES,
+        _dir_fmt_nuc=_DNAME_FMT_NUC,
+        _dir_fmt_vce=_DNAME_FMT_VCE,
+        _dir_vce=_DIR_VCE,
+        _fname_regex_tbme=_REGEX_TBME,
+        _fname_regex_egv=_REGEX_EGV,
+        _fname_fmt_ncsd_out=_FNAME_FMT_NCSD_OUT,
+        _fname_fmt_vce=_FNAME_FMT_VCE,
+        _fname_mfdp=_FNAME_MFDP,
+        _fname_trdens_in=_FNAME_TRDENS_IN,
+        _fname_trdens_out=_FNAME_TRDENS_OUT,
+        _fname_egv_final=_FNAME_EGV,
+        _fname_heff=_FNAME_HEFF,
 ):
     """Valence cluster expansion calculations within NCSM
 

@@ -23,19 +23,19 @@ from InvalidNumberOfArgumentsException import InvalidNumberOfArgumentsException
 from ncsm_vce_calc import get_name, make_base_directories, make_mfdp_files
 from ncsm_vce_calc import truncate_spaces, do_ncsd
 from ncsm_vce_calc import NHW, N1, N2
-from ncsm_vce_calc import PATH_RESULTS, PATH_TEMPLATES, DNAME_FMT_NUC
-from ncsm_vce_calc import REGEX_TBME, FNAME_FMT_NCSD_OUT, FNAME_MFDP
+from ncsm_vce_calc import _PATH_RESULTS, _PATH_TEMPLATES, _DNAME_FMT_NUC
+from ncsm_vce_calc import _REGEX_TBME, _FNAME_FMT_NCSD_OUT, _FNAME_MFDP
 
 
 def ncsm_single_calculation(
         z, a, aeff,
         nhw=NHW, n1=N1, n2=N2,
-        _path_results=PATH_RESULTS,
-        _path_temp=PATH_TEMPLATES,
-        _dir_fmt_nuc=DNAME_FMT_NUC,
-        _fname_regex_tbme=REGEX_TBME,
-        _fname_fmt_ncsd_out=FNAME_FMT_NCSD_OUT,
-        _fname_mfdp=FNAME_MFDP,
+        _path_results=_PATH_RESULTS,
+        _path_temp=_PATH_TEMPLATES,
+        _dir_fmt_nuc=_DNAME_FMT_NUC,
+        _fname_regex_tbme=_REGEX_TBME,
+        _fname_fmt_ncsd_out=_FNAME_FMT_NCSD_OUT,
+        _fname_mfdp=_FNAME_MFDP,
         force=False):
     # get directory path
     dirpath_nuc = path.join(
