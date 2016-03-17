@@ -40,8 +40,9 @@ from __future__ import division
 
 import re
 from os import getcwd, path, walk, mkdir, chdir, symlink, remove, link
-from subprocess import call
-from sys import argv
+from subprocess import Popen, PIPE
+from sys import argv, stdout
+from math import floor
 
 from FGetSmallerInteraction import run as truncate_interaction
 from FdoVCE import run as vce_calculation
@@ -55,13 +56,14 @@ N2 = 15
 MAX_NMAX = 15
 
 # Directories
-_PATH_MAIN = getcwd()
-_DPATH_TEMPLATES = path.join(_PATH_MAIN, 'templates')
-_DPATH_RESULTS = path.join(_PATH_MAIN, 'results')
+_DPATH_MAIN = './'
+_DPATH_TEMPLATES = path.join(_DPATH_MAIN, 'templates')
+_DPATH_RESULTS = path.join(_DPATH_MAIN, 'results')
 _DNAME_FMT_NUC = '%s%d_%d_Nhw%d_%d_%d'  # name, A, Aeff
 _DNAME_FMT_VCE = 'vce_presc%d,%d,%d_Nhw%d_%d_%d'  # A presc, Nhw, n1, n2
 _DNAME_FMT_VCE_SF = _DNAME_FMT_VCE + '_sf%f.2'
 _DNAME_VCE = 'vce'
+
 # Files
 _RGX_TBME = 'TBME'
 _RGX_EGV = 'mfdp_*\d+\.egv'
@@ -76,6 +78,18 @@ _FNAME_EGV = 'mfdp.egv'
 _FNAME_TRDENS_OUT = 'trdens.out'
 _FNAME_HEFF = 'Heff_OLS.dat'
 _LINE_FMT_MFDP_RESTR = ' %d %-2d %d %-2d %d %-4d ! N=%d'
+
+# output
+_FNAME_NCSD_STDOUT = '__stdout_ncsd__.txt'
+_FNAME_NCSD_STDERR = '__stderr_ncsd__.txt'
+_FNAME_TRDENS_STDOUT = '__stdout_trdens__.txt'
+_FNAME_TRDENS_STDERR = '__stderr_trdens__.txt'
+WIDTH_TERM = 79
+WIDTH_PROGRESS_BAR = 48
+STR_PROGRESS_BAR = 'Progress: %3d/%-3d '
+STR_PROG_NCSD = 'Doing NCSD calculations for (A, Aeff) pairs'
+STR_PROG_VCE = 'Doing VCE calculations for Aeff prescriptions'
+
 # other
 _Z_NAME_MAP = {
     1: 'h_', 2: 'he', 3: 'li', 4: 'be', 5: 'b_', 6: 'c_', 7: 'n_', 8: 'o_',
@@ -168,7 +182,7 @@ def make_mfdp_files(z, a_range, a_presc, n_hw, n_1, n_2,
 
 def get_mfdp_replace_map(fname_tbme, outfile_name, z, a, n_hw, n_1, n_2, aeff):
     n = a - z
-    par = 0
+    par = a % 2
     if a % 2 == 0:
         tot2 = 0
     else:
@@ -255,53 +269,60 @@ def _rewrite_file(src, dst, replace_map):
     outfile.close()
 
 
-def truncate_space(n1, n2,
-                   path_elt,
-                   path_temp=_DPATH_TEMPLATES,
-                   tbme_name_regex=_RGX_TBME,
-                   fname_fmt_tbme=_FNAME_FMT_TBME):
+def truncate_space(
+        n1, n2, dpath_elt,
+        _path_temp=_DPATH_TEMPLATES,
+        _tbme_name_regex=_RGX_TBME,
+        _fname_fmt_tbme=_FNAME_FMT_TBME
+):
     """Run the script that truncates the space by removing extraneous
     interactions from the TBME file
 
     :param n1: Maximum state for single particle
     :param n2: Maximum state for two particles
-    :param path_elt: Path to the directory in which the resultant TBME file
+    :param dpath_elt: Path to the directory in which the resultant TBME file
     is to be put
-    :param path_temp: Path to the templates directory in which the full TBME
+    :param _path_temp: Path to the templates directory in which the full TBME
     files resides
-    :param tbme_name_regex: Regular expression that matches only the TBME file
+    :param _tbme_name_regex: Regular expression that matches only the TBME file
     in the templates directory
-    :param fname_fmt_tbme: Format string for the TBME file to be formatted
+    :param _fname_fmt_tbme: Format string for the TBME file to be formatted
     with n1
     """
-    w = walk(path_temp)
+    w = walk(_path_temp)
     dirpath, dirnames, filenames = w.next()
     for f in filenames:
-        if re.match(tbme_name_regex, f) is not None:
+        if re.match(_tbme_name_regex, f) is not None:
             tbme_filename = f
             break
     else:
         raise TBMEFileNotFoundException()
     src_path = path.join(dirpath, tbme_filename)
-    dst_path = path.join(path_elt, fname_fmt_tbme % n1)
-    truncate_interaction(src_path, n1, n2, dst_path)
+    dst_path = path.join(dpath_elt, _fname_fmt_tbme % n1)
+    if not path.exists(dst_path):
+        truncate_interaction(src_path, n1, n2, dst_path)
+    return dst_path
 
 
-def truncate_spaces(n1, n2,
-                    dirpaths, path_temp,
-                    tbme_name_regex):
+def truncate_spaces(
+        n1, n2, dirpaths,
+        _fname_fmt_tbme=_FNAME_FMT_TBME):
     """For multiple directories, perform the operation of truncate_space
 
-    :param n1: Something
-    :param n2: Something
-    :param dirpaths: Paths to the destinations
-    :param path_temp: Path to the source
-    :param tbme_name_regex: Regex that matches the TBME file in the source
+    :param n1: max allowed one-particle state
+    :param n2: max allowed two-particle state
+    :param dirpaths: Paths to the destination directories
+    :param _fname_fmt_tbme: unformatted string template for TBME file name,
+    which takes a single integer (n1) as an argument
     """
-    for dirpath in dirpaths:
-        truncate_space(n1=n1, n2=n2, path_elt=dirpath,
-                       path_temp=path_temp,
-                       tbme_name_regex=tbme_name_regex)
+    d0 = dirpaths[0]
+    fpath0 = truncate_space(n1=n1, n2=n2, dpath_elt=d0)
+    if len(dirpaths) > 1:
+        fname_tbme = _fname_fmt_tbme % n1
+        for d in dirpaths[1:]:
+            dst_path = path.join(d, fname_tbme)
+            if not path.exists(dst_path):
+                link(fpath0, dst_path)
 
 
 class TBMEFileNotFoundException(Exception):
@@ -339,15 +360,29 @@ class EgvFileNotFoundException(Exception):
     pass
 
 
-def run_ncsd(dpath, fpath_outfile, force):
+def run_ncsd(dpath, fpath_outfile, force, verbose,
+             _fname_stdout=_FNAME_NCSD_STDOUT,
+             _fname_stderr=_FNAME_NCSD_STDERR):
     if force or not path.exists(path.join(fpath_outfile)):
         main_dir = getcwd()
         chdir(dpath)
-        call(['NCSD'])
+        args = ['NCSD']
+        if verbose:
+            Popen(args=args)
+        else:
+            p = Popen(args=args, stdout=PIPE, stderr=PIPE)
+            out, err = p.communicate()
+            fout = open(_fname_stdout, 'w')
+            fout.write(out)
+            fout.close()
+            ferr = open(_fname_stderr, 'w')
+            ferr.write(err)
+            ferr.close()
         chdir(main_dir)
 
 
-def run_all_ncsd(a_values, presc, a_dirpaths_map, a_outfile_map, force):
+def run_all_ncsd(a_values, presc, a_dirpaths_map, a_outfile_map,
+                 force, verbose):
     """Run the NCSD calculations. For each A value, does the NCSD calculation
     in each of its corresponding directories.
 
@@ -362,31 +397,55 @@ def run_all_ncsd(a_values, presc, a_dirpaths_map, a_outfile_map, force):
     already exist
     :param force: If true, redoes the calculations even if the output files
     already exist.
+    :param verbose: if true, prints regular output of NCSD to stdout, otherwise
+    this output is suppressed
     """
     for a, aeff in zip(a_values, presc):
         dpath = a_dirpaths_map[a]
         fpath_outfile = path.join(dpath, a_outfile_map[a])
-        run_ncsd(dpath=dpath, fpath_outfile=fpath_outfile, force=force)
+        run_ncsd(dpath=dpath, fpath_outfile=fpath_outfile,
+                 force=force, verbose=verbose)
 
 
-def run_trdens(a6_dir, force, outfile):
+def run_trdens(
+        a6_dir, outfile, force, verbose,
+        _fname_stdout=_FNAME_TRDENS_STDOUT,
+        _fname_stderr=_FNAME_TRDENS_STDERR
+):
     """Run the TRDENS calculation in a6_dir
 
     :param a6_dir: Directory in which to run the calulation
-    :param force: If True, redoes the calculation even if output files already
-    exist
-    :param outfile: Name of the output file generated by the TRDENS calculation.
-    (If force is False, will not run if outfile already exists)
+    :param outfile: Name of the output file generated by the TRDENS
+    calculation. (If force is False, will not run if outfile already exists)
+    :param force: If True, redoes the calculation even if output files
+    already exist
+    :param verbose: if true, prints regular output of TRDENS to stdout,
+    otherwise suppresses output and writes it to
+    _fname_stdout and _fname_stderr
+    :param _fname_stdout: filename to which to write standard output of
+    TRDENS if verbose is false
+    :param _fname_stderr: filename to which to write standard error output
+    of TRDENS if verbose is false
     """
     outfile_path = path.join(a6_dir, outfile)
-    if path.exists(outfile_path):
-        if not force:
-            return 0
-        else:
-            remove(outfile_path)
+    if path.exists(outfile_path) and not force:
+        return 0
+    elif force:
+        remove(outfile_path)
     main_dir = getcwd()
     chdir(a6_dir)
-    call(['TRDENS'])
+    args = ['TRDENS']
+    if verbose:
+        Popen(args=args)
+    else:
+        p = Popen(args=args, stdout=PIPE, stderr=PIPE)
+        out, err = p.communicate()
+        fout = open(_fname_stdout, 'w')
+        fout.write(out)
+        fout.close()
+        ferr = open(_fname_stderr, 'w')
+        ferr.write(err)
+        ferr.close()
     chdir(main_dir)
     return 1
 
@@ -443,7 +502,7 @@ def _get_a_to_dirpaths_map(
     a_paths_map = dict()
     path_fmt = path.join(_dpath_results, _dir_fmt_nuc)
     for a, aeff in zip(a_values, a_prescription):
-        a_paths_map[a] = path_fmt % (get_name(z), a, aeff, nhw, n1, n2)
+        a_paths_map[a] = path_fmt % (get_name(z), a, aeff, nhw + a % 2, n1, n2)
     return a_paths_map
 
 
@@ -455,31 +514,38 @@ def _get_a_to_outfile_map(
     for a, aeff in zip(a_values, a_prescription):
         a_outfile_map[a] = path.join(
             a_dirpaths_map[a],
-            _fname_fmt_ncsd_out % (get_name(z), a, aeff, nhw, n1, n2))
+            _fname_fmt_ncsd_out % (get_name(z), a, aeff, nhw + a % 2, n1, n2))
     return a_outfile_map
 
 
-def ncsd_multiple_calculations(
-        z, a_values, a_presc_list, nhw, n1, n2, force):
-    a_aeff_set = set()
-    for ap in a_presc_list:
-        a_aeff_set |= set(zip(a_values, ap))
-    for a, aeff in sorted(a_aeff_set):
-        ncsd_single_calculation(
-            z=z, a=a, aeff=aeff, nhw=nhw, n1=n1, n2=n2, force=force
-        )
+def _print_progress(
+        completed, total, end=False,
+        bar_len=WIDTH_PROGRESS_BAR, total_width=WIDTH_TERM,
+        text_fmt=STR_PROGRESS_BAR
+):
+    text = text_fmt % (floor(completed), total)
+    p = completed / total
+    bar_fill = int(floor(p * bar_len))
+    progress_bar = '[' + '#'*bar_fill + ' '*(bar_len - bar_fill) + ']'
+    sp_fill_len = total_width - len(text) - len(progress_bar)
+    if sp_fill_len < 0:
+        sp_fill_len = 0
+    line = '\r' + text + ' '*sp_fill_len + progress_bar
+    if end:
+        line += '\n'
+    stdout.flush()
 
 
 def ncsd_single_calculation(
-        z, a, aeff,
-        nhw=NHW, n1=N1, n2=N2,
+        z, a, aeff, nhw, n1, n2,
+        force, verbose,
         _path_results=_DPATH_RESULTS,
-        _path_temp=_DPATH_TEMPLATES,
         _dir_fmt_nuc=_DNAME_FMT_NUC,
-        _fname_regex_tbme=_RGX_TBME,
         _fname_fmt_ncsd_out=_FNAME_FMT_NCSD_OUT,
         _fname_mfdp=_FNAME_MFDP,
-        force=False):
+):
+    if a % 2 != nhw % 2:
+        nhw += 1
     # get directory path
     dirpath_nuc = path.join(
         _path_results,
@@ -488,28 +554,42 @@ def ncsd_single_calculation(
         dirpath_nuc,
         _fname_fmt_ncsd_out % (get_name(z=z), a, aeff, nhw, n1, n2))
     # make directory
-    make_base_directories(a_values=[a], presc=[aeff],
-                          results_path=_path_results,
-                          a_dirpaths_map={a: dirpath_nuc})
+    make_base_directories(
+        a_values=[a], presc=[aeff],
+        results_path=_path_results, a_dirpaths_map={a: dirpath_nuc}
+    )
 
     # ncsm calculations: make mfdp file, perform truncation, and run NCSD
-    make_mfdp_files(z=z, a_range=[a], a_presc=[aeff],
-                    a_dirpath_map={a: dirpath_nuc},
-                    a_outfile_map={a: outfile_ncsd},
-                    n_hw=nhw, n_1=n1, n_2=n2,
-                    mfdp_name=_fname_mfdp)
-    truncate_spaces(n1=n1, n2=n2, dirpaths=[dirpath_nuc],
-                    path_temp=_path_temp,
-                    tbme_name_regex=_fname_regex_tbme)
-    run_all_ncsd(a_values=[a], presc=[aeff],
-                 a_dirpaths_map={a: dirpath_nuc},
-                 a_outfile_map={a: outfile_ncsd},
-                 force=force)
+    make_mfdp_files(
+        z=z, a_range=[a], a_presc=[aeff],
+        a_dirpath_map={a: dirpath_nuc}, a_outfile_map={a: outfile_ncsd},
+        n_hw=nhw, n_1=n1, n_2=n2, mfdp_name=_fname_mfdp
+    )
+    truncate_spaces(n1=n1, n2=n2, dirpaths=[dirpath_nuc])
+    run_all_ncsd(
+        a_values=[a], presc=[aeff],
+        a_dirpaths_map={a: dirpath_nuc}, a_outfile_map={a: outfile_ncsd},
+        force=force, verbose=verbose,
+    )
+
+
+def ncsd_multiple_calculations(
+        z, a_values, a_presc_list, nhw, n1, n2,
+        force, verbose, progress):
+    # todo do progress bar
+    a_aeff_set = set()
+    for ap in a_presc_list:
+        a_aeff_set |= set(zip(a_values, ap))
+    for a, aeff in sorted(a_aeff_set):
+        ncsd_single_calculation(
+            z=z, a=a, aeff=aeff, nhw=nhw, n1=n1, n2=n2,
+            force=force, verbose=verbose,
+        )
 
 
 def vce_single_calculation(
         z, a_values, a_prescription, a_range, nhw, n1, n2,
-        force_trdens, force_vce,
+        force_trdens, force_vce, verbose,
         _dpath_results=_DPATH_RESULTS,
         _dpath_temp=_DPATH_TEMPLATES,
         _dname_vce=_DNAME_VCE,
@@ -535,6 +615,8 @@ def vce_single_calculation(
     :param force_vce: if true, force redoing of the valence cluster expansion
     and generation of interaction files, even if interaction files are already
     present
+    :param verbose: if true, prints the regular output of TRDENS to stdout,
+    otherwise suppresses output
     :param _dpath_results: Path to the results directory
     :param _dpath_temp: Path to the templates directory
     :param _dname_fmt_vce: template string for the directory for the vce
@@ -575,7 +657,7 @@ def vce_single_calculation(
     run_trdens(
         a6_dir=a6_dir,
         outfile=_fname_trdens_out,
-        force=force_trdens)
+        force=force_trdens, verbose=verbose)
 
     # do valence cluster expansion
     if not path.exists(_dname_vce):
@@ -597,8 +679,24 @@ def vce_single_calculation(
     )
 
 
+def vce_multiple_calculations(
+        z, a_values, a_presc_list, a_range, nhw, n1, n2,
+        force_trdens, force_vce, verbose, progress):
+    # todo progress bar
+    for ap in a_presc_list:
+        vce_single_calculation(
+            z=z, a_values=a_values,
+            a_prescription=ap, a_range=a_range,
+            nhw=nhw, n1=n1, n2=n2,
+            force_trdens=force_trdens,
+            force_vce=force_vce,
+            verbose=verbose
+        )
+
+
 def ncsd_vce_calculation(
         a_prescription, a_range,
+        verbose, progress,
         nshell=N_SHELL, nhw=NHW, n1=N1, n2=N2,
         force_ncsd=False,
         force_trdens=False,
@@ -612,6 +710,10 @@ def ncsd_vce_calculation(
     effective Hamiltonian
     :param a_range: sequence of A values for which to generate interaction
     files
+    :param verbose: if true, regular output of NCSD and TRDENS are printed
+    to stdout, otherwise they are suppressed and written to a file instead
+    :param progress: if true (and verbose false) display a progress bar for
+    each calculation
     :param nshell: Major harmonic oscillator shell
     :param nhw: major oscillator shell model space trunctation
     :param n1: max allowed single-particle state
@@ -629,10 +731,12 @@ def ncsd_vce_calculation(
     z = a_values[0] / 2
 
     # ncsd calculations: make mfdp files, perform truncation, and run NCSD
-    ncsd_multiple_calculations(z=z, a_values=a_values,
-                               a_presc_list=[a_prescription],
-                               nhw=nhw, n1=n1, n2=n2,
-                               force=force_all or force_ncsd)
+    ncsd_multiple_calculations(
+        z=z, a_values=a_values,
+        a_presc_list=[a_prescription],
+        nhw=nhw, n1=n1, n2=n2,
+        force=force_all or force_ncsd,
+        verbose=verbose, progress=progress)
 
     # vce calculations
     vce_single_calculation(
@@ -641,34 +745,38 @@ def ncsd_vce_calculation(
         a_range=a_range,
         nhw=nhw, n1=n1, n2=n2,
         force_trdens=force_trdens or force_all,
-        force_vce=force_vce or force_all
+        force_vce=force_vce or force_all, verbose=verbose
     )
 
     return 1
 
 
 def ncsd_vce_calculations(
-        a_prescription, a_range, nhw, n1, n2, nshell=N_SHELL,
-        force_ncsd=False, force_trdens=False, force_vce=False, force_all=False
+        a_prescription, a_range,
+        nshell=N_SHELL, nhw=NHW, n1=N1, n2=N2,
+        force_ncsd=False, force_trdens=False, force_vce=False,
+        force_all=False,
+        verbose=False, progress=True,
 ):
     a_values = _generating_a_values(n_shell=nshell)
     z = int(a_values[0] / 2)
     a_presc_list = list(a_prescription)
     ncsd_multiple_calculations(
-        z=z,
-        a_values=a_values,
+        z=z, a_values=a_values,
         a_presc_list=a_presc_list,
         nhw=nhw, n1=n1, n2=n2,
-        force=force_all or force_ncsd
+        force=force_all or force_ncsd,
+        verbose=verbose, progress=progress,
     )
-    for ap in a_presc_list:
-        vce_single_calculation(
-            z=z, a_values=a_values,
-            a_prescription=ap, a_range=a_range,
-            nhw=nhw, n1=n1, n2=n2,
-            force_trdens=force_trdens or force_all,
-            force_vce=force_vce or force_all
-        )
+    vce_multiple_calculations(
+        z=z, a_values=a_values,
+        a_presc_list=a_presc_list,
+        a_range=a_range,
+        nhw=nhw, n1=n1, n2=n2,
+        force_trdens=force_trdens or force_all,
+        force_vce=force_vce or force_all,
+        verbose=verbose, progress=progress,
+    )
 
 
 # SCRIPT
@@ -710,6 +818,7 @@ if __name__ == "__main__":
     user_args = argv[1:]
     f_ncsd, f_trdens, f_vce, f_all = (False,) * 4
     multicom, com = False, False
+    verbose0, progress0 = False, True
     while True:
         a0 = user_args[0]
         if re.match('^-f[ntv]{0,3}$', a0.lower()):
@@ -718,6 +827,8 @@ if __name__ == "__main__":
             com = True
         elif re.match('^-M$', a0):
             multicom = True
+        elif re.match('^-v$', a0):
+            verbose0, progress0 = True, False
         else:
             break
         user_args = user_args[1:]
@@ -738,27 +849,31 @@ if __name__ == "__main__":
         fn(
             a_prescription=a_prescription0, a_range=a_range0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
-            force_all=f_all)
+            force_all=f_all, verbose=verbose0, progress=progress0
+        )
     elif len(other_args) == 2:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
         fn(
             a_prescription=a_prescription0, a_range=a_range0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
-            force_all=f_all)
+            force_all=f_all, verbose=verbose0, progress=progress0,
+        )
     elif len(other_args) == 3:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
         nhw_0 = int(other_args[2])
         fn(
             a_prescription=a_prescription0, a_range=a_range0, nhw=nhw_0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
-            force_all=f_all)
+            force_all=f_all, verbose=verbose0, progress=progress0,
+        )
     elif len(other_args) == 4:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
         n1_0, n2_0 = [int(x) for x in other_args[2:4]]
         fn(
             a_prescription=a_prescription0, a_range=a_range0, n1=n1_0, n2=n2_0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
-            force_all=f_all)
+            force_all=f_all, verbose=verbose0, progress=progress0,
+        )
     elif len(other_args) == 5:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
         nhw_0, n1_0, n2_0 = [int(x) for x in other_args[2:5]]
@@ -766,7 +881,8 @@ if __name__ == "__main__":
             a_prescription=a_prescription0, a_range=a_range0,
             nhw=nhw_0, n1=n1_0, n2=n2_0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
-            force_all=f_all)
+            force_all=f_all, verbose=verbose0, progress=progress0,
+        )
     elif len(other_args) == 6:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
         nhw_0, n1_0, n2_0, nshell_0 = [int(x) for x in other_args[2:6]]
@@ -774,7 +890,8 @@ if __name__ == "__main__":
             a_prescription=a_prescription0, a_range=a_range0,
             nhw=nhw_0, n1=n1_0, n2=n2_0, nshell=nshell_0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
-            force_all=f_all)
+            force_all=f_all, verbose=verbose0, progress=progress0,
+        )
     else:
         raise InvalidNumberOfArgumentsException(
             '%d' % (len(argv) - 1,) +
