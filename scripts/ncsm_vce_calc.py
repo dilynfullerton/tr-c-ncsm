@@ -563,7 +563,7 @@ def ncsd_vce_calculation(
         mkdir(_dir_vce)
     vce_dirpath = path.join(
         _path_results, _dir_vce,
-        _dir_fmt_vce % tuple(a_prescription + (nhw, n1, n2))
+        _dir_fmt_vce % tuple(tuple(a_prescription) + (nhw, n1, n2))
     )
     if not path.exists(vce_dirpath):
         mkdir(vce_dirpath)
@@ -582,9 +582,47 @@ def ncsd_vce_calculation(
     return 1
 
 
-def ncsd_vce_calculations(a_prescription, a_range, **kwargs):
+def ncsm_single_calculation(
+        z, a, aeff,
+        nhw=NHW, n1=N1, n2=N2,
+        _path_results=_PATH_RESULTS,
+        _path_temp=_PATH_TEMPLATES,
+        _dir_fmt_nuc=_DNAME_FMT_NUC,
+        _fname_regex_tbme=_REGEX_TBME,
+        _fname_fmt_ncsd_out=_FNAME_FMT_NCSD_OUT,
+        _fname_mfdp=_FNAME_MFDP,
+        force=False):
+    # get directory path
+    dirpath_nuc = path.join(
+        _path_results,
+        _dir_fmt_nuc % (get_name(z=z), a, aeff, nhw, n1, n2))
+    outfile_ncsd = path.join(
+        dirpath_nuc,
+        _fname_fmt_ncsd_out % (get_name(z=z), a, aeff, nhw, n1, n2))
+    # make directory
+    make_base_directories(a_values=[a], presc=[aeff],
+                          results_path=_path_results,
+                          a_dirpaths_map={a: dirpath_nuc})
+
+    # ncsm calculations: make mfdp file, perform truncation, and run NCSD
+    make_mfdp_files(z=z, a_range=[a], a_presc=[aeff],
+                    a_dirpath_map={a: dirpath_nuc},
+                    a_outfile_map={a: outfile_ncsd},
+                    n_hw=nhw, n_1=n1, n_2=n2,
+                    mfdp_name=_fname_mfdp)
+    truncate_spaces(n1=n1, n2=n2, dirpaths=[dirpath_nuc],
+                    path_temp=_path_temp,
+                    tbme_name_regex=_fname_regex_tbme)
+    do_ncsd(a_values=[a], presc=[aeff],
+            a_dirpaths_map={a: dirpath_nuc},
+            a_outfile_map={a: outfile_ncsd},
+            force=force)
+
+
+def ncsd_vce_calculations( a_prescription, a_range, **kwargs):
     for presc in a_prescription:
-        ncsd_vce_calculation(a_prescription=presc, a_range=a_range, **kwargs)
+        ncsd_vce_calculation(a_prescription=tuple(presc), a_range=a_range,
+                             **kwargs)
 
 
 # SCRIPT
@@ -696,3 +734,4 @@ if __name__ == "__main__":
             '%d' % (len(argv) - 1,) +
             ' is not a valid number of arguments for ncsm_vce_calc.py.' +
             'Please enter 3-9 arguments.')
+
