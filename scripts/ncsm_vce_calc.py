@@ -56,15 +56,15 @@ MAX_NMAX = 15
 
 # Directories
 _PATH_MAIN = getcwd()
-_PATH_TEMPLATES = path.join(_PATH_MAIN, 'templates')
-_PATH_RESULTS = path.join(_PATH_MAIN, 'results')
+_DPATH_TEMPLATES = path.join(_PATH_MAIN, 'templates')
+_DPATH_RESULTS = path.join(_PATH_MAIN, 'results')
 _DNAME_FMT_NUC = '%s%d_%d_Nhw%d_%d_%d'  # name, A, Aeff
 _DNAME_FMT_VCE = 'vce_presc%d,%d,%d_Nhw%d_%d_%d'  # A presc, Nhw, n1, n2
 _DNAME_FMT_VCE_SF = _DNAME_FMT_VCE + '_sf%f.2'
-_DIR_VCE = 'vce'
+_DNAME_VCE = 'vce'
 # Files
-_REGEX_TBME = 'TBME'
-_REGEX_EGV = 'mfdp_*\d+\.egv'
+_RGX_TBME = 'TBME'
+_RGX_EGV = 'mfdp_*\d+\.egv'
 _FNAME_FMT_VCE = 'A%d.int'  # A value
 _FNAME_FMT_NCSD_OUT = '%s%d_%d_Nhw%d_%d_%d.out'  # name, A, Aeff, Nhw, n1, n2
 _FNAME_FMT_NCSD_OUT_SF = _FNAME_FMT_NCSD_OUT[:-4] + '_sf%f.2' + '.out'
@@ -86,13 +86,13 @@ _ZNAME_FMT_ALT = '%d-'
 
 
 # FUNCTIONS
-def generating_a_values(n_shell):
+def _generating_a_values(n_shell):
     """Based on the given major harmonic oscillator shell, gets the 3
     A values that are used to generate the effective Hamiltonian
     :param n_shell: major oscillator shell
     """
-    a0 = int((n_shell + 2) * (n_shell + 1) * n_shell / 3 * 2)
-    return a0, a0 + 1, a0 + 2
+    a_0 = int((n_shell + 2) * (n_shell + 1) * n_shell / 3 * 2)
+    return a_0, a_0 + 1, a_0 + 2
 
 
 def get_name(z, z_name_map=_Z_NAME_MAP, alt_name=_ZNAME_FMT_ALT):
@@ -126,7 +126,7 @@ def make_base_directories(a_values, presc, results_path, a_dirpaths_map):
 
 def make_mfdp_file(z, a, aeff, n_hw, n_1, n_2, path_elt, outfile_name,
                    fname_fmt_tbme=_FNAME_FMT_TBME,
-                   path_temp=_PATH_TEMPLATES,
+                   path_temp=_DPATH_TEMPLATES,
                    mfdp_name=_FNAME_MFDP):
     """Reads the mfdp file from path_temp 
     and rewrites it into path_elt in accordance
@@ -157,7 +157,7 @@ def make_mfdp_file(z, a, aeff, n_hw, n_1, n_2, path_elt, outfile_name,
 
 def make_mfdp_files(z, a_range, a_presc, n_hw, n_1, n_2,
                     a_dirpath_map, a_outfile_map,
-                    path_temp=_PATH_TEMPLATES,
+                    path_temp=_DPATH_TEMPLATES,
                     mfdp_name=_FNAME_MFDP):
     for a, aeff in zip(a_range, a_presc):
         make_mfdp_file(z=z, a=a, aeff=aeff, n_hw=n_hw, n_1=n_1, n_2=n_2,
@@ -194,8 +194,8 @@ def get_mfdp_restrictions_lines(nmax,
 
 
 def make_trdens_file(z, a, nuc_dir,
-                     path_results=_PATH_RESULTS,
-                     path_temp=_PATH_TEMPLATES,
+                     path_results=_DPATH_RESULTS,
+                     path_temp=_DPATH_TEMPLATES,
                      trdens_name=_FNAME_TRDENS_IN):
     """Reads the trdens.in file from path_temp and rewrites it 
     into path_elt in accordance with the given z, a
@@ -257,8 +257,8 @@ def _rewrite_file(src, dst, replace_map):
 
 def truncate_space(n1, n2,
                    path_elt,
-                   path_temp=_PATH_TEMPLATES,
-                   tbme_name_regex=_REGEX_TBME,
+                   path_temp=_DPATH_TEMPLATES,
+                   tbme_name_regex=_RGX_TBME,
                    fname_fmt_tbme=_FNAME_FMT_TBME):
     """Run the script that truncates the space by removing extraneous
     interactions from the TBME file
@@ -339,7 +339,15 @@ class EgvFileNotFoundException(Exception):
     pass
 
 
-def do_ncsd(a_values, presc, a_dirpaths_map, a_outfile_map, force):
+def run_ncsd(dpath, fpath_outfile, force):
+    if force or not path.exists(path.join(fpath_outfile)):
+        main_dir = getcwd()
+        chdir(dpath)
+        call(['NCSD'])
+        chdir(main_dir)
+
+
+def run_all_ncsd(a_values, presc, a_dirpaths_map, a_outfile_map, force):
     """Run the NCSD calculations. For each A value, does the NCSD calculation
     in each of its corresponding directories.
 
@@ -355,16 +363,13 @@ def do_ncsd(a_values, presc, a_dirpaths_map, a_outfile_map, force):
     :param force: If true, redoes the calculations even if the output files
     already exist.
     """
-    main_dir = getcwd()
     for a, aeff in zip(a_values, presc):
-        if force or not path.exists(path.join(a_dirpaths_map[a],
-                                              a_outfile_map[a])):
-            chdir(a_dirpaths_map[a])
-            call(['NCSD'])
-            chdir(main_dir)
+        dpath = a_dirpaths_map[a]
+        fpath_outfile = path.join(dpath, a_outfile_map[a])
+        run_ncsd(dpath=dpath, fpath_outfile=fpath_outfile, force=force)
 
 
-def do_trdens(a6_dir, force, outfile):
+def run_trdens(a6_dir, force, outfile):
     """Run the TRDENS calculation in a6_dir
 
     :param a6_dir: Directory in which to run the calulation
@@ -386,7 +391,7 @@ def do_trdens(a6_dir, force, outfile):
     return 1
 
 
-def do_vce(
+def run_vce(
         a_values, a_prescription, a_range,
         a_outfile_map, dirpath_aeff6, dirpath_vce,
         fname_fmt_vce_int, fname_heff,
@@ -415,9 +420,9 @@ def do_vce(
     he4_fname = a_outfile_map[a_values[0]]
     he5_fname = a_outfile_map[a_values[1]]
     he6_fname = path.join(dirpath_aeff6, fname_heff)
-    a0 = a_range[0]
+    a_0 = a_range[0]
     fpath_fmt = path.join(dirpath_vce, fname_fmt_vce_int)
-    fpath = fpath_fmt % a0
+    fpath = fpath_fmt % a_0
     if force or not path.exists(fpath):
         vce_calculation(a_prescription, fpath, he4_fname, he5_fname, he6_fname)
     if len(a_range) > 1:
@@ -430,165 +435,37 @@ def do_vce(
                 link(fpath, next_fpath)
 
 
-def ncsd_vce_calculation(
-        a_prescription, a_range,
-        nshell=N_SHELL, nhw=NHW, n1=N1, n2=N2,
-        force_ncsd=False,
-        force_trdens=False,
-        force_vce=False,
-        force_all=False,
-        _path_results=_PATH_RESULTS,
-        _path_temp=_PATH_TEMPLATES,
-        _dir_fmt_nuc=_DNAME_FMT_NUC,
-        _dir_fmt_vce=_DNAME_FMT_VCE,
-        _dir_vce=_DIR_VCE,
-        _fname_regex_tbme=_REGEX_TBME,
-        _fname_regex_egv=_REGEX_EGV,
-        _fname_fmt_ncsd_out=_FNAME_FMT_NCSD_OUT,
-        _fname_fmt_vce=_FNAME_FMT_VCE,
-        _fname_mfdp=_FNAME_MFDP,
-        _fname_trdens_in=_FNAME_TRDENS_IN,
-        _fname_trdens_out=_FNAME_TRDENS_OUT,
-        _fname_egv_final=_FNAME_EGV,
-        _fname_heff=_FNAME_HEFF,
+def _get_a_to_dirpaths_map(
+        a_values, a_prescription, z, nhw, n1, n2,
+        _dpath_results=_DPATH_RESULTS,
+        _dir_fmt_nuc=_DNAME_FMT_NUC
 ):
-    """Valence cluster expansion calculations within NCSM
-
-    :param a_prescription: 3-tuple containing the Aeff values for use in
-    constructing the effective interaction Hamiltonian
-    effective Hamiltonian
-    :param a_range: sequence of A values for which to generate interaction
-    files
-    :param nshell: Major harmonic oscillator shell
-    :param nhw: Something something something dark side
-    :param n1: Something something something dark side
-    :param n2: Something something something dark side
-    :param _path_results: Path to the results directory
-    :param _path_temp: Path to the templates directory
-    :param _dir_fmt_nuc: Template string for the directory for the base
-    interactions. The format parameters are a string and two integers,
-    representing (name, A, Aeff). For example, for Nshell1 with a (6, 6, 6)
-    prescription, one would create he4_6, he5_6, he6_6.
-    :param _dir_fmt_vce: template string for the directory for the vce
-    interaction files
-    :param _dir_vce: Template string for the directory for the interactions
-    calculated based on the effective Hamiltonian. Should accept a string
-    representing the A_prescription tuple as a format argument.
-    :param _fname_regex_tbme: Regular expression that matches the TBME file in
-    the templates directory
-    :param _fname_regex_egv: Regular expression that matches the .egv file
-    outputted by the NCSD calculation (which needs to be renamed)
-    :param _fname_fmt_ncsd_out: Template string for the .out file to be
-    outputted by the NCSD calculation. (This should accept the same arguments
-    as the dir_fmt_nuc, so a natural choice for this string would be appending
-    '.out' to the dir_fmt_nuc).
-    :param _fname_fmt_vce: Template string for the name to be given to the
-    .int file generated by running the FdoVCE script.
-    Must accept 7 integer arguments:
-        Aeff4 Aeff5 Aeff6 Nhw n1 n2 Aeff6
-    :param _fname_mfdp: Name of the mfdp file in the templates directory
-    :param _fname_trdens_in: Name of the trdens input file in the templates
-    directory
-    :param _fname_egv_final: String with which to rename the .egv file outputted
-    by the NCSD calculation in prepration for the TRDENS calculation.
-    :param _fname_trdens_out: Name of the trdens output file (signifying that
-    this operation has been performed).
-    :param _fname_heff: Name of the effective OLS Hamiltonian file
-    :param force_ncsd: If True, force redoing the NCSD calculations even if
-    output files already exist
-    :param force_trdens: If True, force redoing the TRDENS calculations even
-    if output files already exist
-    :param force_vce: If True, force redoing the VCE expansion calculations
-    even if output files already exist
-    :param force_all: If True, force redoing all calculations
-    """
-    # Get a values and directory names
-    a_values = generating_a_values(nshell)
-    z = a_values[0] / 2
-    a_dirpaths_map = dict()
+    a_paths_map = dict()
+    path_fmt = path.join(_dpath_results, _dir_fmt_nuc)
     for a, aeff in zip(a_values, a_prescription):
-        a_dirpaths_map[a] = path.join(
-            _path_results,
-            _dir_fmt_nuc % (get_name(z), a, aeff, nhw, n1, n2))
+        a_paths_map[a] = path_fmt % (get_name(z), a, aeff, nhw, n1, n2)
+    return a_paths_map
+
+
+def _get_a_to_outfile_map(
+        a_values, a_prescription, z, nhw, n1, n2, a_dirpaths_map,
+        _fname_fmt_ncsd_out=_FNAME_FMT_NCSD_OUT
+):
     a_outfile_map = dict()
     for a, aeff in zip(a_values, a_prescription):
         a_outfile_map[a] = path.join(
             a_dirpaths_map[a],
             _fname_fmt_ncsd_out % (get_name(z), a, aeff, nhw, n1, n2))
-
-    # Make directories for base files
-    make_base_directories(
-        a_values=a_values,
-        presc=a_prescription,
-        results_path=_path_results,
-        a_dirpaths_map=a_dirpaths_map)
-
-    # ncsd calculations: make mfdp files, perform truncation, and run NCSD
-    make_mfdp_files(
-        z=z, a_range=a_values,
-        a_dirpath_map=a_dirpaths_map,
-        a_outfile_map=a_outfile_map,
-        a_presc=a_prescription, n_hw=nhw, n_1=n1, n_2=n2,
-        mfdp_name=_fname_mfdp)
-    truncate_spaces(
-        n1=n1, n2=n2,
-        dirpaths=a_dirpaths_map.values(),
-        path_temp=_path_temp,
-        tbme_name_regex=_fname_regex_tbme)
-    do_ncsd(
-        a_values=a_values, presc=a_prescription,
-        a_dirpaths_map=a_dirpaths_map, a_outfile_map=a_outfile_map,
-        force=force_ncsd or force_all)
-
-    # for the 3rd a value, make trdens file and run TRDENS
-    make_trdens_file(
-        z=z, a=a_values[2],
-        nuc_dir=a_dirpaths_map[a_values[2]],
-        path_results=_path_results,
-        path_temp=_path_temp,
-        trdens_name=_fname_trdens_in)
-    a6_dir = a_dirpaths_map[a_values[2]]
-    rename_egv_file(
-        a6_dir=a6_dir,
-        egv_name_regex=_fname_regex_egv,
-        next_egv_name=_fname_egv_final,
-        force=force_trdens or force_all)
-    do_trdens(
-        a6_dir=a6_dir,
-        outfile=_fname_trdens_out,
-        force=force_trdens or force_all,)
-
-    # do valence cluster expansion
-    if not path.exists(_dir_vce):
-        mkdir(_dir_vce)
-    vce_dirpath = path.join(
-        _path_results, _dir_vce,
-        _dir_fmt_vce % tuple(tuple(a_prescription) + (nhw, n1, n2))
-    )
-    if not path.exists(vce_dirpath):
-        mkdir(vce_dirpath)
-    do_vce(
-        a_values=a_values,
-        a_prescription=a_prescription,
-        a_range=a_range,
-        dirpath_aeff6=a6_dir,
-        dirpath_vce=vce_dirpath,
-        a_outfile_map=a_outfile_map,
-        fname_heff=_fname_heff,
-        fname_fmt_vce_int=_fname_fmt_vce,
-        force=force_vce or force_all
-    )
-
-    return 1
+    return a_outfile_map
 
 
-def ncsm_single_calculation(
+def ncsd_single_calculation(
         z, a, aeff,
         nhw=NHW, n1=N1, n2=N2,
-        _path_results=_PATH_RESULTS,
-        _path_temp=_PATH_TEMPLATES,
+        _path_results=_DPATH_RESULTS,
+        _path_temp=_DPATH_TEMPLATES,
         _dir_fmt_nuc=_DNAME_FMT_NUC,
-        _fname_regex_tbme=_REGEX_TBME,
+        _fname_regex_tbme=_RGX_TBME,
         _fname_fmt_ncsd_out=_FNAME_FMT_NCSD_OUT,
         _fname_mfdp=_FNAME_MFDP,
         force=False):
@@ -613,16 +490,151 @@ def ncsm_single_calculation(
     truncate_spaces(n1=n1, n2=n2, dirpaths=[dirpath_nuc],
                     path_temp=_path_temp,
                     tbme_name_regex=_fname_regex_tbme)
-    do_ncsd(a_values=[a], presc=[aeff],
-            a_dirpaths_map={a: dirpath_nuc},
-            a_outfile_map={a: outfile_ncsd},
-            force=force)
+    run_all_ncsd(a_values=[a], presc=[aeff],
+                 a_dirpaths_map={a: dirpath_nuc},
+                 a_outfile_map={a: outfile_ncsd},
+                 force=force)
 
 
-def ncsd_vce_calculations( a_prescription, a_range, **kwargs):
-    for presc in a_prescription:
-        ncsd_vce_calculation(a_prescription=tuple(presc), a_range=a_range,
-                             **kwargs)
+def ncsd_vce_calculation(
+        a_prescription, a_range,
+        nshell=N_SHELL, nhw=NHW, n1=N1, n2=N2,
+        force_ncsd=False,
+        force_trdens=False,
+        force_vce=False,
+        force_all=False,
+        _dpath_results=_DPATH_RESULTS,
+        _dpath_temp=_DPATH_TEMPLATES,
+        _dir_fmt_vce=_DNAME_FMT_VCE,
+        _dir_vce=_DNAME_VCE,
+        _fname_regex_egv=_RGX_EGV,
+        _fname_fmt_vce=_FNAME_FMT_VCE,
+        _fname_trdens_in=_FNAME_TRDENS_IN,
+        _fname_trdens_out=_FNAME_TRDENS_OUT,
+        _fname_egv_final=_FNAME_EGV,
+        _fname_heff=_FNAME_HEFF,
+):
+    """Valence cluster expansion calculations within NCSM
+
+    :param a_prescription: 3-tuple containing the Aeff values for use in
+    constructing the effective interaction Hamiltonian
+    effective Hamiltonian
+    :param a_range: sequence of A values for which to generate interaction
+    files
+    :param nshell: Major harmonic oscillator shell
+    :param nhw: Something something something dark side
+    :param n1: Something something something dark side
+    :param n2: Something something something dark side
+    :param _dpath_results: Path to the results directory
+    :param _dpath_temp: Path to the templates directory
+    :param _dir_fmt_vce: template string for the directory for the vce
+    interaction files
+    :param _dir_vce: Template string for the directory for the interactions
+    calculated based on the effective Hamiltonian. Should accept a string
+    representing the A_prescription tuple as a format argument.
+    :param _fname_regex_egv: Regular expression that matches the .egv file
+    outputted by the NCSD calculation (which needs to be renamed)
+    :param _fname_fmt_vce: Template string for the name to be given to the
+    .int file generated by running the FdoVCE script.
+    Must accept 7 integer arguments:
+        Aeff4 Aeff5 Aeff6 Nhw n1 n2 Aeff6
+    :param _fname_trdens_in: Name of the trdens input file in the templates
+    directory
+    :param _fname_egv_final: String with which to rename the .egv file outputted
+    by the NCSD calculation in prepration for the TRDENS calculation.
+    :param _fname_trdens_out: Name of the trdens output file (signifying that
+    this operation has been performed).
+    :param _fname_heff: Name of the effective OLS Hamiltonian file
+    :param force_ncsd: If True, force redoing the NCSD calculations even if
+    output files already exist
+    :param force_trdens: If True, force redoing the TRDENS calculations even
+    if output files already exist
+    :param force_vce: If True, force redoing the VCE expansion calculations
+    even if output files already exist
+    :param force_all: If True, force redoing all calculations
+    """
+    # Get a values and directory names
+    a_values = _generating_a_values(nshell)
+    z = a_values[0] / 2
+    a_dirpaths_map = _get_a_to_dirpaths_map(
+        a_values=a_values, a_prescription=a_prescription,
+        z=z, nhw=nhw, n1=n1, n2=n2,
+    )
+    a_outfile_map = _get_a_to_outfile_map(
+        a_values=a_values, a_prescription=a_prescription,
+        z=z, nhw=nhw, n1=n1, n2=n2, a_dirpaths_map=a_dirpaths_map
+    )
+
+    # ncsd calculations: make mfdp files, perform truncation, and run NCSD
+    for a, aeff in zip(a_values, a_prescription):
+        ncsd_single_calculation(z=z, a=a, aeff=aeff, nhw=nhw, n1=n1, n2=n2,
+                                force=force_all or force_ncsd)
+
+    # for the 3rd a value, make trdens file and run TRDENS
+    make_trdens_file(
+        z=z, a=a_values[2],
+        nuc_dir=a_dirpaths_map[a_values[2]],
+        path_results=_dpath_results,
+        path_temp=_dpath_temp,
+        trdens_name=_fname_trdens_in)
+    a6_dir = a_dirpaths_map[a_values[2]]
+    rename_egv_file(
+        a6_dir=a6_dir,
+        egv_name_regex=_fname_regex_egv,
+        next_egv_name=_fname_egv_final,
+        force=force_trdens or force_all)
+    run_trdens(
+        a6_dir=a6_dir,
+        outfile=_fname_trdens_out,
+        force=force_trdens or force_all,)
+
+    # do valence cluster expansion
+    if not path.exists(_dir_vce):
+        mkdir(_dir_vce)
+    vce_dirpath = path.join(
+        _dpath_results, _dir_vce,
+        _dir_fmt_vce % tuple(tuple(a_prescription) + (nhw, n1, n2))
+    )
+    if not path.exists(vce_dirpath):
+        mkdir(vce_dirpath)
+    run_vce(
+        a_values=a_values,
+        a_prescription=a_prescription,
+        a_range=a_range,
+        dirpath_aeff6=a6_dir,
+        dirpath_vce=vce_dirpath,
+        a_outfile_map=a_outfile_map,
+        fname_heff=_fname_heff,
+        fname_fmt_vce_int=_fname_fmt_vce,
+        force=force_vce or force_all
+    )
+
+    return 1
+
+
+def ncsd_vce_calculations(
+        a_prescription, a_range, nhw, n1, n2, nshell=N_SHELL,
+        force_ncsd=False, force_trdens=False, force_vce=False, force_all=False
+):
+    a_values = _generating_a_values(n_shell=nshell)
+    z = int(a_values[0] / 2)
+    a_presc_list = list(a_prescription)
+    for i, a in zip(range(3), a_values):
+        ai_set = set([ap[i] for ap in a_presc_list])
+        for aeff in ai_set:
+            ncsd_single_calculation(
+                z=z, a=a, aeff=aeff, nhw=nhw, n1=n1, n2=n2,
+                force=force_all or force_ncsd
+            )
+    for ap in a_presc_list:
+        ncsd_vce_calculation(
+            a_prescription=ap, a_range=a_range, nshell=nshell,
+            nhw=nhw, n1=n1, n2=n2,
+            force_ncsd=False,
+            force_trdens=force_trdens or force_all,
+            force_vce=force_vce or force_all,
+            force_all=False
+        )
 
 
 # SCRIPT
@@ -661,11 +673,10 @@ def _force_from_argv0(argv0):
 
 
 if __name__ == "__main__":
-    user_args = argv
+    user_args = argv[1:]
     f_ncsd, f_trdens, f_vce, f_all = (False,) * 4
     multicom, com = False, False
     while True:
-        user_args = user_args[1:]
         a0 = user_args[0]
         if re.match('^-f[ntv]{0,3}$', a0.lower()):
             f_ncsd, f_trdens, f_vce, f_all = _force_from_argv0(a0)
@@ -675,6 +686,7 @@ if __name__ == "__main__":
             multicom = True
         else:
             break
+        user_args = user_args[1:]
     if com or multicom:
         ap_min, ap_max = [int(x) for x in user_args[0:2]]
         fn = ncsd_vce_calculations
@@ -700,21 +712,21 @@ if __name__ == "__main__":
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all)
     elif len(other_args) == 3:
-        a_range0 = list(range(int(other_args[0]), int(user_args[1])+1))
+        a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
         nhw_0 = int(other_args[2])
         fn(
             a_prescription=a_prescription0, a_range=a_range0, nhw=nhw_0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all)
     elif len(other_args) == 4:
-        a_range0 = list(range(int(other_args[0]), int(user_args[1])+1))
+        a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
         n1_0, n2_0 = [int(x) for x in other_args[2:4]]
         fn(
             a_prescription=a_prescription0, a_range=a_range0, n1=n1_0, n2=n2_0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all)
     elif len(other_args) == 5:
-        a_range0 = list(range(int(other_args[0]), int(user_args[1])+1))
+        a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
         nhw_0, n1_0, n2_0 = [int(x) for x in other_args[2:5]]
         fn(
             a_prescription=a_prescription0, a_range=a_range0,
@@ -722,7 +734,7 @@ if __name__ == "__main__":
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all)
     elif len(other_args) == 6:
-        a_range0 = list(range(int(other_args[0]), int(user_args[1])+1))
+        a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
         nhw_0, n1_0, n2_0, nshell_0 = [int(x) for x in other_args[2:6]]
         fn(
             a_prescription=a_prescription0, a_range=a_range0,
@@ -734,4 +746,3 @@ if __name__ == "__main__":
             '%d' % (len(argv) - 1,) +
             ' is not a valid number of arguments for ncsm_vce_calc.py.' +
             'Please enter 3-9 arguments.')
-

@@ -21,7 +21,7 @@ from __future__ import division
 from sys import argv
 
 from InvalidNumberOfArgumentsException import InvalidNumberOfArgumentsException
-from scripts.ncsm_vce_calc import ncsm_single_calculation
+from scripts.ncsm_vce_calc import ncsd_single_calculation
 
 if __name__ == "__main__":
     if '-f' == argv[1].lower():
@@ -32,21 +32,21 @@ if __name__ == "__main__":
         user_args = argv[1:]
     if len(user_args) == 2:
         z0, a0 = [int(x) for x in user_args]
-        ncsm_single_calculation(z=z0, a=a0, aeff=a0, force=force0)
+        ncsd_single_calculation(z=z0, a=a0, aeff=a0, force=force0)
     elif len(user_args) == 3:
         z0, a0, aeff0 = [int(x) for x in user_args]
-        ncsm_single_calculation(z=z0, a=a0, aeff=aeff0, force=force0)
+        ncsd_single_calculation(z=z0, a=a0, aeff=aeff0, force=force0)
     elif len(user_args) == 4:
         z0, a0, aeff0, nhw0 = [int(x) for x in user_args]
-        ncsm_single_calculation(z=z0, a=a0, aeff=aeff0,
+        ncsd_single_calculation(z=z0, a=a0, aeff=aeff0,
                                 nhw=nhw0, force=force0)
     elif len(user_args) == 5:
         z0, a0, aeff0, n1_0, n2_0 = [int(x) for x in user_args]
-        ncsm_single_calculation(z=z0, a=a0, aeff=aeff0,
+        ncsd_single_calculation(z=z0, a=a0, aeff=aeff0,
                                 n1=n1_0, n2=n2_0, force=force0)
     elif len(user_args) == 6:
         z0, a0, aeff0, nhw0, n1_0, n2_0 = [int(x) for x in user_args]
-        ncsm_single_calculation(z=z0, a=a0, aeff=aeff0,
+        ncsd_single_calculation(z=z0, a=a0, aeff=aeff0,
                                 nhw=nhw0, n1=n1_0, n2=n2_0, force=force0)
     else:
         raise InvalidNumberOfArgumentsException(
