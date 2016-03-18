@@ -319,7 +319,7 @@ def truncate_space(
     return dst_path
 
 
-def truncate_spaces( n1, n2, dirpaths, _fname_fmt_tbme=_FNAME_FMT_TBME):
+def truncate_spaces(n1, n2, dirpaths, _fname_fmt_tbme=_FNAME_FMT_TBME):
     """For multiple directories, perform the operation of truncate_space
 
     :param n1: max allowed one-particle state
@@ -762,71 +762,37 @@ def vce_multiple_calculations(
         _print_progress(jobs_completed, jobs_total, end=True)
 
 
-def ncsd_vce_calculation(
-        a_prescription, a_range,
+def ncsd_vce_calculations(
+        a_prescriptions, a_range,
         nshell=N_SHELL, nhw=NHW, n1=N1, n2=N2,
         force_ncsd=False, force_trdens=False, force_vce=False,
         force_all=False,
         verbose=False, progress=True,
 ):
-    """Valence cluster expansion calculations within NCSM
-
-    :param a_prescription: 3-tuple containing the Aeff values for use in
-    constructing the effective interaction Hamiltonian
-    effective Hamiltonian
+    """Given a sequence or generator of A prescriptions, does the NCSD/VCE
+    calculation for each prescription
+    :param a_prescriptions: sequence or generator of A prescription tuples
     :param a_range: sequence of A values for which to generate interaction
     files
-    :param verbose: if true, regular output of NCSD and TRDENS are printed
-    to stdout, otherwise they are suppressed and written to a file instead
-    :param progress: if true (and verbose false) display a progress bar for
-    each calculation
-    :param nshell: Major harmonic oscillator shell
-    :param nhw: major oscillator shell model space trunctation
-    :param n1: max allowed single-particle state
-    :param n2: max allowed two-particle staet
-    :param force_ncsd: If True, force redoing the NCSD calculations even if
-    output files already exist
-    :param force_trdens: If True, force redoing the TRDENS calculations even
-    if output files already exist
-    :param force_vce: If True, force redoing the VCE expansion calculations
-    even if output files already exist
-    :param force_all: If True, force redoing all calculations
+    :param nshell: major oscillator shell (0 = s, 1 = p, 2 = sd, ...)
+    :param nhw: model space max oscillator shell
+    :param n1: max allowed one-particle state
+    :param n2: max allowed two-particle state
+    :param force_ncsd: if true, forces recalculation of NCSD, even if output
+    files already exist
+    :param force_trdens: if true, forces recalculation of TRDENS, even if
+    output file already exists
+    :param force_vce: if true, forces recalculation of valence cluster
+    expansion, even if interaction file already exists
+    :param force_all: if true, forces recalculation of everything
+    :param verbose: if true, prints standard output for subprocesses to
+    stdout; otherwise this is suppressed and saved in a text file
+    :param progress: if true, shows a progress bar. Note if verbose is true,
+    progress bar will not be shown.
     """
-    # Get a values and directory names
-    a_values = _generating_a_values(nshell)
-    z = a_values[0] / 2
-
-    # ncsd calculations: make mfdp files, perform truncation, and run NCSD
-    ncsd_multiple_calculations(
-        z=z, a_values=a_values,
-        a_presc_list=[a_prescription],
-        nhw=nhw, n1=n1, n2=n2,
-        force=force_all or force_ncsd,
-        verbose=verbose, progress=progress)
-
-    # vce calculations
-    vce_single_calculation(
-        z=z, a_values=a_values,
-        a_prescription=a_prescription,
-        a_range=a_range,
-        nhw=nhw, n1=n1, n2=n2,
-        force_trdens=force_trdens or force_all,
-        force_vce=force_vce or force_all, verbose=verbose
-    )
-
-    return 1
-
-
-def ncsd_vce_calculations(
-        a_prescription, a_range,
-        nshell=N_SHELL, nhw=NHW, n1=N1, n2=N2,
-        force_ncsd=False, force_trdens=False, force_vce=False,
-        force_all=False,
-        verbose=False, progress=True,
-):
     a_values = _generating_a_values(n_shell=nshell)
     z = int(a_values[0] / 2)
-    a_presc_list = list(a_prescription)
+    a_presc_list = list(a_prescriptions)
     ncsd_multiple_calculations(
         z=z, a_values=a_values,
         a_presc_list=a_presc_list,
@@ -846,6 +812,11 @@ def ncsd_vce_calculations(
 
 
 def _combinations(sequence, r):
+    """Given a sequence of unique elements, yields all unique length-r
+    combinations of those elements WITHOUT repeats
+    :param sequence: sequence of unique elements
+    :param r: length of the combinations to return
+    """
     if r == 0:
         yield []
     else:
@@ -857,6 +828,13 @@ def _combinations(sequence, r):
 
 
 def _multicombinations(sequence, r):
+    """Given a sequence, yields all possible length-r multi-combinations
+    of items of the sequence, where a multi-combination is
+    a unique combination of elements where repeats ARE allowd
+    :param sequence: sequence of unique elements from which to generate
+    multi-combinations
+    :param r: length of the multi-combinations to generate
+    """
     if r == 0:
         yield []
     else:
@@ -901,51 +879,49 @@ if __name__ == "__main__":
         user_args = user_args[1:]
     if com or multicom:
         ap_min, ap_max = [int(x) for x in user_args[0:2]]
-        fn = ncsd_vce_calculations
         if com:
-            a_prescription0 = _combinations(range(ap_min, ap_max+1), 3)
+            a_prescriptions0 = _combinations(range(ap_min, ap_max + 1), 3)
         else:
-            a_prescription0 = _multicombinations(range(ap_min, ap_max+1), 3)
+            a_prescriptions0 = _multicombinations(range(ap_min, ap_max + 1), 3)
         other_args = user_args[2:]
     else:
-        fn = ncsd_vce_calculation
-        a_prescription0 = tuple([int(x) for x in user_args[0:3]])
+        a_prescriptions0 = [tuple([int(x) for x in user_args[0:3]])]
         other_args = user_args[3:]
     if len(other_args) == 1:
         a_range0 = [int(other_args[0])]
-        fn(
-            a_prescription=a_prescription0, a_range=a_range0,
+        ncsd_vce_calculations(
+            a_prescriptions=a_prescriptions0, a_range=a_range0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0
         )
     elif len(other_args) == 2:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
-        fn(
-            a_prescription=a_prescription0, a_range=a_range0,
+        ncsd_vce_calculations(
+            a_prescriptions=a_prescriptions0, a_range=a_range0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0,
         )
     elif len(other_args) == 3:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
         nhw_0 = int(other_args[2])
-        fn(
-            a_prescription=a_prescription0, a_range=a_range0, nhw=nhw_0,
+        ncsd_vce_calculations(
+            a_prescriptions=a_prescriptions0, a_range=a_range0, nhw=nhw_0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0,
         )
     elif len(other_args) == 4:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
         n1_0, n2_0 = [int(x) for x in other_args[2:4]]
-        fn(
-            a_prescription=a_prescription0, a_range=a_range0, n1=n1_0, n2=n2_0,
+        ncsd_vce_calculations(
+            a_prescriptions=a_prescriptions0, a_range=a_range0, n1=n1_0, n2=n2_0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0,
         )
     elif len(other_args) == 5:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
         nhw_0, n1_0, n2_0 = [int(x) for x in other_args[2:5]]
-        fn(
-            a_prescription=a_prescription0, a_range=a_range0,
+        ncsd_vce_calculations(
+            a_prescriptions=a_prescriptions0, a_range=a_range0,
             nhw=nhw_0, n1=n1_0, n2=n2_0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0,
@@ -953,8 +929,8 @@ if __name__ == "__main__":
     elif len(other_args) == 6:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
         nhw_0, n1_0, n2_0, nshell_0 = [int(x) for x in other_args[2:6]]
-        fn(
-            a_prescription=a_prescription0, a_range=a_range0,
+        ncsd_vce_calculations(
+            a_prescriptions=a_prescriptions0, a_range=a_range0,
             nhw=nhw_0, n1=n1_0, n2=n2_0, nshell=nshell_0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0,
