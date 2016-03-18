@@ -40,7 +40,7 @@ from __future__ import division
 
 import re
 from os import getcwd, path, walk, mkdir, chdir, symlink, remove, link
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, call
 from sys import argv, stdout
 from math import floor
 
@@ -385,7 +385,7 @@ def run_ncsd(
         chdir(dpath)
         args = ['NCSD']
         if verbose:
-            Popen(args=args)
+            call(args=args)
         else:
             p = Popen(args=args, stdout=PIPE, stderr=PIPE)
             out, err = p.communicate()
@@ -457,7 +457,7 @@ def run_trdens(
     chdir(a6_dir)
     args = ['TRDENS']
     if verbose:
-        Popen(args=args)
+        call(args=args)
     else:
         p = Popen(args=args, stdout=PIPE, stderr=PIPE)
         out, err = p.communicate()
@@ -625,6 +625,7 @@ def ncsd_multiple_calculations(
     # do ncsd
     jobs_total = len(a_aeff_set)
     jobs_completed = 0
+    progress = progress and not verbose
     if progress:
         print str_prog_ncsd
     for a, aeff in sorted(a_aeff_set):
@@ -740,6 +741,7 @@ def vce_multiple_calculations(
 ):
     jobs_total = len(a_presc_list)
     jobs_completed = 0
+    progress = progress and not verbose
     if progress:
         print _str_prog_vce
     for ap in a_presc_list:
