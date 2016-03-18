@@ -176,6 +176,8 @@ def make_mfdp_files(z, a_values, a_presc, n_hw, n_1, n_2,
                     path_temp=_DPATH_TEMPLATES,
                     _fname_mfdp=_FNAME_MFDP):
     for a, aeff in zip(a_values, a_presc):
+        if a % 2 != n_hw % 2:
+            n_hw += 1
         outfile_name = path.split(a_aeff_to_outfile_fpath_map[(a, aeff)])[1]
         make_mfdp_file(z=z, a=a, aeff=aeff, n_hw=n_hw, n_1=n_1, n_2=n_2,
                        path_elt=a_aeff_to_dpath_map[(a, aeff)],
@@ -357,6 +359,8 @@ def rename_egv_file(
             symlink(f, next_egv_path)
             break
     else:
+        for f in filenames:
+            print f
         raise EgvFileNotFoundException()
     return 1
 
@@ -512,8 +516,10 @@ def _get_a_aeff_to_dpath_map(
     a_paths_map = dict()
     path_fmt = path.join(_dpath_results, _dir_fmt_nuc)
     for a, aeff in zip(a_values, a_prescription):
+        if nhw % 2 != a % 2:
+            nhw += 1
         a_paths_map[(a, aeff)] = path_fmt % (
-            get_name(z), a, aeff, nhw + a % 2, n1, n2
+            get_name(z), a, aeff, nhw, n1, n2
         )
     return a_paths_map
 
@@ -524,9 +530,11 @@ def _get_a_aeff_to_outfile_fpath_map(
 ):
     a_outfile_map = dict()
     for a, aeff in zip(a_values, a_prescription):
+        if nhw % 2 != a % 2:
+            nhw += 1
         a_outfile_map[(a, aeff)] = path.join(
             a_aeff_to_dirpath_map[(a, aeff)],
-            _fname_fmt_ncsd_out % (get_name(z), a, aeff, nhw + a % 2, n1, n2))
+            _fname_fmt_ncsd_out % (get_name(z), a, aeff, nhw, n1, n2))
     return a_outfile_map
 
 
@@ -549,58 +557,7 @@ def _print_progress(
     stdout.flush()
 
 
-def ncsd_single_calculation(
-        z, a, aeff,
-        nhw=NHW, n1=N1, n2=N1,
-        force=False, verbose=False,
-        _path_results=_DPATH_RESULTS,
-        _dir_fmt_nuc=_DNAME_FMT_NUC,
-        _fname_fmt_ncsd_out=_FNAME_FMT_NCSD_OUT,
-):
-    if a % 2 != nhw % 2:
-        nhw += 1
-    # get directory path
-    dirpath_nuc = path.join(
-        _path_results,
-        _dir_fmt_nuc % (get_name(z=z), a, aeff, nhw, n1, n2))
-    outfile_ncsd = path.join(
-        dirpath_nuc,
-        _fname_fmt_ncsd_out % (get_name(z=z), a, aeff, nhw, n1, n2))
-    # make directory
-    make_base_directories(
-        a_values=[a], presc=[aeff],
-        _dpath_results=_path_results,
-        a_aeff_to_dpath_map={(a, aeff): dirpath_nuc}
-    )
-
-    # ncsm calculations: make mfdp file, perform truncation, and run NCSD
-    make_mfdp_files(
-        z=z, a_values=[a], a_presc=[aeff],
-        a_aeff_to_dpath_map={(a, aeff): dirpath_nuc},
-        a_aeff_to_outfile_fpath_map={(a, aeff): outfile_ncsd},
-        n_hw=nhw, n_1=n1, n_2=n2,
-    )
-    truncate_spaces(n1=n1, n2=n2, dirpaths=[dirpath_nuc])
-    run_all_ncsd(
-        a_values=[a], presc=[aeff],
-        a_aeff_to_dpath_map={(a, aeff): dirpath_nuc},
-        a_aeff_to_outfile_fpath_map={(a, aeff): outfile_ncsd},
-        force=force, verbose=verbose,
-    )
-
-
-def ncsd_multiple_calculations(
-        z, a_values, a_presc_list,
-        nhw=NHW, n1=N1, n2=N1,
-        force=False, verbose=False, progress=True,
-        _str_prog_ncsd=_STR_PROG_NCSD,
-):
-    a_aeff_set = set()
-    # prepare directories
-    for ap in a_presc_list:
-        a_aeff_set |= set(zip(a_values, ap))
-    a_list = [a_aeff[0] for a_aeff in a_aeff_set]
-    aeff_list = [a_aeff[1] for a_aeff in a_aeff_set]
+def _prepare_directories(a_list, aeff_list, z, nhw, n1, n2):
     a_aeff_to_dir_map = _get_a_aeff_to_dpath_map(
         a_values=a_list, a_prescription=aeff_list, z=z, nhw=nhw, n1=n1, n2=n2
     )
@@ -619,18 +576,52 @@ def ncsd_multiple_calculations(
         n_hw=nhw, n_1=n1, n_2=n2,
     )
     truncate_spaces(n1=n1, n2=n2, dirpaths=a_aeff_to_dir_map.values())
+    return a_aeff_to_dir_map, a_aeff_to_outfile_map
+
+
+def ncsd_single_calculation(
+        z, a, aeff,
+        nhw=NHW, n1=N1, n2=N1,
+        force=False, verbose=False,
+):
+    a_aeff_to_dpath, a_aeff_to_outfile = _prepare_directories(
+        a_list=[a], aeff_list=[aeff], z=z, nhw=nhw, n1=n1, n2=n2
+    )
+    run_all_ncsd(
+        a_values=[a], presc=[aeff],
+        a_aeff_to_dpath_map=a_aeff_to_dpath,
+        a_aeff_to_outfile_fpath_map=a_aeff_to_outfile,
+        force=force, verbose=verbose,
+    )
+
+
+def ncsd_multiple_calculations(
+        z, a_values, a_presc_list,
+        nhw=NHW, n1=N1, n2=N1,
+        force=False, verbose=False, progress=True,
+        str_prog_ncsd=_STR_PROG_NCSD,
+):
+    a_aeff_set = set()
+    # prepare directories
+    for ap in a_presc_list:
+        a_aeff_set |= set(zip(a_values, ap))
+    a_list = [a_aeff[0] for a_aeff in a_aeff_set]
+    aeff_list = [a_aeff[1] for a_aeff in a_aeff_set]
+    a_aeff_to_dir, a_aeff_to_outfile = _prepare_directories(
+        a_list=a_list, aeff_list=aeff_list, z=z, nhw=nhw, n1=n1, n2=n2
+    )
     # do ncsd
     jobs_total = len(a_aeff_set)
     jobs_completed = 0
     if progress:
-        print _str_prog_ncsd
+        print str_prog_ncsd
     for a, aeff in sorted(a_aeff_set):
         if progress:
             _print_progress(jobs_completed, jobs_total)
         run_all_ncsd(
             a_values=[a], presc=[aeff],
-            a_aeff_to_dpath_map=a_aeff_to_dir_map,
-            a_aeff_to_outfile_fpath_map=a_aeff_to_outfile_map,
+            a_aeff_to_dpath_map=a_aeff_to_dir,
+            a_aeff_to_outfile_fpath_map=a_aeff_to_outfile,
             force=force, verbose=verbose,
         )
         jobs_completed += 1
@@ -641,18 +632,11 @@ def ncsd_multiple_calculations(
 def ncsd_exact_calculations(z, a_range, nhw=NHW, n1=N1, n2=N2,
                             force=False, verbose=False, progress=True,
                             _str_prog_ncsd_ex=_STR_PROG_NCSD_EX):
-    jobs_total = len(a_range)
-    jobs_completed = 0
-    if progress:
-        print _str_prog_ncsd_ex
-    for a in a_range:
-        if progress:
-            _print_progress(jobs_completed, jobs_total)
-        ncsd_single_calculation(z=z, a=a, aeff=a, nhw=nhw, n1=n1, n2=n2,
-                                force=force, verbose=verbose)
-        jobs_completed += 1
-    if progress:
-        _print_progress(jobs_completed, jobs_total, end=True)
+    ncsd_multiple_calculations(
+        z=z, a_values=a_range, a_presc_list=[a_range], nhw=nhw, n1=n1, n2=n2,
+        force=force, verbose=verbose, progress=progress,
+        str_prog_ncsd=_str_prog_ncsd_ex
+    )
 
 
 def vce_single_calculation(
