@@ -602,6 +602,12 @@ def ncsd_multiple_calculations(
         _print_progress(jobs_completed, jobs_total, end=True)
 
 
+def ncsd_exact_calculations(z, a_range, nhw=NHW, n1=N1, n2=N2,
+                            force=False, verbose=False, progress=True):
+    for a in a_range:
+        ncsd_single_calculation(z=z, a=a, aeff=a, nhw=nhw, n1=n1, n2=n2)
+
+
 def vce_single_calculation(
         z, a_values, a_prescription, a_range,
         nhw=NHW, n1=N1, n2=N1,
@@ -804,7 +810,6 @@ def ncsd_vce_calculations(
     )
 
 
-# SCRIPT
 def _combinations(sequence, r):
     if r == 0:
         yield []
@@ -827,6 +832,7 @@ def _multicombinations(sequence, r):
                 yield [sequence[i]] + mi
 
 
+# SCRIPT
 def _force_from_argv0(argv0):
     force_ncsd, force_trdens, force_vce, force_all = (False,) * 4
     if 'n' in argv0:
@@ -922,3 +928,5 @@ if __name__ == "__main__":
             '%d' % (len(argv) - 1,) +
             ' is not a valid number of arguments for ncsm_vce_calc.py.' +
             'Please enter 3-9 arguments.')
+
+
