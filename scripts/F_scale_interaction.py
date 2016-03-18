@@ -29,7 +29,7 @@ def get_scaleif_fn(elt_cond_fn, rest_cols, scalefactor):
 
 
 def run(fpath_src, fpath_dst,
-        scalefn=lambda a, b: b,
+        scalefn0=lambda a, b: b,
         force=False,
         _line_fmt=_LINE_FMT):
     if force or not path.exists(fpath_dst):
@@ -41,7 +41,7 @@ def run(fpath_src, fpath_dst,
             ldat = line.split()
             elt = [int(x) for x in ldat[:6]]  # a, b, c, d, j, t
             rest = [float(x) for x in ldat[6:]]
-            next_rest = scalefn(elt, rest)
+            next_rest = scalefn0(elt, rest)
             next_line = _line_fmt % (tuple(elt) + tuple(next_rest))
             fout.write(next_line)
         fout.close()

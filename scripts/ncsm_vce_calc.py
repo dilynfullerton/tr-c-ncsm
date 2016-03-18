@@ -87,8 +87,8 @@ _FNAME_TRDENS_STDERR = '__stderr_trdens__.txt'
 WIDTH_TERM = 79
 WIDTH_PROGRESS_BAR = 48
 STR_PROGRESS_BAR = 'Progress: %3d/%-3d '
-STR_PROG_NCSD = 'Doing NCSD calculations for (A, Aeff) pairs'
-STR_PROG_VCE = 'Doing VCE calculations for Aeff prescriptions'
+_STR_PROG_NCSD = 'Doing NCSD calculations for (A, Aeff) pairs'
+_STR_PROG_VCE = 'Doing VCE calculations for Aeff prescriptions'
 
 # other
 _Z_NAME_MAP = {
@@ -538,8 +538,9 @@ def _print_progress(
 
 
 def ncsd_single_calculation(
-        z, a, aeff, nhw, n1, n2,
-        force, verbose,
+        z, a, aeff,
+        nhw=NHW, n1=N1, n2=N1,
+        force=False, verbose=False,
         _path_results=_DPATH_RESULTS,
         _dir_fmt_nuc=_DNAME_FMT_NUC,
         _fname_fmt_ncsd_out=_FNAME_FMT_NCSD_OUT,
@@ -575,22 +576,34 @@ def ncsd_single_calculation(
 
 
 def ncsd_multiple_calculations(
-        z, a_values, a_presc_list, nhw, n1, n2,
-        force, verbose, progress):
-    # todo do progress bar
+        z, a_values, a_presc_list,
+        nhw=NHW, n1=N1, n2=N1,
+        force=False, verbose=False, progress=True,
+        _str_prog_ncsd=_STR_PROG_NCSD
+):
     a_aeff_set = set()
     for ap in a_presc_list:
         a_aeff_set |= set(zip(a_values, ap))
+    jobs_total = len(a_aeff_set)
+    jobs_completed = 0
+    if progress:
+        print _str_prog_ncsd
     for a, aeff in sorted(a_aeff_set):
+        if progress:
+            _print_progress(jobs_completed, jobs_total)
         ncsd_single_calculation(
             z=z, a=a, aeff=aeff, nhw=nhw, n1=n1, n2=n2,
             force=force, verbose=verbose,
         )
+        jobs_completed += 1
+    if progress:
+        _print_progress(jobs_completed, jobs_total, end=True)
 
 
 def vce_single_calculation(
-        z, a_values, a_prescription, a_range, nhw, n1, n2,
-        force_trdens, force_vce, verbose,
+        z, a_values, a_prescription, a_range,
+        nhw=NHW, n1=N1, n2=N1,
+        force_trdens=False, force_vce=False, verbose=False,
         _dpath_results=_DPATH_RESULTS,
         _dpath_temp=_DPATH_TEMPLATES,
         _dname_vce=_DNAME_VCE,
@@ -683,9 +696,16 @@ def vce_single_calculation(
 
 def vce_multiple_calculations(
         z, a_values, a_presc_list, a_range, nhw, n1, n2,
-        force_trdens, force_vce, verbose, progress):
-    # todo progress bar
+        force_trdens, force_vce, verbose, progress,
+        _str_prog_vce=_STR_PROG_VCE
+):
+    jobs_total = len(a_presc_list)
+    jobs_completed = 0
+    if progress:
+        print _str_prog_vce
     for ap in a_presc_list:
+        if progress:
+            _print_progress(jobs_completed, jobs_total)
         vce_single_calculation(
             z=z, a_values=a_values,
             a_prescription=ap, a_range=a_range,
@@ -694,16 +714,17 @@ def vce_multiple_calculations(
             force_vce=force_vce,
             verbose=verbose
         )
+        jobs_completed += 1
+    if progress:
+        _print_progress(jobs_completed, jobs_total, end=True)
 
 
 def ncsd_vce_calculation(
         a_prescription, a_range,
-        verbose, progress,
         nshell=N_SHELL, nhw=NHW, n1=N1, n2=N2,
-        force_ncsd=False,
-        force_trdens=False,
-        force_vce=False,
+        force_ncsd=False, force_trdens=False, force_vce=False,
         force_all=False,
+        verbose=False, progress=True,
 ):
     """Valence cluster expansion calculations within NCSM
 
