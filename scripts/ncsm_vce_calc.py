@@ -140,10 +140,12 @@ def make_base_directories(a_values, presc, a_aeff_to_dpath_map,
             mkdir(dirpath)
 
 
-def make_mfdp_file(z, a, aeff, n_hw, n_1, n_2, path_elt, outfile_name,
-                   fname_fmt_tbme=_FNAME_FMT_TBME,
-                   path_temp=_DPATH_TEMPLATES,
-                   mfdp_name=_FNAME_MFDP):
+def make_mfdp_file(
+        z, a, aeff, n_hw, n_1, n_2, path_elt, outfile_name,
+        fname_fmt_tbme=_FNAME_FMT_TBME,
+        path_temp=_DPATH_TEMPLATES,
+        mfdp_name=_FNAME_MFDP
+):
     """Reads the mfdp file from path_temp 
     and rewrites it into path_elt in accordance
     ith the given z, a, aeff, nhw, n1, n2, and outfile name
@@ -171,10 +173,12 @@ def make_mfdp_file(z, a, aeff, n_hw, n_1, n_2, path_elt, outfile_name,
                   replace_map=replace_map)
 
 
-def make_mfdp_files(z, a_values, a_presc, n_hw, n_1, n_2,
-                    a_aeff_to_dpath_map, a_aeff_to_outfile_fpath_map,
-                    path_temp=_DPATH_TEMPLATES,
-                    _fname_mfdp=_FNAME_MFDP):
+def make_mfdp_files(
+        z, a_values, a_presc, n_hw, n_1, n_2,
+        a_aeff_to_dpath_map, a_aeff_to_outfile_fpath_map,
+        path_temp=_DPATH_TEMPLATES,
+        _fname_mfdp=_FNAME_MFDP
+):
     for a, aeff in zip(a_values, a_presc):
         if a % 2 != n_hw % 2:
             n_hw += 1
@@ -202,9 +206,11 @@ def get_mfdp_replace_map(fname_tbme, outfile_name, z, a, n_hw, n_1, n_2, aeff):
             '<<AEFF>>': str(aeff)}
 
 
-def get_mfdp_restrictions_lines(nmax,
-                                _max_allowed_nmax=MAX_NMAX,
-                                _str_rest_line=_LINE_FMT_MFDP_RESTR):
+def get_mfdp_restrictions_lines(
+        nmax,
+        _max_allowed_nmax=MAX_NMAX,
+        _str_rest_line=_LINE_FMT_MFDP_RESTR
+):
     lines = list()
     for n in range(min(nmax, _max_allowed_nmax) + 1):
         i = (n + 1) * (n + 2)
@@ -212,10 +218,12 @@ def get_mfdp_restrictions_lines(nmax,
     return '\n'.join(lines)
 
 
-def make_trdens_file(z, a, nuc_dir,
-                     _dpath_results=_DPATH_RESULTS,
-                     _dpath_temp=_DPATH_TEMPLATES,
-                     _fname_trdens_in=_FNAME_TRDENS_IN):
+def make_trdens_file(
+        z, a, nuc_dir,
+        _dpath_results=_DPATH_RESULTS,
+        _dpath_temp=_DPATH_TEMPLATES,
+        _fname_trdens_in=_FNAME_TRDENS_IN
+):
     """Reads the trdens.in file from path_temp and rewrites it 
     into path_elt in accordance with the given z, a
     :param z: proton number
@@ -309,9 +317,7 @@ def truncate_space(
     return dst_path
 
 
-def truncate_spaces(
-        n1, n2, dirpaths,
-        _fname_fmt_tbme=_FNAME_FMT_TBME):
+def truncate_spaces( n1, n2, dirpaths, _fname_fmt_tbme=_FNAME_FMT_TBME):
     """For multiple directories, perform the operation of truncate_space
 
     :param n1: max allowed one-particle state
@@ -369,9 +375,11 @@ class EgvFileNotFoundException(Exception):
     pass
 
 
-def run_ncsd(dpath, fpath_outfile, force, verbose,
-             _fname_stdout=_FNAME_NCSD_STDOUT,
-             _fname_stderr=_FNAME_NCSD_STDERR):
+def run_ncsd(
+        dpath, fpath_outfile, force, verbose,
+        _fname_stdout=_FNAME_NCSD_STDOUT,
+        _fname_stderr=_FNAME_NCSD_STDERR
+):
     if force or not path.exists(path.join(fpath_outfile)):
         main_dir = getcwd()
         chdir(dpath)
@@ -390,9 +398,10 @@ def run_ncsd(dpath, fpath_outfile, force, verbose,
         chdir(main_dir)
 
 
-def run_all_ncsd(a_values, presc,
-                 a_aeff_to_dpath_map, a_aeff_to_outfile_fpath_map,
-                 force, verbose):
+def run_all_ncsd(
+        a_values, presc, a_aeff_to_dpath_map, a_aeff_to_outfile_fpath_map,
+        force, verbose
+):
     """Run the NCSD calculations. For each A value, does the NCSD calculation
     in each of its corresponding directories.
 
@@ -632,9 +641,11 @@ def ncsd_multiple_calculations(
         _print_progress(jobs_completed, jobs_total, end=True)
 
 
-def ncsd_exact_calculations(z, a_range, nhw=NHW, n1=N1, n2=N2,
-                            force=False, verbose=False, progress=True,
-                            _str_prog_ncsd_ex=_STR_PROG_NCSD_EX):
+def ncsd_exact_calculations(
+        z, a_range, nhw=NHW, n1=N1, n2=N2,
+        force=False, verbose=False, progress=True,
+        _str_prog_ncsd_ex=_STR_PROG_NCSD_EX
+):
     ncsd_multiple_calculations(
         z=z, a_values=a_range, a_presc_list=[a_range], nhw=nhw, n1=n1, n2=n2,
         force=force, verbose=verbose, progress=progress,
