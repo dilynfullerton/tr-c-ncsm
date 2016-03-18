@@ -181,9 +181,11 @@ def make_mfdp_files(
 ):
     for a, aeff in zip(a_values, a_presc):
         if a % 2 != n_hw % 2:
-            n_hw += 1
+            n_hw0 = n_hw + 1
+        else:
+            n_hw0 = n_hw
         outfile_name = path.split(a_aeff_to_outfile_fpath_map[(a, aeff)])[1]
-        make_mfdp_file(z=z, a=a, aeff=aeff, n_hw=n_hw, n_1=n_1, n_2=n_2,
+        make_mfdp_file(z=z, a=a, aeff=aeff, n_hw=n_hw0, n_1=n_1, n_2=n_2,
                        path_elt=a_aeff_to_dpath_map[(a, aeff)],
                        outfile_name=outfile_name,
                        path_temp=path_temp, mfdp_name=_fname_mfdp)
