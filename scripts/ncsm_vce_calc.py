@@ -122,19 +122,20 @@ def get_name(z, z_name_map=_Z_NAME_MAP, alt_name=_ZNAME_FMT_ALT):
         return alt_name % z
 
 
-def make_base_directories(a_values, presc, results_path, a_dirpaths_map):
+def make_base_directories(a_values, presc, a_aeff_to_dpath_map,
+                          _dpath_results=_DPATH_RESULTS):
     """Makes directories for first 3 a values if they do not exist yet
     :param a_values: Values of A for which directories are made.
     Example: If in nshell1, would make directories for He4,5,6
     :param presc: Aeff prescription for VCE expansion
-    :param results_path: Path to the directory into which these base
-    :param a_dirpaths_map: map from A value to directory path
+    :param _dpath_results: Path to the directory into which these base
+    :param a_aeff_to_dpath_map: map from A value to directory path
     directories are put
     """
-    if not path.exists(results_path):
-        mkdir(results_path)
+    if not path.exists(_dpath_results):
+        mkdir(_dpath_results)
     for a, aeff in zip(a_values, presc):
-        dirpath = a_dirpaths_map[a]
+        dirpath = a_aeff_to_dpath_map[(a, aeff)]
         if not path.exists(dirpath):
             mkdir(dirpath)
 
@@ -170,16 +171,16 @@ def make_mfdp_file(z, a, aeff, n_hw, n_1, n_2, path_elt, outfile_name,
                   replace_map=replace_map)
 
 
-def make_mfdp_files(z, a_range, a_presc, n_hw, n_1, n_2,
-                    a_dirpath_map, a_outfile_map,
+def make_mfdp_files(z, a_values, a_presc, n_hw, n_1, n_2,
+                    a_aeff_to_dpath_map, a_aeff_to_outfile_fpath_map,
                     path_temp=_DPATH_TEMPLATES,
-                    mfdp_name=_FNAME_MFDP):
-    for a, aeff in zip(a_range, a_presc):
-        outfile_name = path.split(a_outfile_map[a])[1]
+                    _fname_mfdp=_FNAME_MFDP):
+    for a, aeff in zip(a_values, a_presc):
+        outfile_name = path.split(a_aeff_to_outfile_fpath_map[(a, aeff)])[1]
         make_mfdp_file(z=z, a=a, aeff=aeff, n_hw=n_hw, n_1=n_1, n_2=n_2,
-                       path_elt=a_dirpath_map[a],
+                       path_elt=a_aeff_to_dpath_map[(a, aeff)],
                        outfile_name=outfile_name,
-                       path_temp=path_temp, mfdp_name=mfdp_name)
+                       path_temp=path_temp, mfdp_name=_fname_mfdp)
 
 
 def get_mfdp_replace_map(fname_tbme, outfile_name, z, a, n_hw, n_1, n_2, aeff):
@@ -210,21 +211,21 @@ def get_mfdp_restrictions_lines(nmax,
 
 
 def make_trdens_file(z, a, nuc_dir,
-                     path_results=_DPATH_RESULTS,
-                     path_temp=_DPATH_TEMPLATES,
-                     trdens_name=_FNAME_TRDENS_IN):
+                     _dpath_results=_DPATH_RESULTS,
+                     _dpath_temp=_DPATH_TEMPLATES,
+                     _fname_trdens_in=_FNAME_TRDENS_IN):
     """Reads the trdens.in file from path_temp and rewrites it 
     into path_elt in accordance with the given z, a
     :param z: proton number
     :param a: mass number
     :param nuc_dir: directory name
-    :param path_results: path to the results directory
-    :param path_temp: path to the templates directory
-    :param trdens_name: name of the trdens file in the templates dir
+    :param _dpath_results: path to the results directory
+    :param _dpath_temp: path to the templates directory
+    :param _fname_trdens_in: name of the trdens file in the templates dir
     """
-    src = path.join(path_temp, trdens_name)
-    path_elt = path.join(path_results, nuc_dir)
-    dst = path.join(path_elt, trdens_name)
+    src = path.join(_dpath_temp, _fname_trdens_in)
+    path_elt = path.join(_dpath_results, nuc_dir)
+    dst = path.join(path_elt, _fname_trdens_in)
     rep_map = get_trdens_replace_map(z=z, a=a)
     _rewrite_file(src=src, dst=dst, replace_map=rep_map)
 
@@ -331,18 +332,20 @@ class TBMEFileNotFoundException(Exception):
     pass
 
 
-def rename_egv_file(a6_dir, egv_name_regex, next_egv_name, force):
+def rename_egv_file(
+        a6_dir, force, _fname_rgx_egv=_RGX_EGV, _fname_egv_next=_FNAME_EGV,
+):
     """Renames the egv file from its default output name to the name needed
     for running TRDENS
 
     :param a6_dir: Directory in which the file resides
-    :param egv_name_regex: Regular expression that matches the defualt output
-    name
-    :param next_egv_name: Name that the file is renamed to
     :param force: If True, replaces any existing files by the name of
     next_egv_name
+    :param _fname_rgx_egv: Regular expression that matches the defualt output
+    name
+    :param _fname_egv_next: Name that the file is renamed to
     """
-    next_egv_path = path.join(a6_dir, next_egv_name)
+    next_egv_path = path.join(a6_dir, _fname_egv_next)
     if path.lexists(next_egv_path):
         if not force:
             return 0
@@ -350,7 +353,7 @@ def rename_egv_file(a6_dir, egv_name_regex, next_egv_name, force):
             remove(next_egv_path)
     dirpath, dirnames, filenames = walk(a6_dir).next()
     for f in filenames:
-        if re.match(egv_name_regex, f) is not None:
+        if re.match(_fname_rgx_egv, f) is not None:
             symlink(f, next_egv_path)
             break
     else:
@@ -383,7 +386,8 @@ def run_ncsd(dpath, fpath_outfile, force, verbose,
         chdir(main_dir)
 
 
-def run_all_ncsd(a_values, presc, a_dirpaths_map, a_outfile_map,
+def run_all_ncsd(a_values, presc,
+                 a_aeff_to_dpath_map, a_aeff_to_outfile_fpath_map,
                  force, verbose):
     """Run the NCSD calculations. For each A value, does the NCSD calculation
     in each of its corresponding directories.
@@ -392,32 +396,34 @@ def run_all_ncsd(a_values, presc, a_dirpaths_map, a_outfile_map,
     Hamiltonian
     :param presc: 3-tuple of Aeff values which, along with the
     A values, are used to generate the effective Hamiltonian
-    :param a_dirpaths_map: Map from A values to the path to the directory in
-    which NCSD is to be performed
-    :param a_outfile_map: Map from A values to the .out files produced by the
-    calculation. If force is False, will not do the calculation if such files
-    already exist
+    :param a_aeff_to_dpath_map: Map from A values to the path to the
+    directory in which NCSD is to be performed
+    :param a_aeff_to_outfile_fpath_map: Map from A values to the .out
+    files produced by the calculation. If force is False, will not do the
+    calculation if such files already exist
     :param force: If true, redoes the calculations even if the output files
     already exist.
     :param verbose: if true, prints regular output of NCSD to stdout, otherwise
     this output is suppressed
     """
     for a, aeff in zip(a_values, presc):
-        dpath = a_dirpaths_map[a]
-        fpath_outfile = path.join(dpath, a_outfile_map[a])
+        dpath = a_aeff_to_dpath_map[(a, aeff)]
+        fpath_outfile = path.join(dpath,
+                                  a_aeff_to_outfile_fpath_map[(a, aeff)])
         run_ncsd(dpath=dpath, fpath_outfile=fpath_outfile,
                  force=force, verbose=verbose)
 
 
 def run_trdens(
-        a6_dir, outfile, force, verbose,
+        a6_dir, force, verbose,
+        _fname_trdens_out=_FNAME_TRDENS_OUT,
         _fname_stdout=_FNAME_TRDENS_STDOUT,
         _fname_stderr=_FNAME_TRDENS_STDERR
 ):
     """Run the TRDENS calculation in a6_dir
 
     :param a6_dir: Directory in which to run the calulation
-    :param outfile: Name of the output file generated by the TRDENS
+    :param _fname_trdens_out: Name of the output file generated by the TRDENS
     calculation. (If force is False, will not run if outfile already exists)
     :param force: If True, redoes the calculation even if output files
     already exist
@@ -429,7 +435,7 @@ def run_trdens(
     :param _fname_stderr: filename to which to write standard error output
     of TRDENS if verbose is false
     """
-    outfile_path = path.join(a6_dir, outfile)
+    outfile_path = path.join(a6_dir, _fname_trdens_out)
     if path.exists(outfile_path):
         if not force:
             return 0
@@ -455,7 +461,7 @@ def run_trdens(
 
 def run_vce(
         a_values, a_prescription, a_range,
-        a_outfile_map, dirpath_aeff6, dirpath_vce, force,
+        a_aeff_to_outfile_fname_map, dirpath_aeff6, dirpath_vce, force,
         _fname_fmt_vce_int=_FNAME_FMT_VCE,
         _fname_heff=_FNAME_HEFF,
 ):
@@ -468,19 +474,20 @@ def run_vce(
     Note: All generated interaction files will be the same (linked), the
     only difference is their file names, such that the shell_calc.py
     script interprets them as interactions for different A values.
-    :param a_outfile_map: Map from A values to their respective NCSD output
-    files
+    :param a_aeff_to_outfile_fname_map: Map from A values to their
+    respective NCSD output files
     :param dirpath_aeff6: Directory for the 3rd A value
     :param dirpath_vce: Path to the directory in which to put generated
     interaction files
-    :param _fname_fmt_vce_int: Filename template for generated interaction files
+    :param _fname_fmt_vce_int: Filename template for generated interaction
+    files
     :param _fname_heff: Name of the effective Hamiltonian output file
     generated by the TRDENS calculation for the 3rd A value
     :param force: If True, force redoing the calculation even if
     output files already exist
     """
-    he4_fname = a_outfile_map[a_values[0]]
-    he5_fname = a_outfile_map[a_values[1]]
+    he4_fname = a_aeff_to_outfile_fname_map[(a_values[0], a_prescription[0])]
+    he5_fname = a_aeff_to_outfile_fname_map[(a_values[1], a_prescription[1])]
     he6_fname = path.join(dirpath_aeff6, _fname_heff)
     a_0 = a_range[0]
     fpath_fmt = path.join(dirpath_vce, _fname_fmt_vce_int)
@@ -497,7 +504,7 @@ def run_vce(
                 link(fpath, next_fpath)
 
 
-def _get_a_to_dirpaths_map(
+def _get_a_aeff_to_dpath_map(
         a_values, a_prescription, z, nhw, n1, n2,
         _dpath_results=_DPATH_RESULTS,
         _dir_fmt_nuc=_DNAME_FMT_NUC
@@ -505,18 +512,20 @@ def _get_a_to_dirpaths_map(
     a_paths_map = dict()
     path_fmt = path.join(_dpath_results, _dir_fmt_nuc)
     for a, aeff in zip(a_values, a_prescription):
-        a_paths_map[a] = path_fmt % (get_name(z), a, aeff, nhw + a % 2, n1, n2)
+        a_paths_map[(a, aeff)] = path_fmt % (
+            get_name(z), a, aeff, nhw + a % 2, n1, n2
+        )
     return a_paths_map
 
 
-def _get_a_to_outfile_map(
-        a_values, a_prescription, z, nhw, n1, n2, a_dirpaths_map,
+def _get_a_aeff_to_outfile_fpath_map(
+        a_values, a_prescription, z, nhw, n1, n2, a_aeff_to_dirpath_map,
         _fname_fmt_ncsd_out=_FNAME_FMT_NCSD_OUT
 ):
     a_outfile_map = dict()
     for a, aeff in zip(a_values, a_prescription):
-        a_outfile_map[a] = path.join(
-            a_dirpaths_map[a],
+        a_outfile_map[(a, aeff)] = path.join(
+            a_aeff_to_dirpath_map[(a, aeff)],
             _fname_fmt_ncsd_out % (get_name(z), a, aeff, nhw + a % 2, n1, n2))
     return a_outfile_map
 
@@ -547,7 +556,6 @@ def ncsd_single_calculation(
         _path_results=_DPATH_RESULTS,
         _dir_fmt_nuc=_DNAME_FMT_NUC,
         _fname_fmt_ncsd_out=_FNAME_FMT_NCSD_OUT,
-        _fname_mfdp=_FNAME_MFDP,
 ):
     if a % 2 != nhw % 2:
         nhw += 1
@@ -561,19 +569,22 @@ def ncsd_single_calculation(
     # make directory
     make_base_directories(
         a_values=[a], presc=[aeff],
-        results_path=_path_results, a_dirpaths_map={a: dirpath_nuc}
+        _dpath_results=_path_results,
+        a_aeff_to_dpath_map={(a, aeff): dirpath_nuc}
     )
 
     # ncsm calculations: make mfdp file, perform truncation, and run NCSD
     make_mfdp_files(
-        z=z, a_range=[a], a_presc=[aeff],
-        a_dirpath_map={a: dirpath_nuc}, a_outfile_map={a: outfile_ncsd},
-        n_hw=nhw, n_1=n1, n_2=n2, mfdp_name=_fname_mfdp
+        z=z, a_values=[a], a_presc=[aeff],
+        a_aeff_to_dpath_map={(a, aeff): dirpath_nuc},
+        a_aeff_to_outfile_fpath_map={(a, aeff): outfile_ncsd},
+        n_hw=nhw, n_1=n1, n_2=n2,
     )
     truncate_spaces(n1=n1, n2=n2, dirpaths=[dirpath_nuc])
     run_all_ncsd(
         a_values=[a], presc=[aeff],
-        a_dirpaths_map={a: dirpath_nuc}, a_outfile_map={a: outfile_ncsd},
+        a_aeff_to_dpath_map={(a, aeff): dirpath_nuc},
+        a_aeff_to_outfile_fpath_map={(a, aeff): outfile_ncsd},
         force=force, verbose=verbose,
     )
 
@@ -582,11 +593,33 @@ def ncsd_multiple_calculations(
         z, a_values, a_presc_list,
         nhw=NHW, n1=N1, n2=N1,
         force=False, verbose=False, progress=True,
-        _str_prog_ncsd=_STR_PROG_NCSD
+        _str_prog_ncsd=_STR_PROG_NCSD,
 ):
     a_aeff_set = set()
+    # prepare directories
     for ap in a_presc_list:
         a_aeff_set |= set(zip(a_values, ap))
+    a_list = [a_aeff[0] for a_aeff in a_aeff_set]
+    aeff_list = [a_aeff[1] for a_aeff in a_aeff_set]
+    a_aeff_to_dir_map = _get_a_aeff_to_dpath_map(
+        a_values=a_list, a_prescription=aeff_list, z=z, nhw=nhw, n1=n1, n2=n2
+    )
+    a_aeff_to_outfile_map = _get_a_aeff_to_outfile_fpath_map(
+        a_values=a_list, a_prescription=aeff_list, z=z, nhw=nhw, n1=n1, n2=n2,
+        a_aeff_to_dirpath_map=a_aeff_to_dir_map
+    )
+    make_base_directories(
+        a_values=a_list, presc=aeff_list,
+        a_aeff_to_dpath_map=a_aeff_to_dir_map
+    )
+    make_mfdp_files(
+        z=z, a_values=a_list, a_presc=aeff_list,
+        a_aeff_to_dpath_map=a_aeff_to_dir_map,
+        a_aeff_to_outfile_fpath_map=a_aeff_to_outfile_map,
+        n_hw=nhw, n_1=n1, n_2=n2,
+    )
+    truncate_spaces(n1=n1, n2=n2, dirpaths=a_aeff_to_dir_map.values())
+    # do ncsd
     jobs_total = len(a_aeff_set)
     jobs_completed = 0
     if progress:
@@ -594,8 +627,10 @@ def ncsd_multiple_calculations(
     for a, aeff in sorted(a_aeff_set):
         if progress:
             _print_progress(jobs_completed, jobs_total)
-        ncsd_single_calculation(
-            z=z, a=a, aeff=aeff, nhw=nhw, n1=n1, n2=n2,
+        run_all_ncsd(
+            a_values=[a], presc=[aeff],
+            a_aeff_to_dpath_map=a_aeff_to_dir_map,
+            a_aeff_to_outfile_fpath_map=a_aeff_to_outfile_map,
             force=force, verbose=verbose,
         )
         jobs_completed += 1
@@ -625,13 +660,8 @@ def vce_single_calculation(
         nhw=NHW, n1=N1, n2=N1,
         force_trdens=False, force_vce=False, verbose=False,
         _dpath_results=_DPATH_RESULTS,
-        _dpath_temp=_DPATH_TEMPLATES,
         _dname_vce=_DNAME_VCE,
         _dname_fmt_vce=_DNAME_FMT_VCE,
-        _fname_rgx_egv=_RGX_EGV,
-        _fname_egv_final=_FNAME_EGV,
-        _fname_trdens_in=_FNAME_TRDENS_IN,
-        _fname_trdens_out=_FNAME_TRDENS_OUT,
 ):
     """Valence cluster expansion
     :param z: protonn number
@@ -652,45 +682,36 @@ def vce_single_calculation(
     :param verbose: if true, prints the regular output of TRDENS to stdout,
     otherwise suppresses output
     :param _dpath_results: Path to the results directory
-    :param _dpath_temp: Path to the templates directory
     :param _dname_fmt_vce: template string for the directory for the vce
     interaction files
     :param _dname_vce: Template string for the directory for the interactions
     calculated based on the effective Hamiltonian. Should accept a string
     representing the A_prescription tuple as a format argument.
-    :param _fname_rgx_egv: Regular expression that matches the .egv file
     outputted by the NCSD calculation (which needs to be renamed)
-    :param _fname_trdens_in: Name of the trdens input file in the templates
     directory
-    :param _fname_egv_final: String with which to rename the .egv file outputted
     by the NCSD calculation in prepration for the TRDENS calculation.
-    :param _fname_trdens_out: Name of the trdens output file (signifying that
     this operation has been performed).
     """
-    a_dirpaths_map = _get_a_to_dirpaths_map(
+    a_aeff_dir_map = _get_a_aeff_to_dpath_map(
         a_values=a_values, a_prescription=a_prescription,
         z=z, nhw=nhw, n1=n1, n2=n2
     )
-    a_outfile_map = _get_a_to_outfile_map(
+    a_aeff_outfile_map = _get_a_aeff_to_outfile_fpath_map(
         a_values=a_values, a_prescription=a_prescription,
-        z=z, nhw=nhw, n1=n1, n2=n2, a_dirpaths_map=a_dirpaths_map
+        z=z, nhw=nhw, n1=n1, n2=n2, a_aeff_to_dirpath_map=a_aeff_dir_map
     )
     # for the 3rd a value, make trdens file and run TRDENS
+    a_aeff6 = (a_values[2], a_prescription[2])
     make_trdens_file(
         z=z, a=a_values[2],
-        nuc_dir=a_dirpaths_map[a_values[2]],
-        path_results=_dpath_results,
-        path_temp=_dpath_temp,
-        trdens_name=_fname_trdens_in)
-    a6_dir = a_dirpaths_map[a_values[2]]
+        nuc_dir=a_aeff_dir_map[a_aeff6],
+    )
+    a6_dir = a_aeff_dir_map[a_aeff6]
     rename_egv_file(
         a6_dir=a6_dir,
-        egv_name_regex=_fname_rgx_egv,
-        next_egv_name=_fname_egv_final,
         force=force_trdens)
     run_trdens(
         a6_dir=a6_dir,
-        outfile=_fname_trdens_out,
         force=force_trdens, verbose=verbose)
 
     # do valence cluster expansion
@@ -709,7 +730,7 @@ def vce_single_calculation(
         a_range=a_range,
         dirpath_aeff6=a6_dir,
         dirpath_vce=vce_dirpath,
-        a_outfile_map=a_outfile_map,
+        a_aeff_to_outfile_fname_map=a_aeff_outfile_map,
         force=force_vce
     )
 
