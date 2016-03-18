@@ -941,5 +941,3 @@ if __name__ == "__main__":
             '%d' % (len(argv) - 1,) +
             ' is not a valid number of arguments for ncsm_vce_calc.py.' +
             'Please enter 3-9 arguments.')
-
-
