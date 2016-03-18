@@ -429,10 +429,11 @@ def run_trdens(
     of TRDENS if verbose is false
     """
     outfile_path = path.join(a6_dir, outfile)
-    if path.exists(outfile_path) and not force:
-        return 0
-    elif force:
-        remove(outfile_path)
+    if path.exists(outfile_path):
+        if not force:
+            return 0
+        else:
+            remove(outfile_path)
     main_dir = getcwd()
     chdir(a6_dir)
     args = ['TRDENS']
