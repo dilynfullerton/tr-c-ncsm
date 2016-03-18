@@ -27,6 +27,7 @@ from InvalidNumberOfArgumentsException import InvalidNumberOfArgumentsException
 from scripts.ncsm_vce_calc import ncsd_single_calculation
 from scripts.ncsm_vce_calc import ncsd_exact_calculations
 
+# todo this script section is some really smell code
 if __name__ == "__main__":
     user_args = argv[1:]
     force0, exact_range = False, False

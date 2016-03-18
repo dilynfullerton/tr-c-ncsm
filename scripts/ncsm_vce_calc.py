@@ -845,6 +845,7 @@ def _force_from_argv0(argv0):
     return force_ncsd, force_trdens, force_vce, force_all
 
 
+# todo make this script handling better
 if __name__ == "__main__":
     user_args = argv[1:]
     f_ncsd, f_trdens, f_vce, f_all = (False,) * 4
