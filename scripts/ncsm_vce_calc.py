@@ -56,7 +56,7 @@ N2 = 15
 MAX_NMAX = 15
 
 # Directories
-_DPATH_MAIN = './'
+_DPATH_MAIN = getcwd()
 _DPATH_TEMPLATES = path.join(_DPATH_MAIN, 'templates')
 _DPATH_RESULTS = path.join(_DPATH_MAIN, 'results')
 _DNAME_FMT_NUC = '%s%d_%d_Nhw%d_%d_%d'  # name, A, Aeff
@@ -174,9 +174,10 @@ def make_mfdp_files(z, a_range, a_presc, n_hw, n_1, n_2,
                     path_temp=_DPATH_TEMPLATES,
                     mfdp_name=_FNAME_MFDP):
     for a, aeff in zip(a_range, a_presc):
+        outfile_name = path.split(a_outfile_map[a])[1]
         make_mfdp_file(z=z, a=a, aeff=aeff, n_hw=n_hw, n_1=n_1, n_2=n_2,
                        path_elt=a_dirpath_map[a],
-                       outfile_name=a_outfile_map[a],
+                       outfile_name=outfile_name,
                        path_temp=path_temp, mfdp_name=mfdp_name)
 
 
@@ -660,8 +661,9 @@ def vce_single_calculation(
         force=force_trdens, verbose=verbose)
 
     # do valence cluster expansion
-    if not path.exists(_dname_vce):
-        mkdir(_dname_vce)
+    dpath_vce0 = path.join(_dpath_results, _dname_vce)
+    if not path.exists(dpath_vce0):
+        mkdir(dpath_vce0)
     vce_dirpath = path.join(
         _dpath_results, _dname_vce,
         _dname_fmt_vce % tuple(tuple(a_prescription) + (nhw, n1, n2))
