@@ -39,7 +39,7 @@ if __name__ == "__main__":
             exact_range = True
         else:
             break
-        user_args = argv[1:]
+        user_args = user_args[1:]
     if not exact_range:
         if len(user_args) == 2:
             z0, a0 = [int(x) for x in user_args]
