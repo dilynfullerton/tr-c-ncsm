@@ -412,8 +412,7 @@ def run_all_ncsd(a_values, presc,
     """
     for a, aeff in zip(a_values, presc):
         dpath = a_aeff_to_dpath_map[(a, aeff)]
-        fpath_outfile = path.join(dpath,
-                                  a_aeff_to_outfile_fpath_map[(a, aeff)])
+        fpath_outfile = a_aeff_to_outfile_fpath_map[(a, aeff)]
         run_ncsd(dpath=dpath, fpath_outfile=fpath_outfile,
                  force=force, verbose=verbose)
 
@@ -517,9 +516,11 @@ def _get_a_aeff_to_dpath_map(
     path_fmt = path.join(_dpath_results, _dir_fmt_nuc)
     for a, aeff in zip(a_values, a_prescription):
         if nhw % 2 != a % 2:
-            nhw += 1
+            nhw0 = nhw + 1
+        else:
+            nhw0 = nhw
         a_paths_map[(a, aeff)] = path_fmt % (
-            get_name(z), a, aeff, nhw, n1, n2
+            get_name(z), a, aeff, nhw0, n1, n2
         )
     return a_paths_map
 
@@ -531,10 +532,12 @@ def _get_a_aeff_to_outfile_fpath_map(
     a_outfile_map = dict()
     for a, aeff in zip(a_values, a_prescription):
         if nhw % 2 != a % 2:
-            nhw += 1
+            nhw0 = nhw + 1
+        else:
+            nhw0 = nhw
         a_outfile_map[(a, aeff)] = path.join(
             a_aeff_to_dirpath_map[(a, aeff)],
-            _fname_fmt_ncsd_out % (get_name(z), a, aeff, nhw, n1, n2))
+            _fname_fmt_ncsd_out % (get_name(z), a, aeff, nhw0, n1, n2))
     return a_outfile_map
 
 
