@@ -89,6 +89,7 @@ WIDTH_PROGRESS_BAR = 48
 STR_PROGRESS_BAR = 'Progress: %3d/%-3d '
 _STR_PROG_NCSD = 'Doing NCSD calculations for (A, Aeff) pairs...'
 _STR_PROG_VCE = 'Doing VCE calculations for Aeff prescriptions...'
+_STR_PROG_NCSD_EX = 'Doing NCSD calculations for A=Aeff...'
 
 # other
 _Z_NAME_MAP = {
@@ -603,9 +604,20 @@ def ncsd_multiple_calculations(
 
 
 def ncsd_exact_calculations(z, a_range, nhw=NHW, n1=N1, n2=N2,
-                            force=False, verbose=False, progress=True):
+                            force=False, verbose=False, progress=True,
+                            _str_prog_ncsd_ex=_STR_PROG_NCSD_EX):
+    jobs_total = len(a_range)
+    jobs_completed = 0
+    if progress:
+        print _str_prog_ncsd_ex
     for a in a_range:
-        ncsd_single_calculation(z=z, a=a, aeff=a, nhw=nhw, n1=n1, n2=n2)
+        if progress:
+            _print_progress(jobs_completed, jobs_total)
+        ncsd_single_calculation(z=z, a=a, aeff=a, nhw=nhw, n1=n1, n2=n2,
+                                force=force, verbose=verbose)
+        jobs_completed += 1
+    if progress:
+        _print_progress(jobs_completed, jobs_total, end=True)
 
 
 def vce_single_calculation(
