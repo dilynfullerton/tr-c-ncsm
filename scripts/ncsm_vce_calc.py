@@ -613,11 +613,27 @@ def ncsd_single_calculation(
 
 
 def ncsd_multiple_calculations(
-        z, a_values, a_presc_list,
-        nhw=NHW, n1=N1, n2=N1,
+        a_presc_list, a_values,
+        z, nhw=NHW, n1=N1, n2=N1,
         force=False, verbose=False, progress=True,
         str_prog_ncsd=_STR_PROG_NCSD,
 ):
+    """For a given list of A prescriptions, do the NCSD calculations
+    necessary for doing a valence cluster expansion
+    :param a_presc_list: sequence of A prescriptions
+    :param a_values: three base a values (e.g. 4, 5, 6 for p shell)
+    :param z: proton number
+    :param nhw: major oscillator shell model space truncation
+    :param n1: max allowed 1-particle state
+    :param n2: max allowed 2-particle state
+    :param force: if true, force doing the NCSD calculation, even if it has
+    already been done
+    :param verbose: if true, prints the regular NCSD output to stdout; else
+    this is suppressed and written to a file instead
+    :param progress: if true, show a progress bar. Note: will not show
+    progress bar if verbose is true
+    :param str_prog_ncsd: string to show before progress bar
+    """
     a_aeff_set = set()
     # prepare directories
     for ap in a_presc_list:
