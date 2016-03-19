@@ -66,7 +66,7 @@ _DNAME_VCE = 'vce'
 
 # Files
 _RGX_TBME = 'TBME'
-_RGX_EGV = 'mfdp_*\d+\.egv'
+_FNAME_FMT_EGV = 'mfdp_%d.egv'
 _FNAME_FMT_VCE = 'A%d.int'  # A value
 _FNAME_FMT_NCSD_OUT = '%s%d_%d_Nhw%d_%d_%d.out'  # name, A, Aeff, Nhw, n1, n2
 _FNAME_FMT_NCSD_OUT_SF = _FNAME_FMT_NCSD_OUT[:-4] + '_sf%f.2' + '.out'
@@ -343,15 +343,17 @@ class TBMEFileNotFoundException(Exception):
 
 
 def rename_egv_file(
-        a6_dir, force, _fname_rgx_egv=_RGX_EGV, _fname_egv_next=_FNAME_EGV,
+        a6_dir, nhw, force,
+        _fname_fmt_egv=_FNAME_FMT_EGV, _fname_egv_next=_FNAME_EGV,
 ):
     """Renames the egv file from its default output name to the name needed
     for running TRDENS
 
     :param a6_dir: Directory in which the file resides
+    :param nhw: major oscillator model space truncation
     :param force: If True, replaces any existing files by the name of
     next_egv_name
-    :param _fname_rgx_egv: Regular expression that matches the defualt output
+    :param _fname_fmt_egv: Regular expression that matches the defualt output
     name
     :param _fname_egv_next: Name that the file is renamed to
     """
@@ -363,7 +365,8 @@ def rename_egv_file(
             remove(next_egv_path)
     dirpath, dirnames, filenames = walk(a6_dir).next()
     for f in filenames:
-        if re.match(_fname_rgx_egv, f) is not None:
+        fname_egv = _fname_fmt_egv % nhw
+        if f == fname_egv:
             symlink(f, next_egv_path)
             break
     else:
@@ -649,6 +652,21 @@ def ncsd_exact_calculations(
         force=False, verbose=False, progress=True,
         _str_prog_ncsd_ex=_STR_PROG_NCSD_EX
 ):
+    """For each A in a_range, does the NCSD calculation for A=Aeff
+    :param z: proton number
+    :param a_range: range of A values for which to do NCSD with Aeff=A
+    :param nhw: major oscillator model space truncation. Note: Increased by 1
+    for values of A that have opposite parity (odd-even)
+    :param n1: max allowed 1-particle state
+    :param n2: max allowed 2-particle state
+    :param force: if true, force calculation of NCSD even if output files are
+    present
+    :param verbose: if true, print regular NCSD output to stdout; otherwise
+    output is suppressed and written to a file instead
+    :param progress: if true, show a progress bar. Note: will not be shown if
+    verbose is true.
+    :param _str_prog_ncsd_ex: string to show before progress bar
+    """
     ncsd_multiple_calculations(
         z=z, a_values=a_range, a_presc_list=[a_range], nhw=nhw, n1=n1, n2=n2,
         force=force, verbose=verbose, progress=progress,
@@ -703,17 +721,10 @@ def vce_single_calculation(
     )
     # for the 3rd a value, make trdens file and run TRDENS
     a_aeff6 = (a_values[2], a_prescription[2])
-    make_trdens_file(
-        z=z, a=a_values[2],
-        nuc_dir=a_aeff_dir_map[a_aeff6],
-    )
+    make_trdens_file(z=z, a=a_values[2], nuc_dir=a_aeff_dir_map[a_aeff6])
     a6_dir = a_aeff_dir_map[a_aeff6]
-    rename_egv_file(
-        a6_dir=a6_dir,
-        force=force_trdens)
-    run_trdens(
-        a6_dir=a6_dir,
-        force=force_trdens, verbose=verbose)
+    rename_egv_file(a6_dir=a6_dir, nhw=nhw, force=force_trdens)
+    run_trdens(a6_dir=a6_dir, force=force_trdens, verbose=verbose)
 
     # do valence cluster expansion
     dpath_vce0 = path.join(_dpath_results, _dname_vce)
@@ -741,6 +752,28 @@ def vce_multiple_calculations(
         force_trdens, force_vce, verbose, progress,
         _str_prog_vce=_STR_PROG_VCE
 ):
+    """For every A prescription in a_presc_list, performs the valence
+    cluster expansion to generate an interaction file. Assumes NCSD
+    calculations have already been done sufficiently.
+    :param z: proton number
+    :param a_values: three base A values (e.g. if in p shell these are 4, 5, 6)
+    :param a_presc_list: sequence of 3-tuples representing A prescriptions
+    with which to do the valence cluster expansion
+    :param a_range: sequence of values for which to generate interaction
+    files
+    :param nhw: major oscillator model space truncation
+    :param n1: max allowed one-particle state
+    :param n2: max allowed two-particle state
+    :param force_trdens: if true, force calculation of TRDENS even if output
+    file is already present
+    :param force_vce: if true, force calculation of valence cluster expansion
+    even if interaction output file is already present
+    :param verbose: if true, regular output of TRDENS is printed to stdout;
+    otherwise output is suppressed and written to a file instead
+    :param progress: if true, display a progress bar. Note: if verbose is
+    true, progress bar will not be displayed.
+    :param _str_prog_vce: string to display before progress bar
+    """
     jobs_total = len(a_presc_list)
     jobs_completed = 0
     progress = progress and not verbose
@@ -913,7 +946,8 @@ if __name__ == "__main__":
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
         n1_0, n2_0 = [int(x) for x in other_args[2:4]]
         ncsd_vce_calculations(
-            a_prescriptions=a_prescriptions0, a_range=a_range0, n1=n1_0, n2=n2_0,
+            a_prescriptions=a_prescriptions0, a_range=a_range0,
+            n1=n1_0, n2=n2_0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0,
         )

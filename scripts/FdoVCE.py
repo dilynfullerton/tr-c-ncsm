@@ -71,8 +71,7 @@ def print_header(aeff, e0, spe, st='%d'):
 
 def get_tbme(aeff, e0, spe, fname_out, fname_he6, presc=None):
     write_lines = list()
-    if presc is not None and (
-                    presc[0] != aeff or presc[1] != aeff):
+    if presc is not None and (presc[0] != aeff or presc[1] != aeff):
         write_lines.append(print_header(str(presc), e0, spe, '%s'))
     else:
         write_lines.append(print_header(aeff, e0, spe))
