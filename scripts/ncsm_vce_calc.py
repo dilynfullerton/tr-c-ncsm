@@ -86,7 +86,7 @@ _FNAME_TRDENS_STDOUT = '__stdout_trdens__.txt'
 _FNAME_TRDENS_STDERR = '__stderr_trdens__.txt'
 WIDTH_TERM = 79
 WIDTH_PROGRESS_BAR = 48
-STR_PROGRESS_BAR = 'Progress: %3d/%-3d '
+STR_PROGRESS_BAR = '  Progress: %3d/%-3d '
 _STR_PROG_NCSD = 'Doing NCSD calculations for (A, Aeff) pairs...'
 _STR_PROG_VCE = 'Doing VCE calculations for Aeff prescriptions...'
 _STR_PROG_NCSD_EX = 'Doing NCSD calculations for A=Aeff...'
