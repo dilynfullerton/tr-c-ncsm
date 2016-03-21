@@ -1,6 +1,7 @@
 /mcalc/scripts/old
 /old/GetSmallerInteraction.py
 /old/doVCE.py
+/scripts/rename_dirs.py
 /results-old*
 /.idea
 *.pyc

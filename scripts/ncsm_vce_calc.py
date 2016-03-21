@@ -87,12 +87,12 @@ _FNAME_NCSD_STDOUT = '__stdout_ncsd__.txt'
 _FNAME_NCSD_STDERR = '__stderr_ncsd__.txt'
 _FNAME_TRDENS_STDOUT = '__stdout_trdens__.txt'
 _FNAME_TRDENS_STDERR = '__stderr_trdens__.txt'
-WIDTH_TERM = 79
-WIDTH_PROGRESS_BAR = 48
-STR_PROGRESS_BAR = '  Progress: %3d/%-3d '
 _STR_PROG_NCSD = 'Doing NCSD calculations for (A, Aeff) pairs...'
 _STR_PROG_VCE = 'Doing VCE calculations for Aeff prescriptions...'
 _STR_PROG_NCSD_EX = 'Doing NCSD calculations for A=Aeff...'
+WIDTH_TERM = 79
+WIDTH_PROGRESS_BAR = 48
+STR_PROGRESS_BAR = '  Progress: %3d/%-3d '
 
 # other
 _Z_NAME_MAP = {
@@ -348,7 +348,7 @@ class TBMEFileNotFoundException(Exception):
 
 
 def rename_egv_file(
-        a6_dir, nhw, force,
+        a6_dir, nhw, a6, force,
         _fname_fmt_egv=_FNAME_FMT_EGV, _fname_egv_next=_FNAME_EGV,
 ):
     """Renames the egv file from its default output name to the name needed
@@ -356,12 +356,15 @@ def rename_egv_file(
 
     :param a6_dir: Directory in which the file resides
     :param nhw: major oscillator model space truncation
+    :param a6: third A value, for which Heff is generated
     :param force: If True, replaces any existing files by the name of
     next_egv_name
     :param _fname_fmt_egv: Regular expression that matches the defualt output
     name
     :param _fname_egv_next: Name that the file is renamed to
     """
+    if nhw % 2 != a6 % 2:
+        nhw += 1
     next_egv_path = path.join(a6_dir, _fname_egv_next)
     if path.lexists(next_egv_path):
         if not force:
@@ -375,8 +378,6 @@ def rename_egv_file(
             symlink(f, next_egv_path)
             break
     else:
-        for f in filenames:
-            print f
         raise EgvFileNotFoundException()
     return 1
 
@@ -566,18 +567,19 @@ def _print_progress(
         bar_len=WIDTH_PROGRESS_BAR, total_width=WIDTH_TERM,
         text_fmt=STR_PROGRESS_BAR
 ):
-    text = text_fmt % (floor(completed), total)
-    p = completed / total
-    bar_fill = int(floor(p * bar_len))
-    progress_bar = '[' + '#'*bar_fill + ' '*(bar_len - bar_fill) + ']'
-    sp_fill_len = total_width - len(text) - len(progress_bar)
-    if sp_fill_len < 0:
-        sp_fill_len = 0
-    line = '\r' + text + ' '*sp_fill_len + progress_bar
-    if end:
-        line += '\n'
-    stdout.write(line)
-    stdout.flush()
+    if total > 0:
+        text = text_fmt % (floor(completed), total)
+        p = completed / total
+        bar_fill = int(floor(p * bar_len))
+        progress_bar = '[' + '#'*bar_fill + ' '*(bar_len - bar_fill) + ']'
+        sp_fill_len = total_width - len(text) - len(progress_bar)
+        if sp_fill_len < 0:
+            sp_fill_len = 0
+        line = '\r' + text + ' '*sp_fill_len + progress_bar
+        if end:
+            line += '\n'
+        stdout.write(line)
+        stdout.flush()
 
 
 def _prepare_directories(a_list, aeff_list, z, nhw, n1, n2):
@@ -716,6 +718,8 @@ def vce_single_calculation(
     :param nhw: major oscillator model space truncation
     :param n1: max allowed single particle state
     :param n2: max allowed two-particle state
+    :param nshell: shell number (0 = s, 1 = p, 2 = sd, ...)
+    :param ncomponent: dimension (1 = neutrons, 2 = protons and neutrons)
     :param force_trdens: if true, forces redoing of the TRDENS calculation,
     even if output file(s) are present
     :param force_vce: if true, force redoing of the valence cluster expansion
@@ -746,7 +750,7 @@ def vce_single_calculation(
     a_aeff6 = (a_values[2], a_prescription[2])
     make_trdens_file(z=z, a=a_values[2], nuc_dir=a_aeff_dir_map[a_aeff6])
     a6_dir = a_aeff_dir_map[a_aeff6]
-    rename_egv_file(a6_dir=a6_dir, nhw=nhw, force=force_trdens)
+    rename_egv_file(a6_dir=a6_dir, nhw=nhw, a6=a_values[2], force=force_trdens)
     run_trdens(a6_dir=a6_dir, force=force_trdens, verbose=verbose)
 
     # do valence cluster expansion
@@ -772,8 +776,8 @@ def vce_single_calculation(
 
 
 def vce_multiple_calculations(
-        z, a_values, a_presc_list, a_range, nhw, n1, n2,
-        nshell, ncomponent,
+        z, a_values, a_presc_list, a_range,
+        nhw, n1, n2, nshell, ncomponent,
         force_trdens, force_vce, verbose, progress,
         _str_prog_vce=_STR_PROG_VCE
 ):
@@ -789,6 +793,9 @@ def vce_multiple_calculations(
     :param nhw: major oscillator model space truncation
     :param n1: max allowed one-particle state
     :param n2: max allowed two-particle state
+    :param nshell: shell number (0=s, 1=p, 2=sd, ...)
+    :param ncomponent: number of components
+    (1=neutrons, 2=protons and neutrons)
     :param force_trdens: if true, force calculation of TRDENS even if output
     file is already present
     :param force_vce: if true, force calculation of valence cluster expansion
@@ -822,7 +829,7 @@ def vce_multiple_calculations(
 
 def ncsd_vce_calculations(
         a_prescriptions, a_range,
-        nshell=N_SHELL, nhw=NHW, n1=N1, n2=N2, ncomponent=N_COMPONENT,
+        nhw=NHW, n1=N1, n2=N2, nshell=N_SHELL, ncomponent=N_COMPONENT,
         force_ncsd=False, force_trdens=False, force_vce=False,
         force_all=False,
         verbose=False, progress=True,
@@ -832,10 +839,11 @@ def ncsd_vce_calculations(
     :param a_prescriptions: sequence or generator of A prescription tuples
     :param a_range: sequence of A values for which to generate interaction
     files
-    :param nshell: major oscillator shell (0 = s, 1 = p, 2 = sd, ...)
     :param nhw: model space max oscillator shell
     :param n1: max allowed one-particle state
     :param n2: max allowed two-particle state
+    :param nshell: major oscillator shell (0 = s, 1 = p, 2 = sd, ...)
+    :param ncomponent: num components (1=neutrons, 2=protons and neutrons)
     :param force_ncsd: if true, forces recalculation of NCSD, even if output
     files already exist
     :param force_trdens: if true, forces recalculation of TRDENS, even if
