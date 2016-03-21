@@ -699,7 +699,7 @@ def ncsd_exact_calculations(
 
 def vce_single_calculation(
         z, a_values, a_prescription, a_range,
-        nhw=NHW, n1=N1, n2=N1, nshell=-1,
+        nhw=NHW, n1=N1, n2=N1, nshell=-1, ncomponent=-1,
         force_trdens=False, force_vce=False, verbose=False,
         _dpath_results=_DPATH_RESULTS,
         _dname_vce=_DNAME_VCE,
@@ -755,7 +755,8 @@ def vce_single_calculation(
         mkdir(dpath_vce0)
     vce_dirpath = path.join(
         _dpath_results, _dname_vce,
-        _dname_fmt_vce % tuple(tuple(a_prescription) + (nhw, n1, n2, nshell))
+        _dname_fmt_vce % tuple(tuple(a_prescription) +
+                               (nhw, n1, n2, nshell, ncomponent))
     )
     if not path.exists(vce_dirpath):
         mkdir(vce_dirpath)
@@ -771,7 +772,8 @@ def vce_single_calculation(
 
 
 def vce_multiple_calculations(
-        z, a_values, a_presc_list, a_range, nhw, n1, n2, nshell,
+        z, a_values, a_presc_list, a_range, nhw, n1, n2,
+        nshell, ncomponent,
         force_trdens, force_vce, verbose, progress,
         _str_prog_vce=_STR_PROG_VCE
 ):
@@ -808,7 +810,7 @@ def vce_multiple_calculations(
         vce_single_calculation(
             z=z, a_values=a_values,
             a_prescription=ap, a_range=a_range,
-            nhw=nhw, n1=n1, n2=n2, nshell=nshell,
+            nhw=nhw, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
             force_trdens=force_trdens,
             force_vce=force_vce,
             verbose=verbose
@@ -847,7 +849,7 @@ def ncsd_vce_calculations(
     progress bar will not be shown.
     """
     a_values = _generating_a_values(n_shell=nshell, n_component=ncomponent)
-    z = int(a_values[0] / 2)
+    z = int(a_values[0] / ncomponent)
     a_presc_list = list(a_prescriptions)
     ncsd_multiple_calculations(
         z=z, a_values=a_values,
@@ -860,7 +862,7 @@ def ncsd_vce_calculations(
         z=z, a_values=a_values,
         a_presc_list=a_presc_list,
         a_range=a_range,
-        nhw=nhw, n1=n1, n2=n2, nshell=nshell,
+        nhw=nhw, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
         force_trdens=force_trdens or force_all,
         force_vce=force_vce or force_all,
         verbose=verbose, progress=progress,
