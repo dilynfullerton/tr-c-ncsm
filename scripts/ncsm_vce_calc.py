@@ -5,7 +5,7 @@ To run as a script:
 
     $ ncsm_vce_calc.py [-f[ntv]{0,3}]
     [ Aeff4 Aeff5 Aeff6 | [-m|-M] Ap_min Ap_max] Amin
-    [Amax [nhw [n1 n2 [nshell]] | n1 n2]]
+    [Amax [nhw [n1 n2 [nshell [ncomponent]]] | n1 n2]]
 
 In the current directory, creates a RESULTS directory in which the
 Valence Cluster Expansion is performed according to the A-prescription(s)
@@ -29,11 +29,12 @@ If -m or -M precedes the arguments:
 Otherwise:
     The first three arguments are used to explicitly express the A
         prescription
-If 1 additional argument given,   this is assumed to be Amax.
-If 2 additional arguments given, they are assumed to be Amax nhw.
-If 3 additional arguments given, they are assumed to be Amax n1 n2.
-If 4 additional arguments given, they are assumed to be Amax nhw n1 n2.
-If 5 additional arguments given, they are assumed to be Amax nhw n1 n2 nshell.
+If 1 additional argument given,   this is Amax.
+If 2 additional arguments given, they are Amax nhw.
+If 3 additional arguments given, they are Amax n1 n2.
+If 4 additional arguments given, they are Amax nhw n1 n2.
+If 5 additional arguments given, they are Amax nhw n1 n2 nshell.
+If 6 additional arguments given, they are Amax nhw n1 n2 nshell ncomponent.
 """
 
 from __future__ import division
@@ -50,6 +51,7 @@ from InvalidNumberOfArgumentsException import InvalidNumberOfArgumentsException
 
 # CONSTANTS
 N_SHELL = 1
+N_COMPONENT = 2
 NHW = 6
 N1 = 15
 N2 = 15
@@ -60,8 +62,8 @@ _DPATH_MAIN = getcwd()
 _DPATH_TEMPLATES = path.join(_DPATH_MAIN, 'templates')
 _DPATH_RESULTS = path.join(_DPATH_MAIN, 'results')
 _DNAME_FMT_NUC = '%s%d_%d_Nhw%d_%d_%d'  # name, A, Aeff, nhw, n1, n2
-_DNAME_FMT_VCE = 'vce_presc%d,%d,%d_Nhw%d_%d_%d_shell%d'
-#     A presc, Nhw, n1, n2, nshell
+_DNAME_FMT_VCE = 'vce_presc%d,%d,%d_Nhw%d_%d_%d_shell%d_dim%d'
+#     A presc, Nhw, n1, n2, nshell, ncomponent
 _DNAME_FMT_VCE_SF = _DNAME_FMT_VCE + '_sf%f.2'
 _DNAME_VCE = 'vce'
 
@@ -102,12 +104,12 @@ _ZNAME_FMT_ALT = '%d-'
 
 
 # FUNCTIONS
-def _generating_a_values(n_shell):
+def _generating_a_values(n_shell, n_component):
     """Based on the given major harmonic oscillator shell, gets the 3
     A values that are used to generate the effective Hamiltonian
     :param n_shell: major oscillator shell
     """
-    a_0 = int((n_shell + 2) * (n_shell + 1) * n_shell / 3 * 2)
+    a_0 = int((n_shell + 2) * (n_shell + 1) * n_shell / 3 * n_component)
     return a_0, a_0 + 1, a_0 + 2
 
 
@@ -818,7 +820,7 @@ def vce_multiple_calculations(
 
 def ncsd_vce_calculations(
         a_prescriptions, a_range,
-        nshell=N_SHELL, nhw=NHW, n1=N1, n2=N2,
+        nshell=N_SHELL, nhw=NHW, n1=N1, n2=N2, ncomponent=N_COMPONENT,
         force_ncsd=False, force_trdens=False, force_vce=False,
         force_all=False,
         verbose=False, progress=True,
@@ -844,7 +846,7 @@ def ncsd_vce_calculations(
     :param progress: if true, shows a progress bar. Note if verbose is true,
     progress bar will not be shown.
     """
-    a_values = _generating_a_values(n_shell=nshell)
+    a_values = _generating_a_values(n_shell=nshell, n_component=ncomponent)
     z = int(a_values[0] / 2)
     a_presc_list = list(a_prescriptions)
     ncsd_multiple_calculations(
@@ -965,7 +967,7 @@ if __name__ == "__main__":
         )
     elif len(other_args) == 4:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
-        n1_0, n2_0 = [int(x) for x in other_args[2:4]]
+        n1_0, n2_0 = [int(x) for x in other_args[2:]]
         ncsd_vce_calculations(
             a_prescriptions=a_prescriptions0, a_range=a_range0,
             n1=n1_0, n2=n2_0,
@@ -974,7 +976,7 @@ if __name__ == "__main__":
         )
     elif len(other_args) == 5:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
-        nhw_0, n1_0, n2_0 = [int(x) for x in other_args[2:5]]
+        nhw_0, n1_0, n2_0 = [int(x) for x in other_args[2:]]
         ncsd_vce_calculations(
             a_prescriptions=a_prescriptions0, a_range=a_range0,
             nhw=nhw_0, n1=n1_0, n2=n2_0,
@@ -983,15 +985,27 @@ if __name__ == "__main__":
         )
     elif len(other_args) == 6:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
-        nhw_0, n1_0, n2_0, nshell_0 = [int(x) for x in other_args[2:6]]
+        nhw_0, n1_0, n2_0, nshell_0 = [int(x) for x in other_args[2:]]
         ncsd_vce_calculations(
             a_prescriptions=a_prescriptions0, a_range=a_range0,
             nhw=nhw_0, n1=n1_0, n2=n2_0, nshell=nshell_0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0,
         )
+    elif len(other_args) == 7:
+        a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
+        nhw_0, n1_0, n2_0, nshell_0, ncomponent_0 = [int(x)
+                                                     for x in other_args[2:]]
+        ncsd_vce_calculations(
+            a_prescriptions=a_prescriptions0, a_range=a_range0,
+            nhw=nhw_0, n1=n1_0, n2=n2_0,
+            nshell=nshell_0, ncomponent=ncomponent_0,
+            force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
+            force_all=f_all, verbose=verbose0, progress=progress0,
+        )
+
     else:
         raise InvalidNumberOfArgumentsException(
             '%d' % (len(argv) - 1,) +
             ' is not a valid number of arguments for ncsm_vce_calc.py.' +
-            'Please enter 3-9 arguments.')
+            'Please enter 3-10 arguments.')
