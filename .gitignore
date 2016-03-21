@@ -1,12 +1,7 @@
-/mcalc/scripts/old
-/old/GetSmallerInteraction.py
-/old/doVCE.py
+/old
 /scripts/rename_dirs.py
-/results-old*
 /.idea
 *.pyc
-/mcalc/results
-/mcalc/templates/TBMEA2srg-n3lo2.0_15.24
-/results
+/results*
 /scripts/old
-templates/TBMEA2srg-n3lo2.0_15.24
+/templates/TBMEA2srg-n3lo2.0_15.24
