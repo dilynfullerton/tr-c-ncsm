@@ -59,8 +59,9 @@ MAX_NMAX = 15
 _DPATH_MAIN = getcwd()
 _DPATH_TEMPLATES = path.join(_DPATH_MAIN, 'templates')
 _DPATH_RESULTS = path.join(_DPATH_MAIN, 'results')
-_DNAME_FMT_NUC = '%s%d_%d_Nhw%d_%d_%d'  # name, A, Aeff
-_DNAME_FMT_VCE = 'vce_presc%d,%d,%d_Nhw%d_%d_%d'  # A presc, Nhw, n1, n2
+_DNAME_FMT_NUC = '%s%d_%d_Nhw%d_%d_%d'  # name, A, Aeff, nhw, n1, n2
+_DNAME_FMT_VCE = 'vce_presc%d,%d,%d_Nhw%d_%d_%d_shell%d'
+#     A presc, Nhw, n1, n2, nshell
 _DNAME_FMT_VCE_SF = _DNAME_FMT_VCE + '_sf%f.2'
 _DNAME_VCE = 'vce'
 
@@ -540,7 +541,8 @@ def _get_a_aeff_to_dpath_map(
 
 
 def _get_a_aeff_to_outfile_fpath_map(
-        a_values, a_prescription, z, nhw, n1, n2, a_aeff_to_dirpath_map,
+        a_values, a_prescription, z, nhw, n1, n2,
+        a_aeff_to_dirpath_map,
         _fname_fmt_ncsd_out=_FNAME_FMT_NCSD_OUT
 ):
     a_outfile_map = dict()
@@ -576,7 +578,8 @@ def _print_progress(
 
 def _prepare_directories(a_list, aeff_list, z, nhw, n1, n2):
     a_aeff_to_dir_map = _get_a_aeff_to_dpath_map(
-        a_values=a_list, a_prescription=aeff_list, z=z, nhw=nhw, n1=n1, n2=n2
+        a_values=a_list, a_prescription=aeff_list,
+        z=z, nhw=nhw, n1=n1, n2=n2,
     )
     a_aeff_to_outfile_map = _get_a_aeff_to_outfile_fpath_map(
         a_values=a_list, a_prescription=aeff_list, z=z, nhw=nhw, n1=n1, n2=n2,
@@ -602,7 +605,7 @@ def ncsd_single_calculation(
         force=False, verbose=False,
 ):
     a_aeff_to_dpath, a_aeff_to_outfile = _prepare_directories(
-        a_list=[a], aeff_list=[aeff], z=z, nhw=nhw, n1=n1, n2=n2
+        a_list=[a], aeff_list=[aeff], z=z, nhw=nhw, n1=n1, n2=n2,
     )
     run_all_ncsd(
         a_values=[a], presc=[aeff],
@@ -692,7 +695,7 @@ def ncsd_exact_calculations(
 
 def vce_single_calculation(
         z, a_values, a_prescription, a_range,
-        nhw=NHW, n1=N1, n2=N1,
+        nhw=NHW, n1=N1, n2=N1, nshell=-1,
         force_trdens=False, force_vce=False, verbose=False,
         _dpath_results=_DPATH_RESULTS,
         _dname_vce=_DNAME_VCE,
@@ -748,7 +751,7 @@ def vce_single_calculation(
         mkdir(dpath_vce0)
     vce_dirpath = path.join(
         _dpath_results, _dname_vce,
-        _dname_fmt_vce % tuple(tuple(a_prescription) + (nhw, n1, n2))
+        _dname_fmt_vce % tuple(tuple(a_prescription) + (nhw, n1, n2, nshell))
     )
     if not path.exists(vce_dirpath):
         mkdir(vce_dirpath)
@@ -764,7 +767,7 @@ def vce_single_calculation(
 
 
 def vce_multiple_calculations(
-        z, a_values, a_presc_list, a_range, nhw, n1, n2,
+        z, a_values, a_presc_list, a_range, nhw, n1, n2, nshell,
         force_trdens, force_vce, verbose, progress,
         _str_prog_vce=_STR_PROG_VCE
 ):
@@ -801,7 +804,7 @@ def vce_multiple_calculations(
         vce_single_calculation(
             z=z, a_values=a_values,
             a_prescription=ap, a_range=a_range,
-            nhw=nhw, n1=n1, n2=n2,
+            nhw=nhw, n1=n1, n2=n2, nshell=nshell,
             force_trdens=force_trdens,
             force_vce=force_vce,
             verbose=verbose
@@ -853,7 +856,7 @@ def ncsd_vce_calculations(
         z=z, a_values=a_values,
         a_presc_list=a_presc_list,
         a_range=a_range,
-        nhw=nhw, n1=n1, n2=n2,
+        nhw=nhw, n1=n1, n2=n2, nshell=nshell,
         force_trdens=force_trdens or force_all,
         force_vce=force_vce or force_all,
         verbose=verbose, progress=progress,
