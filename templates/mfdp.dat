@@ -15,10 +15,10 @@ Major or subshell occupation restrictions for protons, neutrons and (p+n):
 Control parameters for multiple-G calculations:
   3  0  0  0   ! nsets (# of G's), min(nesp), nskip, iset1 (see below)
 Control parameters for initial and final state vectors:
-  1  1  15     ! ki,kf,nf (Initial, 1st final state, # of final states)
+  1  1  <<NUMST>>     ! ki,kf,nf (Initial, 1st final state, # of final states)
   0.00000      ! the g.s. energy (0 if not available)
 Other control parameters:
-  200           ! Number of iterations required, minimum to do
+  <<NUMITER>>           ! Number of iterations required, minimum to do
   0            ! igt = 1 to calculate sum GT+ and sum GT-, = 0 not to.
 Restart option:
   0            ! irest = 4 to restart, = 0 not to.

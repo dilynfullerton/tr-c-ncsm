@@ -101,6 +101,8 @@ _Z_NAME_MAP = {
     16: 's_', 17: 'cl', 18: 'ar', 19: 'k_', 20: 'ca'
 }
 _ZNAME_FMT_ALT = '%d-'
+_NCSD_NUM_STATES = 15
+_NCSD_NUM_ITER = 200
 
 
 # FUNCTIONS
@@ -194,7 +196,9 @@ def make_mfdp_files(
                        path_temp=path_temp, mfdp_name=_fname_mfdp)
 
 
-def get_mfdp_replace_map(fname_tbme, outfile_name, z, a, n_hw, n_1, n_2, aeff):
+def get_mfdp_replace_map(fname_tbme, outfile_name, z, a, n_hw, n_1, n_2, aeff,
+                         _num_states=_NCSD_NUM_STATES,
+                         _num_iter=_NCSD_NUM_ITER):
     n = a - z
     par = a % 2
     if a % 2 == 0:
@@ -208,6 +212,8 @@ def get_mfdp_replace_map(fname_tbme, outfile_name, z, a, n_hw, n_1, n_2, aeff):
             '<<NHW>>': str(n_hw), '<<PAR>>': str(par), '<<TOT2>>': str(tot2),
             '<<N1>>': str(n_1), '<<N2>>': str(n_2),
             '<<RESTRICTIONS>>': str(rest_lines),
+            '<<NUMST>>': str(_num_states),
+            '<<NUMITER>>': str(_num_iter),
             '<<AEFF>>': str(aeff)}
 
 
