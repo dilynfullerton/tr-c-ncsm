@@ -250,7 +250,9 @@ def get_trdens_replace_map(z, a):
 
 def get_num_states(z, a):
     if z == 2:
-        if a == 5:
+        if a == 4:
+            return 0, 1  # todo this is a guess, is it correct?
+        elif a == 5:
             return 1, 2
         elif a == 6:
             return 2, 5
