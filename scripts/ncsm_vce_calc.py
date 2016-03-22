@@ -45,6 +45,7 @@ from subprocess import Popen, PIPE
 from sys import argv, stdout
 from math import floor
 from threading import Thread
+from Queue import Queue
 
 from FGetSmallerInteraction import run as truncate_interaction
 from FdoVCE import run as vce_calculation
@@ -104,6 +105,7 @@ _Z_NAME_MAP = {
 _ZNAME_FMT_ALT = '%d-'
 _NCSD_NUM_STATES = 15
 _NCSD_NUM_ITER = 200
+_MAX_OPEN_THREADS = 10
 
 
 # FUNCTIONS
@@ -595,34 +597,33 @@ def ncsd_single_calculation(
 
 def _ncsd_multiple_calculations_t(
         a_aeff_set, a_aeff_to_dpath_map, a_aeff_to_outfile_map,
-        force, progress=True, str_prog_ncsd=_STR_PROG_NCSD
+        force, progress=True, str_prog_ncsd=_STR_PROG_NCSD,
+        max_open_threads=_MAX_OPEN_THREADS
 ):
     def _r(a_, aeff_):
         _run_ncsd(
             dpath=a_aeff_to_dpath_map[(a_, aeff_)],
             fpath_outfile=a_aeff_to_outfile_map[(a_, aeff_)],
             force=force, verbose=False)
-    # initialize threads
-    open_threads = list()
-    for a, aeff in sorted(a_aeff_set):
-        t = Thread(target=_r, args=(a, aeff))
-        t.start()
-        open_threads.append(t)
-    # progress bar
+    open_threads = Queue(maxsize=max_open_threads)
+    todo_list = list(a_aeff_set)
     jobs_completed = 0
-    jobs_total = len(open_threads)
+    jobs_total = len(todo_list)
     if progress:
         print str_prog_ncsd
-    # join threads
-    while len(open_threads) > 0:
+    while len(todo_list) > 0 or not open_threads.empty():
         if progress:
             _print_progress(jobs_completed, jobs_total)
-        t = open_threads.pop()
+        # if room in queue, start new threads
+        while len(todo_list) > 0 and not open_threads.full():
+            a, aeff = todo_list.pop()
+            t = Thread(target=_r, args=(a, aeff))
+            open_threads.put(t)
+            t.start()
+        # wait for completion of first thread in queue
+        t = open_threads.get()
         t.join()
-        if t.isAlive():
-            open_threads.append(t)
-        else:
-            jobs_completed += 1
+        jobs_completed += 1
     if progress:
         _print_progress(jobs_completed, jobs_total, end=True)
 
