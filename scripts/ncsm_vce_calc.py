@@ -598,7 +598,8 @@ def ncsd_single_calculation(
 
 
 def _ncsd_multiple_calculations_t(
-        a_aeff_set, a_aeff_to_dpath_map, a_aeff_to_outfile_map, force
+        a_aeff_set, a_aeff_to_dpath_map, a_aeff_to_outfile_map,
+        force, progress=True, str_prog_ncsd=_STR_PROG_NCSD
 ):
     def _r(a_, aeff_):
         _run_ncsd(
@@ -611,12 +612,45 @@ def _ncsd_multiple_calculations_t(
         t = Thread(target=_r, args=(a, aeff))
         t.start()
         active_threads.append(t)
+    # progress bar
+    jobs_completed = 0
+    jobs_total = len(active_threads)
+    if progress:
+        print str_prog_ncsd
     # join threads
     while len(active_threads) > 0:
+        if progress:
+            _print_progress(jobs_completed, jobs_total)
         t = active_threads.pop()
         t.join()
         if t.isAlive():
             active_threads.append(t)
+        else:
+            jobs_completed += 1
+    if progress:
+        _print_progress(jobs_completed, jobs_total, end=True)
+
+
+def _ncsd_multiple_calculations(
+        a_aeff_set, a_aeff_to_dpath_map, a_aeff_to_outfile_map,
+        force, verbose, progress, str_prog_ncsd=_STR_PROG_NCSD
+):
+    # do ncsd
+    jobs_total = len(a_aeff_set)
+    jobs_completed = 0
+    progress = progress and not verbose
+    if progress:
+        print str_prog_ncsd
+    for a, aeff in sorted(a_aeff_set):
+        if progress:
+            _print_progress(jobs_completed, jobs_total)
+        _run_ncsd(
+            dpath=a_aeff_to_dpath_map[(a, aeff)],
+            fpath_outfile=a_aeff_to_outfile_map[(a, aeff)],
+            force=force, verbose=verbose)
+        jobs_completed += 1
+    if progress:
+        _print_progress(jobs_completed, jobs_total, end=True)
 
 
 def ncsd_multiple_calculations(
@@ -656,24 +690,17 @@ def ncsd_multiple_calculations(
             a_aeff_set=a_aeff_set,
             a_aeff_to_dpath_map=a_aeff_to_dir,
             a_aeff_to_outfile_map=a_aeff_to_outfile,
-            force=force)
+            force=force, progress=progress,
+            str_prog_ncsd=str_prog_ncsd
+        )
     else:
-        # do ncsd
-        jobs_total = len(a_aeff_set)
-        jobs_completed = 0
-        progress = progress and not verbose
-        if progress:
-            print str_prog_ncsd
-        for a, aeff in sorted(a_aeff_set):
-            if progress:
-                _print_progress(jobs_completed, jobs_total)
-            _run_ncsd(
-                dpath=a_aeff_to_dir[(a, aeff)],
-                fpath_outfile=a_aeff_to_outfile[(a, aeff)],
-                force=force, verbose=verbose)
-            jobs_completed += 1
-        if progress:
-            _print_progress(jobs_completed, jobs_total, end=True)
+        _ncsd_multiple_calculations(
+            a_aeff_set=a_aeff_set,
+            a_aeff_to_dpath_map=a_aeff_to_dir,
+            a_aeff_to_outfile_map=a_aeff_to_outfile,
+            force=force, verbose=verbose, progress=progress,
+            str_prog_ncsd=str_prog_ncsd
+        )
 
 
 def ncsd_exact_calculations(
