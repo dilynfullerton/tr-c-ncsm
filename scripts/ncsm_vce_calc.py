@@ -256,6 +256,10 @@ def get_trdens_replace_map(z, a):
     return {'<<NNN>>': str(nnn), '<<NUMSTATES>>': str(num_states)}
 
 
+class UnknownNumStatesException(Exception):
+    pass
+
+
 def get_num_states(z, a):
     if z == 2:
         if a == 4:
@@ -268,10 +272,6 @@ def get_num_states(z, a):
             raise UnknownNumStatesException()
     else:
         raise UnknownNumStatesException()
-
-
-class UnknownNumStatesException(Exception):
-    pass
 
 
 def _rewrite_file(src, dst, replace_map):
@@ -330,6 +330,10 @@ def truncate_space(
     return dst_path
 
 
+class TBMEFileNotFoundException(Exception):
+    pass
+
+
 def truncate_spaces(n1, n2, dirpaths, _fname_fmt_tbme=_FNAME_FMT_TBME):
     """For multiple directories, perform the operation of truncate_space
 
@@ -349,7 +353,7 @@ def truncate_spaces(n1, n2, dirpaths, _fname_fmt_tbme=_FNAME_FMT_TBME):
                 link(fpath0, dst_path)
 
 
-class TBMEFileNotFoundException(Exception):
+class EgvFileNotFoundException(Exception):
     pass
 
 
@@ -386,10 +390,6 @@ def rename_egv_file(
     else:
         raise EgvFileNotFoundException()
     return 1
-
-
-class EgvFileNotFoundException(Exception):
-    pass
 
 
 def run_ncsd(
