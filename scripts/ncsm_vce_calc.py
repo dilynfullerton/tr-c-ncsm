@@ -41,7 +41,7 @@ from __future__ import division
 
 import re
 from os import getcwd, path, walk, mkdir, chdir, symlink, remove, link
-from subprocess import Popen, PIPE, call
+from subprocess import Popen, PIPE
 from sys import argv, stdout
 from math import floor
 from threading import Thread
@@ -404,7 +404,8 @@ def _run_ncsd(
         chdir(dpath)
         args = ['NCSD']
         if verbose:
-            call(args=args)
+            p = Popen(args=args)
+            p.wait()
         else:
             p = Popen(args=args, stdout=PIPE, stderr=PIPE)
             out, err = p.communicate()
@@ -447,7 +448,8 @@ def _run_trdens(
     chdir(a6_dir)
     args = ['TRDENS']
     if verbose:
-        call(args=args)
+        p = Popen(args=args)
+        p.wait()
     else:
         p = Popen(args=args, stdout=PIPE, stderr=PIPE)
         out, err = p.communicate()
