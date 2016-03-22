@@ -647,7 +647,7 @@ def _ncsd_multiple_calculations_t(
     while len(active_threads) > 0:
         t = active_threads.pop()
         t.join()
-        if t.is_alive():
+        if t.isAlive():
             active_threads.append(t)
 
 
