@@ -607,24 +607,24 @@ def _ncsd_multiple_calculations_t(
             fpath_outfile=a_aeff_to_outfile_map[(a_, aeff_)],
             force=force, verbose=False)
     # initialize threads
-    active_threads = list()
+    open_threads = list()
     for a, aeff in sorted(a_aeff_set):
         t = Thread(target=_r, args=(a, aeff))
         t.start()
-        active_threads.append(t)
+        open_threads.append(t)
     # progress bar
     jobs_completed = 0
-    jobs_total = len(active_threads)
+    jobs_total = len(open_threads)
     if progress:
         print str_prog_ncsd
     # join threads
-    while len(active_threads) > 0:
+    while len(open_threads) > 0:
         if progress:
             _print_progress(jobs_completed, jobs_total)
-        t = active_threads.pop()
+        t = open_threads.pop()
         t.join()
         if t.isAlive():
-            active_threads.append(t)
+            open_threads.append(t)
         else:
             jobs_completed += 1
     if progress:
