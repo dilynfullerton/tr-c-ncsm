@@ -44,6 +44,7 @@ from os import getcwd, path, walk, mkdir, chdir, symlink, remove, link
 from subprocess import Popen, PIPE, call
 from sys import argv, stdout
 from math import floor
+from threading import Thread
 
 from FGetSmallerInteraction import run as truncate_interaction
 from FdoVCE import run as vce_calculation
@@ -627,10 +628,33 @@ def ncsd_single_calculation(
     )
 
 
+def _ncsd_multiple_calculations_t(
+        a_aeff_set, a_aeff_to_dpath_map, a_aeff_to_outfile_map, force
+):
+    def _r(a_, aeff_):
+        run_all_ncsd(
+            a_values=[a_], presc=[aeff_],
+            a_aeff_to_dpath_map=a_aeff_to_dpath_map,
+            a_aeff_to_outfile_fpath_map=a_aeff_to_outfile_map,
+            force=force, verbose=False)
+    # initialize threads
+    active_threads = list()
+    for a, aeff in sorted(a_aeff_set):
+        t = Thread(target=_r, args=(a, aeff))
+        t.start()
+        active_threads.append(t)
+    # join threads
+    while len(active_threads) > 0:
+        t = active_threads.pop()
+        t.join()
+        if t.is_alive():
+            active_threads.append(t)
+
+
 def ncsd_multiple_calculations(
         a_presc_list, a_values,
         z, nhw=NHW, n1=N1, n2=N1,
-        force=False, verbose=False, progress=True,
+        force=False, verbose=False, progress=True, threading=True,
         str_prog_ncsd=_STR_PROG_NCSD,
 ):
     """For a given list of A prescriptions, do the NCSD calculations
@@ -647,6 +671,8 @@ def ncsd_multiple_calculations(
     this is suppressed and written to a file instead
     :param progress: if true, show a progress bar. Note: will not show
     progress bar if verbose is true
+    :param threading: if true, starts the various calculations in separate
+    threads
     :param str_prog_ncsd: string to show before progress bar
     """
     a_aeff_set = set()
@@ -658,24 +684,31 @@ def ncsd_multiple_calculations(
     a_aeff_to_dir, a_aeff_to_outfile = _prepare_directories(
         a_list=a_list, aeff_list=aeff_list, z=z, nhw=nhw, n1=n1, n2=n2
     )
-    # do ncsd
-    jobs_total = len(a_aeff_set)
-    jobs_completed = 0
-    progress = progress and not verbose
-    if progress:
-        print str_prog_ncsd
-    for a, aeff in sorted(a_aeff_set):
-        if progress:
-            _print_progress(jobs_completed, jobs_total)
-        run_all_ncsd(
-            a_values=[a], presc=[aeff],
+    if threading and len(a_aeff_set) > 1:
+        _ncsd_multiple_calculations_t(
+            a_aeff_set=a_aeff_set,
             a_aeff_to_dpath_map=a_aeff_to_dir,
-            a_aeff_to_outfile_fpath_map=a_aeff_to_outfile,
-            force=force, verbose=verbose,
-        )
-        jobs_completed += 1
-    if progress:
-        _print_progress(jobs_completed, jobs_total, end=True)
+            a_aeff_to_outfile_map=a_aeff_to_outfile,
+            force=force)
+    else:
+        # do ncsd
+        jobs_total = len(a_aeff_set)
+        jobs_completed = 0
+        progress = progress and not verbose
+        if progress:
+            print str_prog_ncsd
+        for a, aeff in sorted(a_aeff_set):
+            if progress:
+                _print_progress(jobs_completed, jobs_total)
+            run_all_ncsd(
+                a_values=[a], presc=[aeff],
+                a_aeff_to_dpath_map=a_aeff_to_dir,
+                a_aeff_to_outfile_fpath_map=a_aeff_to_outfile,
+                force=force, verbose=verbose,
+            )
+            jobs_completed += 1
+        if progress:
+            _print_progress(jobs_completed, jobs_total, end=True)
 
 
 def ncsd_exact_calculations(
