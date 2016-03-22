@@ -40,7 +40,7 @@ If 6 additional arguments given, they are Amax nhw n1 n2 nshell ncomponent.
 from __future__ import division
 
 import re
-from os import getcwd, path, walk, mkdir, chdir, symlink, remove, link
+from os import getcwd, path, walk, mkdir, symlink, remove, link
 from subprocess import Popen, PIPE
 from sys import argv, stdout
 from math import floor
@@ -400,14 +400,12 @@ def _run_ncsd(
         _fname_stderr=_FNAME_NCSD_STDERR
 ):
     if force or not path.exists(path.join(fpath_outfile)):
-        main_dir = getcwd()
-        chdir(dpath)
         args = ['NCSD']
         if verbose:
-            p = Popen(args=args)
+            p = Popen(args=args, cwd=dpath)
             p.wait()
         else:
-            p = Popen(args=args, stdout=PIPE, stderr=PIPE)
+            p = Popen(args=args, cwd=dpath, stdout=PIPE, stderr=PIPE)
             out, err = p.communicate()
             fout = open(path.join(dpath, _fname_stdout), 'w')
             fout.write(out)
@@ -415,7 +413,6 @@ def _run_ncsd(
             ferr = open(path.join(dpath, _fname_stderr), 'w')
             ferr.write(err)
             ferr.close()
-        chdir(main_dir)
 
 
 def _run_trdens(
@@ -444,14 +441,12 @@ def _run_trdens(
             return 0
         else:
             remove(outfile_path)
-    main_dir = getcwd()
-    chdir(a6_dir)
     args = ['TRDENS']
     if verbose:
-        p = Popen(args=args)
+        p = Popen(args=args, cwd=a6_dir)
         p.wait()
     else:
-        p = Popen(args=args, stdout=PIPE, stderr=PIPE)
+        p = Popen(args=args, cwd=a6_dir, stdout=PIPE, stderr=PIPE)
         out, err = p.communicate()
         fout = open(path.join(a6_dir, _fname_stdout), 'w')
         fout.write(out)
@@ -459,7 +454,6 @@ def _run_trdens(
         ferr = open(path.join(a6_dir, _fname_stderr), 'w')
         ferr.write(err)
         ferr.close()
-    chdir(main_dir)
     return 1
 
 
