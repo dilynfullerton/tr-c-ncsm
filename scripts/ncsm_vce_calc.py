@@ -906,6 +906,11 @@ def ncsd_vce_calculations(
     )
 
 
+def _exact(sequence, r):
+    for s in sequence:
+        yield [s] * r
+
+
 def _combinations(sequence, r):
     """Given a sequence of unique elements, yields all unique length-r
     combinations of those elements WITHOUT repeats
@@ -957,7 +962,7 @@ def _force_from_argv0(argv0):
 if __name__ == "__main__":
     user_args = argv[1:]
     f_ncsd, f_trdens, f_vce, f_all = (False,) * 4
-    multicom, com = False, False
+    multicom, com, exact = (False,) * 3
     verbose0, progress0 = False, True
     while True:
         a0 = user_args[0]
@@ -969,15 +974,20 @@ if __name__ == "__main__":
             multicom = True
         elif re.match('^-v$', a0):
             verbose0, progress0 = True, False
+        elif re.match('^-e$', a0):
+            exact = True
         else:
             break
         user_args = user_args[1:]
-    if com or multicom:
+    if com or multicom or exact:
         ap_min, ap_max = [int(x) for x in user_args[0:2]]
+        ap_range = range(ap_min, ap_max+1)
         if com:
-            a_prescriptions0 = _combinations(range(ap_min, ap_max + 1), 3)
+            a_prescriptions0 = _combinations(ap_range, 3)
+        elif multicom:
+            a_prescriptions0 = _multicombinations(ap_range, 3)
         else:
-            a_prescriptions0 = _multicombinations(range(ap_min, ap_max + 1), 3)
+            a_prescriptions0 = _exact(ap_range, 3)
         other_args = user_args[2:]
     else:
         a_prescriptions0 = [tuple([int(x) for x in user_args[0:3]])]
