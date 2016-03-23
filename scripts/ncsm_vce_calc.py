@@ -969,14 +969,14 @@ if __name__ == "__main__":
         a0 = user_args[0]
         if re.match('^-f[ntv]{0,3}$', a0.lower()):
             f_ncsd, f_trdens, f_vce, f_all = _force_from_argv0(a0)
-        elif re.match('^-m$', a0):
+        elif '-m' == a0:
             com = True
-        elif re.match('^-M$', a0):
+        elif '-M' == a0:
             multicom = True
-        elif re.match('^-v$', a0):
-            verbose0, progress0 = True, False
-        elif re.match('^-e$', a0):
+        elif '-e' == a0:
             exact = True
+        elif '-v' == a0:
+            verbose0, progress0 = True, False
         else:
             break
         user_args = user_args[1:]
