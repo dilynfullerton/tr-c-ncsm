@@ -1053,7 +1053,6 @@ if __name__ == "__main__":
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0,
         )
-
     else:
         raise InvalidNumberOfArgumentsException(
             '%d' % (len(argv) - 1,) +
