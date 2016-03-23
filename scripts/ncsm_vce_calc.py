@@ -4,7 +4,7 @@
 To run as a script:
 
     $ ncsm_vce_calc.py [-f[ntv]{0,3}]
-    [ Aeff4 Aeff5 Aeff6 | [-m|-M] Ap_min Ap_max] Amin
+    [ Aeff4 Aeff5 Aeff6 | [-m|-M|-e] Ap_min Ap_max] Amin
     [Amax [nhw [n1 n2 [nshell [ncomponent]]] | n1 n2]]
 
 In the current directory, creates a RESULTS directory in which the
@@ -20,12 +20,13 @@ Else if -f[ntv]* precedes the arguments:
     If v, force recalculation of VCE.
 Otherwise:
     Calculations are not done if outfiles are present
-If -m or -M precedes the arguments:
+If -m or -M or -e precedes the arguments:
     The first two arguments are used to determine a range of A prescriptions
     -m --> Prescriptions are all increasing length-3 combinations of
         integers in the range [Ap_min, Ap_max]
     -M --> Prescriptions are all increasing length-3 combinations of
         numbers with repetition in the range [Ap_min, Ap_max]
+    -e --> Prescriptions are all (A, A, A) for A in the range [Ap_min, Ap_max]
 Otherwise:
     The first three arguments are used to explicitly express the A
         prescription
