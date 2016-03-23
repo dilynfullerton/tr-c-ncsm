@@ -629,6 +629,13 @@ def _ncsd_multiple_calculations_t(
         _print_progress(jobs_completed, jobs_total, end=True)
 
 
+def _ncsd_multiple_calculations_s(
+        a_aeff_set, a_aeff_to_dpath_map, a_aeff_to_outfile_map, force
+):
+    # todo implement me
+    pass
+
+
 def _ncsd_multiple_calculations(
         a_aeff_set, a_aeff_to_dpath_map, a_aeff_to_outfile_map,
         force, verbose, progress, str_prog_ncsd=_STR_PROG_NCSD
@@ -654,6 +661,7 @@ def _ncsd_multiple_calculations(
 def ncsd_multiple_calculations(
         a_presc_list, a_values, z, nhw=NHW, n1=N1, n2=N1,
         force=False, verbose=False, progress=True, threading=True,
+        cluster_submit=False,
         str_prog_ncsd=_STR_PROG_NCSD,
 ):
     """For a given list of A prescriptions, do the NCSD calculations
@@ -672,6 +680,7 @@ def ncsd_multiple_calculations(
     progress bar if verbose is true
     :param threading: if true, starts the various calculations in separate
     threads
+    :param cluster_submit: if true, submits the NCSD job to cluster
     :param str_prog_ncsd: string to show before progress bar
     """
     a_aeff_set = set()
@@ -683,7 +692,14 @@ def ncsd_multiple_calculations(
     a_aeff_to_dir, a_aeff_to_outfile = _prepare_directories(
         a_list=a_list, aeff_list=aeff_list, z=z, nhw=nhw, n1=n1, n2=n2
     )
-    if threading and len(a_aeff_set) > 1:
+    if cluster_submit:
+        _ncsd_multiple_calculations_s(
+            a_aeff_set=a_aeff_set,
+            a_aeff_to_dpath_map=a_aeff_to_dir,
+            a_aeff_to_outfile_map=a_aeff_to_outfile,
+            force=force,
+        )
+    elif threading and len(a_aeff_set) > 1:
         _ncsd_multiple_calculations_t(
             a_aeff_set=a_aeff_set,
             a_aeff_to_dpath_map=a_aeff_to_dir,
@@ -726,6 +742,10 @@ def ncsd_exact_calculations(
         force=force, verbose=verbose, progress=progress,
         str_prog_ncsd=_str_prog_ncsd_ex
     )
+
+
+class NcsdOutfileNotFoundException(Exception):
+    pass
 
 
 def vce_single_calculation(
@@ -775,6 +795,11 @@ def vce_single_calculation(
         a_values=a_values, a_prescription=a_prescription,
         z=z, nhw=nhw, n1=n1, n2=n2, a_aeff_to_dirpath_map=a_aeff_dir_map
     )
+    for f in a_aeff_outfile_map.values():
+        if not path.exists(f):
+            raise NcsdOutfileNotFoundException(
+                'NCSD outfile not found: %s' % f
+            )
     # for the 3rd a value, make trdens file and run TRDENS
     a_aeff6 = (a_values[2], a_prescription[2])
     _make_trdens_file(z=z, a=a_values[2], nuc_dir=a_aeff_dir_map[a_aeff6])
@@ -844,17 +869,24 @@ def vce_multiple_calculations(
     for ap in a_presc_list:
         if progress:
             _print_progress(jobs_completed, jobs_total)
-        vce_single_calculation(
-            z=z, a_values=a_values,
-            a_prescription=ap, a_range=a_range,
-            nhw=nhw, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
-            force_trdens=force_trdens,
-            force_vce=force_vce,
-            verbose=verbose
-        )
-        jobs_completed += 1
+        try:
+            vce_single_calculation(
+                z=z, a_values=a_values,
+                a_prescription=ap, a_range=a_range,
+                nhw=nhw, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
+                force_trdens=force_trdens,
+                force_vce=force_vce,
+                verbose=verbose
+            )
+            jobs_completed += 1
+        except NcsdOutfileNotFoundException:
+            continue
     if progress:
         _print_progress(jobs_completed, jobs_total, end=True)
+    if jobs_completed == jobs_total:
+        return 1
+    else:
+        return 0
 
 
 def ncsd_vce_calculations(
@@ -862,7 +894,7 @@ def ncsd_vce_calculations(
         nhw=NHW, n1=N1, n2=N2, nshell=N_SHELL, ncomponent=N_COMPONENT,
         force_ncsd=False, force_trdens=False, force_vce=False,
         force_all=False,
-        verbose=False, progress=True,
+        verbose=False, progress=True, cluster_submit=False,
 ):
     """Given a sequence or generator of A prescriptions, does the NCSD/VCE
     calculation for each prescription
@@ -885,6 +917,9 @@ def ncsd_vce_calculations(
     stdout; otherwise this is suppressed and saved in a text file
     :param progress: if true, shows a progress bar. Note if verbose is true,
     progress bar will not be shown.
+    :param cluster_submit: if true, NCSD calculation jobs will be submitted
+    to the OpenMP cluster. NOTE: This may result in calculations remaining
+    undone.
     """
     a_values = _generating_a_values(n_shell=nshell, n_component=ncomponent)
     z = int(a_values[0] / ncomponent)
@@ -894,7 +929,7 @@ def ncsd_vce_calculations(
         a_presc_list=a_presc_list,
         nhw=nhw, n1=n1, n2=n2,
         force=force_all or force_ncsd,
-        verbose=verbose, progress=progress,
+        verbose=verbose, progress=progress, cluster_submit=cluster_submit,
     )
     vce_multiple_calculations(
         z=z, a_values=a_values,
@@ -965,6 +1000,7 @@ if __name__ == "__main__":
     f_ncsd, f_trdens, f_vce, f_all = (False,) * 4
     multicom, com, exact = (False,) * 3
     verbose0, progress0 = False, True
+    cluster_submit0 = False
     while True:
         a0 = user_args[0]
         if re.match('^-f[ntv]{0,3}$', a0.lower()):
@@ -977,6 +1013,8 @@ if __name__ == "__main__":
             exact = True
         elif '-v' == a0:
             verbose0, progress0 = True, False
+        elif '-s' == a0:
+            cluster_submit0 = True
         else:
             break
         user_args = user_args[1:]
@@ -998,7 +1036,8 @@ if __name__ == "__main__":
         ncsd_vce_calculations(
             a_prescriptions=a_prescriptions0, a_range=a_range0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
-            force_all=f_all, verbose=verbose0, progress=progress0
+            force_all=f_all, verbose=verbose0, progress=progress0,
+            cluster_submit=cluster_submit0,
         )
     elif len(other_args) == 2:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
@@ -1006,6 +1045,7 @@ if __name__ == "__main__":
             a_prescriptions=a_prescriptions0, a_range=a_range0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0,
+            cluster_submit=cluster_submit0,
         )
     elif len(other_args) == 3:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
@@ -1014,6 +1054,7 @@ if __name__ == "__main__":
             a_prescriptions=a_prescriptions0, a_range=a_range0, nhw=nhw_0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0,
+            cluster_submit=cluster_submit0,
         )
     elif len(other_args) == 4:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
@@ -1023,6 +1064,7 @@ if __name__ == "__main__":
             n1=n1_0, n2=n2_0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0,
+            cluster_submit=cluster_submit0,
         )
     elif len(other_args) == 5:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
@@ -1032,6 +1074,7 @@ if __name__ == "__main__":
             nhw=nhw_0, n1=n1_0, n2=n2_0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0,
+            cluster_submit=cluster_submit0,
         )
     elif len(other_args) == 6:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
@@ -1041,6 +1084,7 @@ if __name__ == "__main__":
             nhw=nhw_0, n1=n1_0, n2=n2_0, nshell=nshell_0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0,
+            cluster_submit=cluster_submit0,
         )
     elif len(other_args) == 7:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
@@ -1052,6 +1096,7 @@ if __name__ == "__main__":
             nshell=nshell_0, ncomponent=ncomponent_0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0,
+            cluster_submit=cluster_submit0,
         )
     else:
         raise InvalidNumberOfArgumentsException(
