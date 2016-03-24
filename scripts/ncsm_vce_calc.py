@@ -55,7 +55,7 @@ from InvalidNumberOfArgumentsException import InvalidNumberOfArgumentsException
 # CONSTANTS
 N_SHELL = 1
 N_COMPONENT = 2
-NHW = 6
+NMAX = 6
 N1 = 15
 N2 = 15
 MAX_NMAX = 15
@@ -65,8 +65,8 @@ _DPATH_MAIN = getcwd()
 _DPATH_TEMPLATES = path.join(_DPATH_MAIN, 'templates')
 _DPATH_RESULTS = path.join(_DPATH_MAIN, 'results')
 _DNAME_FMT_NUC = '%s%d_%d_Nhw%d_%d_%d'  # name, A, Aeff, nhw, n1, n2
-_DNAME_FMT_VCE = 'vce_presc%d,%d,%d_Nhw%d_%d_%d_shell%d_dim%d'
-#     A presc, Nhw, n1, n2, nshell, ncomponent
+_DNAME_FMT_VCE = 'vce_presc%d,%d,%d_Nmax%d_%d_%d_shell%d_dim%d'
+#     A presc, Nmax, n1, n2, nshell, ncomponent
 _DNAME_FMT_VCE_SF = _DNAME_FMT_VCE + '_sf%f.2'
 _DNAME_VCE = 'vce'
 
@@ -150,7 +150,7 @@ def _make_base_directories(a_values, presc, a_aeff_to_dpath_map,
 
 
 def _make_mfdp_file(
-        z, a, aeff, n_hw, n_1, n_2, path_elt, outfile_name,
+        z, a, aeff, nhw, n1, n2, path_elt, outfile_name,
         fname_fmt_tbme=_FNAME_FMT_TBME,
         path_temp=_DPATH_TEMPLATES,
         mfdp_name=_FNAME_MFDP
@@ -161,9 +161,9 @@ def _make_mfdp_file(
     :param z: Proton number
     :param a: Mass number
     :param aeff: Effective mass number for interaction
-    :param n_hw: Something something something dark side
-    :param n_1: Number of allowed states for single particles
-    :param n_2: Number of allowed states for two particles
+    :param nhw: Something something something dark side
+    :param n1: Number of allowed states for single particles
+    :param n2: Number of allowed states for two particles
     :param path_elt: path to the directory into which the mfdp file is
     to be put
     :param outfile_name: name of the outfile
@@ -175,26 +175,22 @@ def _make_mfdp_file(
     temp_mfdp_path = path.join(path_temp, mfdp_name)
     mfdp_path = path.join(path_elt, mfdp_name)
     replace_map = _get_mfdp_replace_map(
-        fname_tbme=fname_fmt_tbme % n_1,
+        fname_tbme=fname_fmt_tbme % n1,
         outfile_name=outfile_name, z=z, a=a,
-        n_hw=n_hw, n_1=n_1, n_2=n_2, aeff=aeff)
+        n_hw=nhw, n_1=n1, n_2=n2, aeff=aeff)
     _rewrite_file(src=temp_mfdp_path, dst=mfdp_path,
                   replace_map=replace_map)
 
 
 def _make_mfdp_files(
-        z, a_values, a_presc, n_hw, n_1, n_2,
+        a_list, aeff_list, nhw_list, z, n_1, n_2,
         a_aeff_to_dpath_map, a_aeff_to_outfile_fpath_map,
         path_temp=_DPATH_TEMPLATES,
         _fname_mfdp=_FNAME_MFDP
 ):
-    for a, aeff in zip(a_values, a_presc):
-        if a % 2 != n_hw % 2:
-            n_hw0 = n_hw + 1
-        else:
-            n_hw0 = n_hw
+    for a, aeff, nhw in zip(a_list, aeff_list, nhw_list):
         outfile_name = path.split(a_aeff_to_outfile_fpath_map[(a, aeff)])[1]
-        _make_mfdp_file(z=z, a=a, aeff=aeff, n_hw=n_hw0, n_1=n_1, n_2=n_2,
+        _make_mfdp_file(z=z, a=a, aeff=aeff, nhw=nhw, n1=n_1, n2=n_2,
                         path_elt=a_aeff_to_dpath_map[(a, aeff)],
                         outfile_name=outfile_name,
                         path_temp=path_temp, mfdp_name=_fname_mfdp)
@@ -506,37 +502,29 @@ def _run_vce(
 
 
 def _get_a_aeff_to_dpath_map(
-        a_values, a_prescription, z, nhw, n1, n2,
+        a_list, aeff_list, nhw_list, z, n1, n2,
         _dpath_results=_DPATH_RESULTS,
         _dir_fmt_nuc=_DNAME_FMT_NUC
 ):
     a_paths_map = dict()
     path_fmt = path.join(_dpath_results, _dir_fmt_nuc)
-    for a, aeff in zip(a_values, a_prescription):
-        if nhw % 2 != a % 2:
-            nhw0 = nhw + 1
-        else:
-            nhw0 = nhw
+    for a, aeff, nhw in zip(a_list, aeff_list, nhw_list):
         a_paths_map[(a, aeff)] = path_fmt % (
-            _get_name(z), a, aeff, nhw0, n1, n2
+            _get_name(z), a, aeff, nhw, n1, n2
         )
     return a_paths_map
 
 
 def _get_a_aeff_to_outfile_fpath_map(
-        a_values, a_prescription, z, nhw, n1, n2,
+        a_list, aeff_list, nhw_list, z, n1, n2,
         a_aeff_to_dirpath_map,
         _fname_fmt_ncsd_out=_FNAME_FMT_NCSD_OUT
 ):
     a_outfile_map = dict()
-    for a, aeff in zip(a_values, a_prescription):
-        if nhw % 2 != a % 2:
-            nhw0 = nhw + 1
-        else:
-            nhw0 = nhw
+    for a, aeff, nhw in zip(a_list, aeff_list, nhw_list):
         a_outfile_map[(a, aeff)] = path.join(
             a_aeff_to_dirpath_map[(a, aeff)],
-            _fname_fmt_ncsd_out % (_get_name(z), a, aeff, nhw0, n1, n2))
+            _fname_fmt_ncsd_out % (_get_name(z), a, aeff, nhw, n1, n2))
     return a_outfile_map
 
 
@@ -560,13 +548,14 @@ def _print_progress(
         stdout.flush()
 
 
-def _prepare_directories(a_list, aeff_list, z, nhw, n1, n2):
+def _prepare_directories(a_list, aeff_list, nhw_list, z, n1, n2):
     a_aeff_to_dir_map = _get_a_aeff_to_dpath_map(
-        a_values=a_list, a_prescription=aeff_list,
-        z=z, nhw=nhw, n1=n1, n2=n2,
+        a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
+        z=z, n1=n1, n2=n2,
     )
     a_aeff_to_outfile_map = _get_a_aeff_to_outfile_fpath_map(
-        a_values=a_list, a_prescription=aeff_list, z=z, nhw=nhw, n1=n1, n2=n2,
+        a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
+        z=z, n1=n1, n2=n2,
         a_aeff_to_dirpath_map=a_aeff_to_dir_map
     )
     _make_base_directories(
@@ -574,20 +563,20 @@ def _prepare_directories(a_list, aeff_list, z, nhw, n1, n2):
         a_aeff_to_dpath_map=a_aeff_to_dir_map
     )
     _make_mfdp_files(
-        z=z, a_values=a_list, a_presc=aeff_list,
+        a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
         a_aeff_to_dpath_map=a_aeff_to_dir_map,
         a_aeff_to_outfile_fpath_map=a_aeff_to_outfile_map,
-        n_hw=nhw, n_1=n1, n_2=n2,
+        z=z, n_1=n1, n_2=n2,
     )
     _truncate_spaces(n1=n1, n2=n2, dirpaths=a_aeff_to_dir_map.values())
     return a_aeff_to_dir_map, a_aeff_to_outfile_map
 
 
 def ncsd_single_calculation(
-        z, a, aeff, nhw=NHW, n1=N1, n2=N1, force=False, verbose=False,
+        z, a, aeff, nhw=NMAX, n1=N1, n2=N1, force=False, verbose=False,
 ):
     a_aeff_to_dpath, a_aeff_to_outfile = _prepare_directories(
-        a_list=[a], aeff_list=[aeff], z=z, nhw=nhw, n1=n1, n2=n2,
+        a_list=[a], aeff_list=[aeff], nhw_list=[nhw], z=z, n1=n1, n2=n2,
     )
     _run_ncsd(
         dpath=a_aeff_to_dpath[(a, aeff)],
@@ -659,7 +648,7 @@ def _ncsd_multiple_calculations(
 
 
 def ncsd_multiple_calculations(
-        a_presc_list, a_values, z, nhw=NHW, n1=N1, n2=N1,
+        a_presc_list, a_values, z, nmax, n1=N1, n2=N1,
         force=False, verbose=False, progress=True, threading=True,
         cluster_submit=False,
         str_prog_ncsd=_STR_PROG_NCSD,
@@ -669,7 +658,7 @@ def ncsd_multiple_calculations(
     :param a_presc_list: sequence of A prescriptions
     :param a_values: three base a values (e.g. 4, 5, 6 for p shell)
     :param z: proton number
-    :param nhw: major oscillator shell model space truncation
+    :param nmax: major oscillator shell model space truncation
     :param n1: max allowed 1-particle state
     :param n2: max allowed 2-particle state
     :param force: if true, force doing the NCSD calculation, even if it has
@@ -686,11 +675,17 @@ def ncsd_multiple_calculations(
     a_aeff_set = set()
     # prepare directories
     for ap in a_presc_list:
-        a_aeff_set |= set(zip(a_values, ap))
-    a_list = [a_aeff[0] for a_aeff in a_aeff_set]
-    aeff_list = [a_aeff[1] for a_aeff in a_aeff_set]
+        a_aeff_set |= set(zip(
+            a_values, ap, [nmax + i for i in range(len(a_values))]
+        ))
+    a_list, aeff_list, nhw_list = list(), list(), list(),
+    for a, aeff, nhw in a_aeff_set:
+        a_list.append(a)
+        aeff_list.append(aeff)
+        nhw_list.append(nhw)
     a_aeff_to_dir, a_aeff_to_outfile = _prepare_directories(
-        a_list=a_list, aeff_list=aeff_list, z=z, nhw=nhw, n1=n1, n2=n2
+        a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
+        z=z, n1=n1, n2=n2
     )
     if cluster_submit:
         _ncsd_multiple_calculations_s(
@@ -718,7 +713,7 @@ def ncsd_multiple_calculations(
 
 
 def ncsd_exact_calculations(
-        z, a_range, nhw=NHW, n1=N1, n2=N2,
+        z, a_range, nhw=NMAX, n1=N1, n2=N2,
         force=False, verbose=False, progress=True,
         _str_prog_ncsd_ex=_STR_PROG_NCSD_EX
 ):
@@ -726,7 +721,7 @@ def ncsd_exact_calculations(
     :param z: proton number
     :param a_range: range of A values for which to do NCSD with Aeff=A
     :param nhw: major oscillator model space truncation. Note: Increased by 1
-    for values of A that have opposite parity (odd-even)
+    for each successive A value
     :param n1: max allowed 1-particle state
     :param n2: max allowed 2-particle state
     :param force: if true, force calculation of NCSD even if output files are
@@ -738,7 +733,7 @@ def ncsd_exact_calculations(
     :param _str_prog_ncsd_ex: string to show before progress bar
     """
     ncsd_multiple_calculations(
-        z=z, a_values=a_range, a_presc_list=[a_range], nhw=nhw, n1=n1, n2=n2,
+        z=z, a_values=a_range, a_presc_list=[a_range], nmax=nhw, n1=n1, n2=n2,
         force=force, verbose=verbose, progress=progress,
         str_prog_ncsd=_str_prog_ncsd_ex
     )
@@ -749,8 +744,8 @@ class NcsdOutfileNotFoundException(Exception):
 
 
 def vce_single_calculation(
-        z, a_values, a_prescription, a_range,
-        nhw=NHW, n1=N1, n2=N1, nshell=-1, ncomponent=-1,
+        z, a_values, a_prescription, a_range, nmax,
+        n1=N1, n2=N1, nshell=-1, ncomponent=-1,
         force_trdens=False, force_vce=False, verbose=False,
         _dpath_results=_DPATH_RESULTS,
         _dname_vce=_DNAME_VCE,
@@ -764,7 +759,7 @@ def vce_single_calculation(
     A values in constructing Heff
     :param a_range: sequence of A values for which effective interaction files
     are to be generated
-    :param nhw: major oscillator model space truncation
+    :param nmax: major oscillator model space truncation
     :param n1: max allowed single particle state
     :param n2: max allowed two-particle state
     :param nshell: shell number (0 = s, 1 = p, 2 = sd, ...)
@@ -788,12 +783,14 @@ def vce_single_calculation(
     this operation has been performed).
     """
     a_aeff_dir_map = _get_a_aeff_to_dpath_map(
-        a_values=a_values, a_prescription=a_prescription,
-        z=z, nhw=nhw, n1=n1, n2=n2
+        a_list=a_values, aeff_list=a_prescription,
+        nhw_list=list(range(nmax, nmax+3)),
+        z=z, n1=n1, n2=n2
     )
     a_aeff_outfile_map = _get_a_aeff_to_outfile_fpath_map(
-        a_values=a_values, a_prescription=a_prescription,
-        z=z, nhw=nhw, n1=n1, n2=n2, a_aeff_to_dirpath_map=a_aeff_dir_map
+        a_list=a_values, aeff_list=a_prescription,
+        nhw_list=list(range(nmax, nmax+3)),
+        z=z, n1=n1, n2=n2, a_aeff_to_dirpath_map=a_aeff_dir_map
     )
     for f in a_aeff_outfile_map.values():
         if not path.exists(f):
@@ -804,7 +801,7 @@ def vce_single_calculation(
     a_aeff6 = (a_values[2], a_prescription[2])
     _make_trdens_file(z=z, a=a_values[2], nuc_dir=a_aeff_dir_map[a_aeff6])
     a6_dirpath = a_aeff_dir_map[a_aeff6]
-    _rename_egv_file(a6_dir=a6_dirpath, nhw=nhw, a6=a_values[2],
+    _rename_egv_file(a6_dir=a6_dirpath, nhw=nmax+2, a6=a_values[2],
                      force=force_trdens)
     _run_trdens(a6_dir=a6_dirpath, force=force_trdens, verbose=verbose)
 
@@ -815,7 +812,7 @@ def vce_single_calculation(
     vce_dirpath = path.join(
         _dpath_results, _dname_vce,
         _dname_fmt_vce % tuple(tuple(a_prescription) +
-                               (nhw, n1, n2, nshell, ncomponent))
+                               (nmax, n1, n2, nshell, ncomponent))
     )
     if not path.exists(vce_dirpath):
         mkdir(vce_dirpath)
@@ -832,7 +829,7 @@ def vce_single_calculation(
 
 def vce_multiple_calculations(
         z, a_values, a_presc_list, a_range,
-        nhw, n1, n2, nshell, ncomponent,
+        nmax, n1, n2, nshell, ncomponent,
         force_trdens, force_vce, verbose, progress,
         _str_prog_vce=_STR_PROG_VCE
 ):
@@ -845,7 +842,7 @@ def vce_multiple_calculations(
     with which to do the valence cluster expansion
     :param a_range: sequence of values for which to generate interaction
     files
-    :param nhw: major oscillator model space truncation
+    :param nmax: major oscillator model space truncation
     :param n1: max allowed one-particle state
     :param n2: max allowed two-particle state
     :param nshell: shell number (0=s, 1=p, 2=sd, ...)
@@ -873,7 +870,7 @@ def vce_multiple_calculations(
             vce_single_calculation(
                 z=z, a_values=a_values,
                 a_prescription=ap, a_range=a_range,
-                nhw=nhw, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
+                nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
                 force_trdens=force_trdens,
                 force_vce=force_vce,
                 verbose=verbose
@@ -891,7 +888,7 @@ def vce_multiple_calculations(
 
 def ncsd_vce_calculations(
         a_prescriptions, a_range,
-        nhw=NHW, n1=N1, n2=N2, nshell=N_SHELL, ncomponent=N_COMPONENT,
+        nmax, n1=N1, n2=N2, nshell=N_SHELL, ncomponent=N_COMPONENT,
         force_ncsd=False, force_trdens=False, force_vce=False,
         force_all=False,
         verbose=False, progress=True, cluster_submit=False,
@@ -901,7 +898,7 @@ def ncsd_vce_calculations(
     :param a_prescriptions: sequence or generator of A prescription tuples
     :param a_range: sequence of A values for which to generate interaction
     files
-    :param nhw: model space max oscillator shell
+    :param nmax: model space max oscillator shell
     :param n1: max allowed one-particle state
     :param n2: max allowed two-particle state
     :param nshell: major oscillator shell (0 = s, 1 = p, 2 = sd, ...)
@@ -927,7 +924,7 @@ def ncsd_vce_calculations(
     ncsd_multiple_calculations(
         z=z, a_values=a_values,
         a_presc_list=a_presc_list,
-        nhw=nhw, n1=n1, n2=n2,
+        nmax=nmax, n1=n1, n2=n2,
         force=force_all or force_ncsd,
         verbose=verbose, progress=progress, cluster_submit=cluster_submit,
     )
@@ -935,7 +932,7 @@ def ncsd_vce_calculations(
         z=z, a_values=a_values,
         a_presc_list=a_presc_list,
         a_range=a_range,
-        nhw=nhw, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
+        nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
         force_trdens=force_trdens or force_all,
         force_vce=force_vce or force_all,
         verbose=verbose, progress=progress,
@@ -1051,7 +1048,7 @@ if __name__ == "__main__":
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
         nhw_0 = int(other_args[2])
         ncsd_vce_calculations(
-            a_prescriptions=a_prescriptions0, a_range=a_range0, nhw=nhw_0,
+            a_prescriptions=a_prescriptions0, a_range=a_range0, nmax=nhw_0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0,
             cluster_submit=cluster_submit0,
@@ -1071,7 +1068,7 @@ if __name__ == "__main__":
         nhw_0, n1_0, n2_0 = [int(x) for x in other_args[2:]]
         ncsd_vce_calculations(
             a_prescriptions=a_prescriptions0, a_range=a_range0,
-            nhw=nhw_0, n1=n1_0, n2=n2_0,
+            nmax=nhw_0, n1=n1_0, n2=n2_0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0,
             cluster_submit=cluster_submit0,
@@ -1081,7 +1078,7 @@ if __name__ == "__main__":
         nhw_0, n1_0, n2_0, nshell_0 = [int(x) for x in other_args[2:]]
         ncsd_vce_calculations(
             a_prescriptions=a_prescriptions0, a_range=a_range0,
-            nhw=nhw_0, n1=n1_0, n2=n2_0, nshell=nshell_0,
+            nmax=nhw_0, n1=n1_0, n2=n2_0, nshell=nshell_0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0,
             cluster_submit=cluster_submit0,
@@ -1092,7 +1089,7 @@ if __name__ == "__main__":
                                                      for x in other_args[2:]]
         ncsd_vce_calculations(
             a_prescriptions=a_prescriptions0, a_range=a_range0,
-            nhw=nhw_0, n1=n1_0, n2=n2_0,
+            nmax=nhw_0, n1=n1_0, n2=n2_0,
             nshell=nshell_0, ncomponent=ncomponent_0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0,
