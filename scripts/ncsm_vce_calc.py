@@ -5,7 +5,7 @@ To run as a script:
 
     $ ncsm_vce_calc.py [-f[ntv]{0,3}]
     [ Aeff4 Aeff5 Aeff6 | [-m|-M|-e] Ap_min Ap_max] Amin
-    [Amax [nhw [n1 n2 [nshell [ncomponent]]] | n1 n2]]
+    [Amax [nmax [n1 n2 [nshell [ncomponent]]] | n1 n2]]
 
 In the current directory, creates a RESULTS directory in which the
 Valence Cluster Expansion is performed according to the A-prescription(s)
@@ -31,11 +31,11 @@ Otherwise:
     The first three arguments are used to explicitly express the A
         prescription
 If 1 additional argument given,   this is Amax.
-If 2 additional arguments given, they are Amax nhw.
-If 3 additional arguments given, they are Amax n1 n2.
-If 4 additional arguments given, they are Amax nhw n1 n2.
-If 5 additional arguments given, they are Amax nhw n1 n2 nshell.
-If 6 additional arguments given, they are Amax nhw n1 n2 nshell ncomponent.
+If 2 additional arguments given, they are Amax nmax.
+If 3 additional arguments given, they are Amax      n1 n2.
+If 4 additional arguments given, they are Amax nmax n1 n2.
+If 5 additional arguments given, they are Amax nmax n1 n2 nshell.
+If 6 additional arguments given, they are Amax nmax n1 n2 nshell ncomponent.
 """
 
 from __future__ import division
@@ -888,7 +888,7 @@ def vce_multiple_calculations(
 
 def ncsd_vce_calculations(
         a_prescriptions, a_range,
-        nmax, n1=N1, n2=N2, nshell=N_SHELL, ncomponent=N_COMPONENT,
+        nmax=NMAX, n1=N1, n2=N2, nshell=N_SHELL, ncomponent=N_COMPONENT,
         force_ncsd=False, force_trdens=False, force_vce=False,
         force_all=False,
         verbose=False, progress=True, cluster_submit=False,
@@ -1046,9 +1046,9 @@ if __name__ == "__main__":
         )
     elif len(other_args) == 3:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
-        nhw_0 = int(other_args[2])
+        nmax_0 = int(other_args[2])
         ncsd_vce_calculations(
-            a_prescriptions=a_prescriptions0, a_range=a_range0, nmax=nhw_0,
+            a_prescriptions=a_prescriptions0, a_range=a_range0, nmax=nmax_0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0,
             cluster_submit=cluster_submit0,
@@ -1065,31 +1065,31 @@ if __name__ == "__main__":
         )
     elif len(other_args) == 5:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
-        nhw_0, n1_0, n2_0 = [int(x) for x in other_args[2:]]
+        nmax_0, n1_0, n2_0 = [int(x) for x in other_args[2:]]
         ncsd_vce_calculations(
             a_prescriptions=a_prescriptions0, a_range=a_range0,
-            nmax=nhw_0, n1=n1_0, n2=n2_0,
+            nmax=nmax_0, n1=n1_0, n2=n2_0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0,
             cluster_submit=cluster_submit0,
         )
     elif len(other_args) == 6:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
-        nhw_0, n1_0, n2_0, nshell_0 = [int(x) for x in other_args[2:]]
+        nmax_0, n1_0, n2_0, nshell_0 = [int(x) for x in other_args[2:]]
         ncsd_vce_calculations(
             a_prescriptions=a_prescriptions0, a_range=a_range0,
-            nmax=nhw_0, n1=n1_0, n2=n2_0, nshell=nshell_0,
+            nmax=nmax_0, n1=n1_0, n2=n2_0, nshell=nshell_0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0,
             cluster_submit=cluster_submit0,
         )
     elif len(other_args) == 7:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
-        nhw_0, n1_0, n2_0, nshell_0, ncomponent_0 = [int(x)
-                                                     for x in other_args[2:]]
+        nmax_0, n1_0, n2_0, nshell_0, ncomponent_0 = [int(x)
+                                                      for x in other_args[2:]]
         ncsd_vce_calculations(
             a_prescriptions=a_prescriptions0, a_range=a_range0,
-            nmax=nhw_0, n1=n1_0, n2=n2_0,
+            nmax=nmax_0, n1=n1_0, n2=n2_0,
             nshell=nshell_0, ncomponent=ncomponent_0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0,
