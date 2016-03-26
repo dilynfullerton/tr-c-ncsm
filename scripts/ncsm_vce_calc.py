@@ -42,6 +42,7 @@ from __future__ import division
 
 import re
 from os import getcwd, path, walk, mkdir, symlink, remove, link
+from shutil import copy
 from subprocess import Popen, PIPE
 from sys import argv, stdout
 from math import floor
@@ -75,11 +76,12 @@ _RGX_TBME = 'TBME'
 _FNAME_FMT_EGV = 'mfdp_%d.egv'
 _FNAME_FMT_VCE = 'A%d.int'  # A value
 _FNAME_FMT_NCSD_OUT = '%s%d_%d_Nhw%d_%d_%d.out'  # name, A, Aeff, Nhw, n1, n2
-_FNAME_FMT_NCSD_OUT_SF = _FNAME_FMT_NCSD_OUT[:-4] + '_sf%f.2' + '.out'
+_FNAME_FMT_JOBSUB = _FNAME_FMT_NCSD_OUT[:-4] + '.sh'
 _FNAME_FMT_TBME = 'TBMEA2srg-n3lo2.O_%d.24'  # n1
 _FNAME_FMT_TBME_SF = _FNAME_FMT_TBME + '_sf%f.2'  # n1 scalefactor
-_FNAME_MFDP = 'mfdp.dat'
-_FNAME_TRDENS_IN = 'trdens.in'
+_FNAME_TMP_MFDP = 'mfdp.dat'
+_FNAME_TMP_TRDENS_IN = 'trdens.in'
+_FNAME_TMP_JOBSUB = 'job.sh'
 _FNAME_EGV = 'mfdp.egv'
 _FNAME_TRDENS_OUT = 'trdens.out'
 _FNAME_HEFF = 'Heff_OLS.dat'
@@ -90,6 +92,8 @@ _FNAME_NCSD_STDOUT = '__stdout_ncsd__.txt'
 _FNAME_NCSD_STDERR = '__stderr_ncsd__.txt'
 _FNAME_TRDENS_STDOUT = '__stdout_trdens__.txt'
 _FNAME_TRDENS_STDERR = '__stderr_trdens__.txt'
+_FNAME_QSUB_STDOUT = '__stdout_qsub__.txt'
+_FNAME_QSUB_STDERR = '__stderr_qsub__.txt'
 _STR_PROG_NCSD = 'Doing NCSD calculations for (A, Aeff) pairs...'
 _STR_PROG_VCE = 'Doing VCE calculations for Aeff prescriptions...'
 _STR_PROG_NCSD_EX = 'Doing NCSD calculations for A=Aeff...'
@@ -149,11 +153,66 @@ def _make_base_directories(a_values, presc, a_aeff_to_dpath_map,
             mkdir(dirpath)
 
 
+def _get_mfdp_restrictions_lines(
+        nmax,
+        _max_allowed_nmax=MAX_NMAX,
+        _str_rest_line=_LINE_FMT_MFDP_RESTR
+):
+    lines = list()
+    for n in range(min(nmax, _max_allowed_nmax) + 1):
+        i = (n + 1) * (n + 2)
+        lines.append(_str_rest_line % (0, i, 0, i, 0, 2 * i, n))
+    return '\n'.join(lines)
+
+
+def _get_mfdp_replace_map(
+        fname_tbme, outfile_name, z, a, n_hw, n_1, n_2, aeff,
+        _num_states=_NCSD_NUM_STATES, _num_iter=_NCSD_NUM_ITER
+):
+    n = a - z
+    par = a % 2
+    if a % 2 == 0:
+        tot2 = 0
+    else:
+        tot2 = 1
+    rest_lines = _get_mfdp_restrictions_lines(nmax=max(n_1, n_2))
+    return {'<<TBMEFILE>>': str(fname_tbme),
+            '<<OUTFILE>>': str(outfile_name),
+            '<<Z>>': str(z), '<<N>>': str(n),
+            '<<NHW>>': str(n_hw), '<<PAR>>': str(par), '<<TOT2>>': str(tot2),
+            '<<N1>>': str(n_1), '<<N2>>': str(n_2),
+            '<<RESTRICTIONS>>': str(rest_lines),
+            '<<NUMST>>': str(_num_states),
+            '<<NUMITER>>': str(_num_iter),
+            '<<AEFF>>': str(aeff)}
+
+
+def _rewrite_file(src, dst, replace_map):
+    """Reads the file given by src, replaces string elements based
+       on the replace map, writes the file into dst.
+    """
+    # read the src file
+    infile = open(src, 'r')
+    read_lines = infile.readlines()
+    infile.close()
+    # replace strings
+    write_lines = list()
+    for line in read_lines:
+        for k, v in replace_map.iteritems():
+            if k in line:
+                line = line.replace(k, str(v))
+        write_lines.append(line)
+    # write to the dst file
+    outfile = open(dst, 'w')
+    outfile.writelines(write_lines)
+    outfile.close()
+
+
 def _make_mfdp_file(
         z, a, aeff, nhw, n1, n2, path_elt, outfile_name,
         fname_fmt_tbme=_FNAME_FMT_TBME,
         path_temp=_DPATH_TEMPLATES,
-        mfdp_name=_FNAME_MFDP
+        mfdp_name=_FNAME_TMP_MFDP
 ):
     """Reads the mfdp file from path_temp 
     and rewrites it into path_elt in accordance
@@ -186,7 +245,7 @@ def _make_mfdp_files(
         a_list, aeff_list, nhw_list, z, n_1, n_2,
         a_aeff_to_dpath_map, a_aeff_to_outfile_fpath_map,
         path_temp=_DPATH_TEMPLATES,
-        _fname_mfdp=_FNAME_MFDP
+        _fname_mfdp=_FNAME_TMP_MFDP
 ):
     for a, aeff, nhw in zip(a_list, aeff_list, nhw_list):
         outfile_name = path.split(a_aeff_to_outfile_fpath_map[(a, aeff)])[1]
@@ -194,67 +253,6 @@ def _make_mfdp_files(
                         path_elt=a_aeff_to_dpath_map[(a, aeff)],
                         outfile_name=outfile_name,
                         path_temp=path_temp, mfdp_name=_fname_mfdp)
-
-
-def _get_mfdp_replace_map(
-        fname_tbme, outfile_name, z, a, n_hw, n_1, n_2, aeff,
-        _num_states=_NCSD_NUM_STATES, _num_iter=_NCSD_NUM_ITER
-):
-    n = a - z
-    par = a % 2
-    if a % 2 == 0:
-        tot2 = 0
-    else:
-        tot2 = 1
-    rest_lines = _get_mfdp_restrictions_lines(nmax=max(n_1, n_2))
-    return {'<<TBMEFILE>>': str(fname_tbme),
-            '<<OUTFILE>>': str(outfile_name),
-            '<<Z>>': str(z), '<<N>>': str(n),
-            '<<NHW>>': str(n_hw), '<<PAR>>': str(par), '<<TOT2>>': str(tot2),
-            '<<N1>>': str(n_1), '<<N2>>': str(n_2),
-            '<<RESTRICTIONS>>': str(rest_lines),
-            '<<NUMST>>': str(_num_states),
-            '<<NUMITER>>': str(_num_iter),
-            '<<AEFF>>': str(aeff)}
-
-
-def _get_mfdp_restrictions_lines(
-        nmax,
-        _max_allowed_nmax=MAX_NMAX,
-        _str_rest_line=_LINE_FMT_MFDP_RESTR
-):
-    lines = list()
-    for n in range(min(nmax, _max_allowed_nmax) + 1):
-        i = (n + 1) * (n + 2)
-        lines.append(_str_rest_line % (0, i, 0, i, 0, 2 * i, n))
-    return '\n'.join(lines)
-
-
-def _make_trdens_file(
-        z, a, nuc_dir,
-        _dpath_results=_DPATH_RESULTS,
-        _dpath_temp=_DPATH_TEMPLATES,
-        _fname_trdens_in=_FNAME_TRDENS_IN
-):
-    """Reads the trdens.in file from path_temp and rewrites it 
-    into path_elt in accordance with the given z, a
-    :param z: proton number
-    :param a: mass number
-    :param nuc_dir: directory name
-    :param _dpath_results: path to the results directory
-    :param _dpath_temp: path to the templates directory
-    :param _fname_trdens_in: name of the trdens file in the templates dir
-    """
-    src = path.join(_dpath_temp, _fname_trdens_in)
-    path_elt = path.join(_dpath_results, nuc_dir)
-    dst = path.join(path_elt, _fname_trdens_in)
-    rep_map = _get_trdens_replace_map(z=z, a=a)
-    _rewrite_file(src=src, dst=dst, replace_map=rep_map)
-
-
-def _get_trdens_replace_map(z, a):
-    nnn, num_states = _get_num_states(z, a)
-    return {'<<NNN>>': str(nnn), '<<NUMSTATES>>': str(num_states)}
 
 
 class UnknownNumStatesException(Exception):
@@ -275,25 +273,35 @@ def _get_num_states(z, a):
         raise UnknownNumStatesException()
 
 
-def _rewrite_file(src, dst, replace_map):
-    """Reads the file given by src, replaces string elements based
-       on the replace map, writes the file into dst.
+def _get_trdens_replace_map(z, a):
+    nnn, num_states = _get_num_states(z, a)
+    return {'<<NNN>>': str(nnn), '<<NUMSTATES>>': str(num_states)}
+
+
+def _make_trdens_file(
+        z, a, nuc_dir,
+        _dpath_results=_DPATH_RESULTS,
+        _dpath_temp=_DPATH_TEMPLATES,
+        _fname_trdens_in=_FNAME_TMP_TRDENS_IN
+):
+    """Reads the trdens.in file from path_temp and rewrites it 
+    into path_elt in accordance with the given z, a
+    :param z: proton number
+    :param a: mass number
+    :param nuc_dir: directory name
+    :param _dpath_results: path to the results directory
+    :param _dpath_temp: path to the templates directory
+    :param _fname_trdens_in: name of the trdens file in the templates dir
     """
-    # read the src file
-    infile = open(src, 'r')
-    read_lines = infile.readlines()
-    infile.close()
-    # replace strings
-    write_lines = list()
-    for line in read_lines:
-        for k, v in replace_map.iteritems():
-            if k in line:
-                line = line.replace(k, str(v))
-        write_lines.append(line)
-    # write to the dst file
-    outfile = open(dst, 'w')
-    outfile.writelines(write_lines)
-    outfile.close()
+    src = path.join(_dpath_temp, _fname_trdens_in)
+    path_elt = path.join(_dpath_results, nuc_dir)
+    dst = path.join(path_elt, _fname_trdens_in)
+    rep_map = _get_trdens_replace_map(z=z, a=a)
+    _rewrite_file(src=src, dst=dst, replace_map=rep_map)
+
+
+class TBMEFileNotFoundException(Exception):
+    pass
 
 
 def _truncate_space(
@@ -331,8 +339,27 @@ def _truncate_space(
     return dst_path
 
 
-class TBMEFileNotFoundException(Exception):
-    pass
+def _make_job_submit_file(
+        dst_fpath,
+        _dpath_temp=_DPATH_TEMPLATES,
+        _fname_tmp_jobsub=_FNAME_TMP_JOBSUB
+):
+    src_fpath = path.join(_dpath_temp, _fname_tmp_jobsub)
+    copy(src_fpath, dst_fpath)
+
+
+def _make_job_submit_files(
+        a_list, aeff_list, a_aeff_to_jobsub_fpath_map
+):
+    a = a_list.pop()
+    aeff = aeff_list.pop()
+    dst = a_aeff_to_jobsub_fpath_map[(a, aeff)]
+    _make_job_submit_file(dst_fpath=dst)
+    if len(a_list) > 0:
+        src = dst
+        for a, aeff in zip(a_list, aeff_list):
+            dst = a_aeff_to_jobsub_fpath_map[(a, aeff)]
+            link(src, dst)
 
 
 def _truncate_spaces(n1, n2, dirpaths, _fname_fmt_tbme=_FNAME_FMT_TBME):
@@ -406,12 +433,14 @@ def _run_ncsd(
         else:
             p = Popen(args=args, cwd=dpath, stdout=PIPE, stderr=PIPE)
             out, err = p.communicate()
-            fout = open(path.join(dpath, _fname_stdout), 'w')
-            fout.write(out)
-            fout.close()
-            ferr = open(path.join(dpath, _fname_stderr), 'w')
-            ferr.write(err)
-            ferr.close()
+            if len(out) > 0:
+                fout = open(path.join(dpath, _fname_stdout), 'w')
+                fout.write(out)
+                fout.close()
+            if len(err) > 0:
+                ferr = open(path.join(dpath, _fname_stderr), 'w')
+                ferr.write(err)
+                ferr.close()
 
 
 def _run_trdens(
@@ -447,12 +476,14 @@ def _run_trdens(
     else:
         p = Popen(args=args, cwd=a6_dir, stdout=PIPE, stderr=PIPE)
         out, err = p.communicate()
-        fout = open(path.join(a6_dir, _fname_stdout), 'w')
-        fout.write(out)
-        fout.close()
-        ferr = open(path.join(a6_dir, _fname_stderr), 'w')
-        ferr.write(err)
-        ferr.close()
+        if len(out) > 0:
+            fout = open(path.join(a6_dir, _fname_stdout), 'w')
+            fout.write(out)
+            fout.close()
+        if len(err) > 0:
+            ferr = open(path.join(a6_dir, _fname_stderr), 'w')
+            ferr.write(err)
+            ferr.close()
     return 1
 
 
@@ -518,14 +549,26 @@ def _get_a_aeff_to_dpath_map(
 def _get_a_aeff_to_outfile_fpath_map(
         a_list, aeff_list, nhw_list, z, n1, n2,
         a_aeff_to_dirpath_map,
-        _fname_fmt_ncsd_out=_FNAME_FMT_NCSD_OUT
+        fname_fmt=_FNAME_FMT_NCSD_OUT
 ):
     a_outfile_map = dict()
     for a, aeff, nhw in zip(a_list, aeff_list, nhw_list):
         a_outfile_map[(a, aeff)] = path.join(
             a_aeff_to_dirpath_map[(a, aeff)],
-            _fname_fmt_ncsd_out % (_get_name(z), a, aeff, nhw, n1, n2))
+            fname_fmt % (_get_name(z), a, aeff, nhw, n1, n2))
     return a_outfile_map
+
+
+def _get_a_aeff_to_jobsub_fpath_map(
+        a_list, aeff_list, nhw_list, z, n1, n2,
+        a_aeff_to_dirpath_map,
+        _fname_fmt_jobsub=_FNAME_FMT_JOBSUB,
+):
+    return _get_a_aeff_to_outfile_fpath_map(
+        a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
+        z=z, n1=n1, n2=n2, a_aeff_to_dirpath_map=a_aeff_to_dirpath_map,
+        fname_fmt=_fname_fmt_jobsub,
+    )
 
 
 def _print_progress(
@@ -548,7 +591,8 @@ def _print_progress(
         stdout.flush()
 
 
-def _prepare_directories(a_list, aeff_list, nhw_list, z, n1, n2):
+def _prepare_directories(a_list, aeff_list, nhw_list, z, n1, n2,
+                         cluster_submit):
     a_aeff_to_dir_map = _get_a_aeff_to_dpath_map(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
         z=z, n1=n1, n2=n2,
@@ -569,15 +613,29 @@ def _prepare_directories(a_list, aeff_list, nhw_list, z, n1, n2):
         z=z, n_1=n1, n_2=n2,
     )
     _truncate_spaces(n1=n1, n2=n2, dirpaths=a_aeff_to_dir_map.values())
-    return a_aeff_to_dir_map, a_aeff_to_outfile_map
+    # todo scale off diagonal interaction terms
+    if cluster_submit:
+        a_aeff_to_jobfile_map = _get_a_aeff_to_jobsub_fpath_map(
+            a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
+            z=z, n1=n1, n2=n2, a_aeff_to_dirpath_map=a_aeff_to_dir_map,
+        )
+        _make_job_submit_files(
+            a_list=a_list, aeff_list=aeff_list,
+            a_aeff_to_jobsub_fpath_map=a_aeff_to_jobfile_map
+        )
+        return a_aeff_to_dir_map, a_aeff_to_outfile_map, a_aeff_to_jobfile_map
+    else:
+        return a_aeff_to_dir_map, a_aeff_to_outfile_map, dict()
 
 
 def ncsd_single_calculation(
-        z, a, aeff, nhw=NMAX, n1=N1, n2=N1, force=False, verbose=False,
+        z, a, aeff, cluster_submit,
+        nhw=NMAX, n1=N1, n2=N1, force=False, verbose=False,
 ):
     a_aeff_to_dpath, a_aeff_to_outfile = _prepare_directories(
         a_list=[a], aeff_list=[aeff], nhw_list=[nhw], z=z, n1=n1, n2=n2,
-    )
+        cluster_submit=cluster_submit,
+    )[:2]
     _run_ncsd(
         dpath=a_aeff_to_dpath[(a, aeff)],
         fpath_outfile=a_aeff_to_outfile[(a, aeff)],
@@ -619,10 +677,28 @@ def _ncsd_multiple_calculations_t(
 
 
 def _ncsd_multiple_calculations_s(
-        a_aeff_set, a_aeff_to_dpath_map, a_aeff_to_outfile_map, force
+        a_aeff_set,
+        a_aeff_to_dpath_map, a_aeff_to_outfile_map, a_aeff_to_jobfile_map,
+        force,
+        _fname_stdout=_FNAME_QSUB_STDOUT, _fname_stderr=_FNAME_QSUB_STDERR,
+
 ):
-    # todo implement me
-    pass
+    for a, aeff in a_aeff_set:
+        fpath_outfile = a_aeff_to_outfile_map[(a, aeff)]
+        if force or not path.exists(fpath_outfile):
+            job = a_aeff_to_jobfile_map[(a, aeff)]
+            dpath = a_aeff_to_dpath_map[(a, aeff)]
+            args = ['qsub', '%s' % job]
+            p = Popen(args=args, stdout=PIPE, stderr=PIPE)
+            out, err = p.communicate()
+            if len(out) > 0:
+                fout = open(path.join(dpath, _fname_stdout), 'w')
+                fout.write(out)
+                fout.close()
+            if len(err) > 0:
+                ferr = open(path.join(dpath, _fname_stderr), 'w')
+                ferr.write(err)
+                ferr.close()
 
 
 def _ncsd_multiple_calculations(
@@ -672,29 +748,31 @@ def ncsd_multiple_calculations(
     :param cluster_submit: if true, submits the NCSD job to cluster
     :param str_prog_ncsd: string to show before progress bar
     """
-    a_aeff_set = set()
+    a_aeff_nhw_set = set()
     # prepare directories
     for ap in a_presc_list:
-        a_aeff_set |= set(zip(
+        a_aeff_nhw_set |= set(zip(
             a_values, ap, [nmax + i for i in range(len(a_values))]
         ))
     a_list, aeff_list, nhw_list = list(), list(), list(),
-    for a, aeff, nhw in a_aeff_set:
+    for a, aeff, nhw in a_aeff_nhw_set:
         a_list.append(a)
         aeff_list.append(aeff)
         nhw_list.append(nhw)
-    a_aeff_to_dir, a_aeff_to_outfile = _prepare_directories(
+    a_aeff_to_dir, a_aeff_to_outfile, a_aeff_to_job = _prepare_directories(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
-        z=z, n1=n1, n2=n2
+        z=z, n1=n1, n2=n2, cluster_submit=cluster_submit,
     )
+    a_aeff_set = set([(a, aeff) for a, aeff, nhw in a_aeff_nhw_set])
     if cluster_submit:
         _ncsd_multiple_calculations_s(
             a_aeff_set=a_aeff_set,
             a_aeff_to_dpath_map=a_aeff_to_dir,
             a_aeff_to_outfile_map=a_aeff_to_outfile,
+            a_aeff_to_jobfile_map=a_aeff_to_job,
             force=force,
         )
-    elif threading and len(a_aeff_set) > 1:
+    elif threading and len(a_aeff_nhw_set) > 1:
         _ncsd_multiple_calculations_t(
             a_aeff_set=a_aeff_set,
             a_aeff_to_dpath_map=a_aeff_to_dir,
