@@ -3,7 +3,7 @@
 
 To run as a script:
 
-    $ ncsm_vce_calc.py [-f[ntv]{0,3}] [-s]
+    $ ncsm_vce_calc.py [-f[ntv]{0,3}] [-v] [-s] [-t walltime]
     [ Aeff4 Aeff5 Aeff6 | [-m|-M|-e] Ap_min Ap_max] Amin
     [Amax [nmax [n1 n2 [nshell [ncomponent]]] | n1 n2]]
 
@@ -12,24 +12,31 @@ Valence Cluster Expansion is performed according to the A-prescription(s)
 given by (Aeff4, Aeff5, and Aeff6) or the range of A prescriptions
 specified by Ap_min and Ap_max if -m or -M precedes the arguments.
 
-If -F or -f precedes the arguments:
+-F or -f
     force recalculation of all steps (NCSD, TRDENS, and VCE)
-Else if -f[ntv]* precedes the arguments:
-    If n, force recalculation of NCSD.
-    If t, force recalculation of TRDENS.
-    If v, force recalculation of VCE.
-Otherwise:
-    Calculations are not done if outfiles are present
-If -m or -M or -e precedes the arguments:
+-f[ntv]*
+    n
+        force recalculation of NCSD.
+    t
+        force recalculation of TRDENS.
+    v
+        force recalculation of VCE.
+-m or -M or -e
     The first two arguments are used to determine a range of A prescriptions
-    -m --> Prescriptions are all increasing length-3 combinations of
-        integers in the range [Ap_min, Ap_max]
-    -M --> Prescriptions are all increasing length-3 combinations of
-        numbers with repetition in the range [Ap_min, Ap_max]
-    -e --> Prescriptions are all (A, A, A) for A in the range [Ap_min, Ap_max]
-Otherwise:
-    The first three arguments are used to explicitly express the A
-        prescription
+    -m
+        Prescriptions are all increasing length-3 combinations of
+          integers in the range [Ap_min, Ap_max]
+    -M
+        Prescriptions are all increasing length-3 combinations of
+          numbers with repetition in the range [Ap_min, Ap_max]
+    -e
+         Prescriptions are all (A, A, A) for A in the range [Ap_min, Ap_max]
+-s
+    NCSD jobs are submitted to OpenMP cluster
+-t walltime
+    NCSD jobs (submitted to cluster) are allotted the given amount of walltime,
+      a string in the format hh:mm:ss
+
 If 1 additional argument given,   this is Amax.
 If 2 additional arguments given, they are Amax nmax.
 If 3 additional arguments given, they are Amax      n1 n2.
@@ -42,7 +49,6 @@ from __future__ import division
 
 import re
 from os import getcwd, path, walk, mkdir, symlink, remove, link
-from shutil import copy
 from subprocess import Popen, PIPE
 from sys import argv, stdout
 from math import floor
@@ -111,6 +117,7 @@ _ZNAME_FMT_ALT = '%d-'
 _NCSD_NUM_STATES = 15
 _NCSD_NUM_ITER = 200
 _MAX_OPEN_THREADS = 10
+NCSD_CLUSTER_WALLTIME = '01:00:00'
 
 
 # FUNCTIONS
@@ -339,22 +346,27 @@ def _truncate_space(
     return dst_path
 
 
+def _get_job_replace_map(walltime):
+    return {'<<WALLTIME>>': str(walltime)}
+
+
 def _make_job_submit_file(
-        dst_fpath,
+        dst_fpath, walltime,
         _dpath_temp=_DPATH_TEMPLATES,
         _fname_tmp_jobsub=_FNAME_TMP_JOBSUB
 ):
     src_fpath = path.join(_dpath_temp, _fname_tmp_jobsub)
-    copy(src_fpath, dst_fpath)
+    rep_map = _get_job_replace_map(walltime=walltime)
+    _rewrite_file(src=src_fpath, dst=dst_fpath, replace_map=rep_map)
 
 
 def _make_job_submit_files(
-        a_list, aeff_list, a_aeff_to_jobsub_fpath_map
+        a_list, aeff_list, a_aeff_to_jobsub_fpath_map, walltime,
 ):
     a = a_list.pop()
     aeff = aeff_list.pop()
     dst = a_aeff_to_jobsub_fpath_map[(a, aeff)]
-    _make_job_submit_file(dst_fpath=dst)
+    _make_job_submit_file(dst_fpath=dst, walltime=walltime)
     if len(a_list) > 0:
         src = dst
         for a, aeff in zip(a_list, aeff_list):
@@ -608,7 +620,7 @@ def _print_progress(
 
 
 def _prepare_directories(a_list, aeff_list, nhw_list, z, n1, n2,
-                         cluster_submit):
+                         cluster_submit=False, walltime=None):
     a_aeff_to_dir_map = _get_a_aeff_to_dpath_map(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
         z=z, n1=n1, n2=n2,
@@ -641,7 +653,8 @@ def _prepare_directories(a_list, aeff_list, nhw_list, z, n1, n2,
         )
         _make_job_submit_files(
             a_list=a_list, aeff_list=aeff_list,
-            a_aeff_to_jobsub_fpath_map=a_aeff_to_jobfile_map
+            a_aeff_to_jobsub_fpath_map=a_aeff_to_jobfile_map,
+            walltime=walltime,
         )
         return a_aeff_to_dir_map, a_aeff_to_egvfile_map, a_aeff_to_jobfile_map
     else:
@@ -649,12 +662,13 @@ def _prepare_directories(a_list, aeff_list, nhw_list, z, n1, n2,
 
 
 def ncsd_single_calculation(
-        z, a, aeff, cluster_submit,
+        z, a, aeff,
         nhw=NMAX, n1=N1, n2=N1, force=False, verbose=False,
+        cluster_submit=False, walltime=None,
 ):
     a_aeff_to_dpath, a_aeff_to_egv = _prepare_directories(
         a_list=[a], aeff_list=[aeff], nhw_list=[nhw], z=z, n1=n1, n2=n2,
-        cluster_submit=cluster_submit,
+        cluster_submit=cluster_submit, walltime=walltime,
     )[:2]
     _run_ncsd(
         dpath=a_aeff_to_dpath[(a, aeff)], fpath_egv=a_aeff_to_egv[(a, aeff)],
@@ -746,7 +760,7 @@ def _ncsd_multiple_calculations(
 def ncsd_multiple_calculations(
         a_presc_list, a_values, z, nmax, n1=N1, n2=N1,
         force=False, verbose=False, progress=True, threading=True,
-        cluster_submit=False,
+        cluster_submit=False, walltime=None,
         str_prog_ncsd=_STR_PROG_NCSD,
 ):
     """For a given list of A prescriptions, do the NCSD calculations
@@ -766,6 +780,9 @@ def ncsd_multiple_calculations(
     :param threading: if true, starts the various calculations in separate
     threads
     :param cluster_submit: if true, submits the NCSD job to cluster
+    :param walltime: if cluster submit is true, this string in the format
+    hh:mm:ss specifies how much time is to be allotted each NCSD
+    calculation
     :param str_prog_ncsd: string to show before progress bar
     """
     a_aeff_nhw_set = set()
@@ -781,7 +798,7 @@ def ncsd_multiple_calculations(
         nhw_list.append(nhw)
     a_aeff_maps = _prepare_directories(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
-        z=z, n1=n1, n2=n2, cluster_submit=cluster_submit,
+        z=z, n1=n1, n2=n2, cluster_submit=cluster_submit, walltime=walltime,
     )
     a_aeff_to_dir, a_aeff_to_egv, a_aeff_to_job = a_aeff_maps
     a_aeff_set = set([(a, aeff) for a, aeff, nhw in a_aeff_nhw_set])
@@ -812,8 +829,10 @@ def ncsd_multiple_calculations(
 
 
 def ncsd_exact_calculations(
-        z, a_range, nhw=NMAX, n1=N1, n2=N2,
+        z, a_range,
+        nhw=NMAX, n1=N1, n2=N2,
         force=False, verbose=False, progress=True,
+        cluster_submit=False, walltime=None,
         _str_prog_ncsd_ex=_STR_PROG_NCSD_EX
 ):
     """For each A in a_range, does the NCSD calculation for A=Aeff
@@ -829,10 +848,14 @@ def ncsd_exact_calculations(
     output is suppressed and written to a file instead
     :param progress: if true, show a progress bar. Note: will not be shown if
     verbose is true.
+    :param cluster_submit: if true, submit job to cluster
+    :param walltime: if cluster_submit is true, this string hh:mm:ss specifies
+    how much wall time is to be allotted each NCSD calculation
     :param _str_prog_ncsd_ex: string to show before progress bar
     """
     ncsd_multiple_calculations(
         z=z, a_values=a_range, a_presc_list=[a_range], nmax=nhw, n1=n1, n2=n2,
+        cluster_submit=cluster_submit, walltime=walltime,
         force=force, verbose=verbose, progress=progress,
         str_prog_ncsd=_str_prog_ncsd_ex
     )
@@ -1000,7 +1023,8 @@ def ncsd_vce_calculations(
         nmax=NMAX, n1=N1, n2=N2, nshell=N_SHELL, ncomponent=N_COMPONENT,
         force_ncsd=False, force_trdens=False, force_vce=False,
         force_all=False,
-        verbose=False, progress=True, cluster_submit=False,
+        verbose=False, progress=True,
+        cluster_submit=False, walltime=None,
 ):
     """Given a sequence or generator of A prescriptions, does the NCSD/VCE
     calculation for each prescription
@@ -1026,6 +1050,8 @@ def ncsd_vce_calculations(
     :param cluster_submit: if true, NCSD calculation jobs will be submitted
     to the OpenMP cluster. NOTE: This may result in calculations remaining
     undone.
+    :param walltime: if cluster_submit, this string hh:mm:ss specifies how
+    much wall time is to be allotted each NCSD calculation
     """
     a_values = _generating_a_values(n_shell=nshell, n_component=ncomponent)
     z = int(a_values[0] / ncomponent)
@@ -1035,7 +1061,8 @@ def ncsd_vce_calculations(
         a_presc_list=a_presc_list,
         nmax=nmax, n1=n1, n2=n2,
         force=force_all or force_ncsd,
-        verbose=verbose, progress=progress, cluster_submit=cluster_submit,
+        verbose=verbose, progress=progress,
+        cluster_submit=cluster_submit, walltime=walltime,
     )
     vce_multiple_calculations(
         z=z, a_values=a_values,
@@ -1107,6 +1134,7 @@ if __name__ == "__main__":
     multicom, com, exact = (False,) * 3
     verbose0, progress0 = False, True
     cluster_submit0 = False
+    walltime0 = NCSD_CLUSTER_WALLTIME
     while True:
         a0 = user_args[0]
         if re.match('^-f[ntv]{0,3}$', a0.lower()):
@@ -1121,6 +1149,10 @@ if __name__ == "__main__":
             verbose0, progress0 = True, False
         elif '-s' == a0:
             cluster_submit0 = True
+        elif '-t' == a0:
+            user_args = user_args[1:]
+            cluster_submit0 = True
+            walltime0 = user_args[0]
         else:
             break
         user_args = user_args[1:]
@@ -1143,7 +1175,7 @@ if __name__ == "__main__":
             a_prescriptions=a_prescriptions0, a_range=a_range0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0,
-            cluster_submit=cluster_submit0,
+            cluster_submit=cluster_submit0, walltime=walltime0,
         )
     elif len(other_args) == 2:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
@@ -1151,7 +1183,7 @@ if __name__ == "__main__":
             a_prescriptions=a_prescriptions0, a_range=a_range0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0,
-            cluster_submit=cluster_submit0,
+            cluster_submit=cluster_submit0, walltime=walltime0,
         )
     elif len(other_args) == 3:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
@@ -1160,7 +1192,7 @@ if __name__ == "__main__":
             a_prescriptions=a_prescriptions0, a_range=a_range0, nmax=nmax_0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0,
-            cluster_submit=cluster_submit0,
+            cluster_submit=cluster_submit0, walltime=walltime0,
         )
     elif len(other_args) == 4:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
@@ -1170,7 +1202,7 @@ if __name__ == "__main__":
             n1=n1_0, n2=n2_0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0,
-            cluster_submit=cluster_submit0,
+            cluster_submit=cluster_submit0, walltime=walltime0,
         )
     elif len(other_args) == 5:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
@@ -1180,7 +1212,7 @@ if __name__ == "__main__":
             nmax=nmax_0, n1=n1_0, n2=n2_0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0,
-            cluster_submit=cluster_submit0,
+            cluster_submit=cluster_submit0, walltime=walltime0,
         )
     elif len(other_args) == 6:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
@@ -1190,7 +1222,7 @@ if __name__ == "__main__":
             nmax=nmax_0, n1=n1_0, n2=n2_0, nshell=nshell_0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0,
-            cluster_submit=cluster_submit0,
+            cluster_submit=cluster_submit0, walltime=walltime0,
         )
     elif len(other_args) == 7:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
@@ -1202,7 +1234,7 @@ if __name__ == "__main__":
             nshell=nshell_0, ncomponent=ncomponent_0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0,
-            cluster_submit=cluster_submit0,
+            cluster_submit=cluster_submit0, walltime=walltime0,
         )
     else:
         raise InvalidNumberOfArgumentsException(
