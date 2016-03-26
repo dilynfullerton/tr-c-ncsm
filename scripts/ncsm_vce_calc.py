@@ -3,7 +3,7 @@
 
 To run as a script:
 
-    $ ncsm_vce_calc.py [-f[ntv]{0,3}]
+    $ ncsm_vce_calc.py [-f[ntv]{0,3}] [-s]
     [ Aeff4 Aeff5 Aeff6 | [-m|-M|-e] Ap_min Ap_max] Amin
     [Amax [nmax [n1 n2 [nshell [ncomponent]]] | n1 n2]]
 
@@ -73,7 +73,7 @@ _DNAME_VCE = 'vce'
 
 # Files
 _RGX_TBME = 'TBME'
-_FNAME_FMT_EGV = 'mfdp_%d.egv'
+_FNAME_FMT_EGV = 'mfdp_%d.egv'  # Nhw
 _FNAME_FMT_VCE = 'A%d.int'  # A value
 _FNAME_FMT_NCSD_OUT = '%s%d_%d_Nhw%d_%d_%d.out'  # name, A, Aeff, Nhw, n1, n2
 _FNAME_FMT_JOBSUB = _FNAME_FMT_NCSD_OUT[:-4] + '.sh'
@@ -359,6 +359,8 @@ def _make_job_submit_files(
         src = dst
         for a, aeff in zip(a_list, aeff_list):
             dst = a_aeff_to_jobsub_fpath_map[(a, aeff)]
+            if path.exists(dst):
+                remove(dst)
             link(src, dst)
 
 
@@ -410,22 +412,22 @@ def _rename_egv_file(
         else:
             remove(next_egv_path)
     dirpath, dirnames, filenames = walk(a6_dir).next()
+    fname_egv = _fname_fmt_egv % nhw
     for f in filenames:
-        fname_egv = _fname_fmt_egv % nhw
         if f == fname_egv:
             symlink(f, next_egv_path)
             break
     else:
-        raise EgvFileNotFoundException()
+        raise EgvFileNotFoundException('File not found: %s' % fname_egv)
     return 1
 
 
 def _run_ncsd(
-        dpath, fpath_outfile, force, verbose,
+        dpath, fpath_egv, force, verbose,
         _fname_stdout=_FNAME_NCSD_STDOUT,
         _fname_stderr=_FNAME_NCSD_STDERR
 ):
-    if force or not path.exists(path.join(fpath_outfile)):
+    if force or not path.exists(path.join(fpath_egv)):
         args = ['NCSD']
         if verbose:
             p = Popen(args=args, cwd=dpath)
@@ -551,12 +553,26 @@ def _get_a_aeff_to_outfile_fpath_map(
         a_aeff_to_dirpath_map,
         fname_fmt=_FNAME_FMT_NCSD_OUT
 ):
-    a_outfile_map = dict()
+    a_aeff_outfile_map = dict()
     for a, aeff, nhw in zip(a_list, aeff_list, nhw_list):
-        a_outfile_map[(a, aeff)] = path.join(
+        a_aeff_outfile_map[(a, aeff)] = path.join(
             a_aeff_to_dirpath_map[(a, aeff)],
             fname_fmt % (_get_name(z), a, aeff, nhw, n1, n2))
-    return a_outfile_map
+    return a_aeff_outfile_map
+
+
+def _get_a_aeff_to_egv_fpath_map(
+        a_list, aeff_list, nhw_list,
+        a_aeff_to_dirpath_map,
+        _fname_fmt_egv=_FNAME_FMT_EGV,
+):
+    a_aeff_to_egv_map = dict()
+    for a, aeff, nhw in zip(a_list, aeff_list, nhw_list):
+        a_aeff_to_egv_map[(a, aeff)] = path.join(
+            a_aeff_to_dirpath_map[(a, aeff)],
+            _fname_fmt_egv % nhw
+        )
+    return a_aeff_to_egv_map
 
 
 def _get_a_aeff_to_jobsub_fpath_map(
@@ -602,6 +618,10 @@ def _prepare_directories(a_list, aeff_list, nhw_list, z, n1, n2,
         z=z, n1=n1, n2=n2,
         a_aeff_to_dirpath_map=a_aeff_to_dir_map
     )
+    a_aeff_to_egvfile_map = _get_a_aeff_to_egv_fpath_map(
+        a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
+        a_aeff_to_dirpath_map=a_aeff_to_dir_map
+    )
     _make_base_directories(
         a_values=a_list, presc=aeff_list,
         a_aeff_to_dpath_map=a_aeff_to_dir_map
@@ -623,35 +643,35 @@ def _prepare_directories(a_list, aeff_list, nhw_list, z, n1, n2,
             a_list=a_list, aeff_list=aeff_list,
             a_aeff_to_jobsub_fpath_map=a_aeff_to_jobfile_map
         )
-        return a_aeff_to_dir_map, a_aeff_to_outfile_map, a_aeff_to_jobfile_map
+        return a_aeff_to_dir_map, a_aeff_to_egvfile_map, a_aeff_to_jobfile_map
     else:
-        return a_aeff_to_dir_map, a_aeff_to_outfile_map, dict()
+        return a_aeff_to_dir_map, a_aeff_to_egvfile_map, dict()
 
 
 def ncsd_single_calculation(
         z, a, aeff, cluster_submit,
         nhw=NMAX, n1=N1, n2=N1, force=False, verbose=False,
 ):
-    a_aeff_to_dpath, a_aeff_to_outfile = _prepare_directories(
+    a_aeff_to_dpath, a_aeff_to_egv = _prepare_directories(
         a_list=[a], aeff_list=[aeff], nhw_list=[nhw], z=z, n1=n1, n2=n2,
         cluster_submit=cluster_submit,
     )[:2]
     _run_ncsd(
-        dpath=a_aeff_to_dpath[(a, aeff)],
-        fpath_outfile=a_aeff_to_outfile[(a, aeff)],
+        dpath=a_aeff_to_dpath[(a, aeff)], fpath_egv=a_aeff_to_egv[(a, aeff)],
         force=force, verbose=verbose
     )
 
 
 def _ncsd_multiple_calculations_t(
-        a_aeff_set, a_aeff_to_dpath_map, a_aeff_to_outfile_map,
+        a_aeff_set,
+        a_aeff_to_dpath_map, a_aeff_to_egvfile_map,
         force, progress=True, str_prog_ncsd=_STR_PROG_NCSD,
         max_open_threads=_MAX_OPEN_THREADS
 ):
     def _r(a_, aeff_):
         _run_ncsd(
             dpath=a_aeff_to_dpath_map[(a_, aeff_)],
-            fpath_outfile=a_aeff_to_outfile_map[(a_, aeff_)],
+            fpath_egv=a_aeff_to_egvfile_map[(a_, aeff_)],
             force=force, verbose=False)
     open_threads = Queue(maxsize=max_open_threads)
     todo_list = list(a_aeff_set)
@@ -678,18 +698,18 @@ def _ncsd_multiple_calculations_t(
 
 def _ncsd_multiple_calculations_s(
         a_aeff_set,
-        a_aeff_to_dpath_map, a_aeff_to_outfile_map, a_aeff_to_jobfile_map,
+        a_aeff_to_dpath_map, a_aeff_to_egvfile_map, a_aeff_to_jobfile_map,
         force,
         _fname_stdout=_FNAME_QSUB_STDOUT, _fname_stderr=_FNAME_QSUB_STDERR,
 
 ):
     for a, aeff in a_aeff_set:
-        fpath_outfile = a_aeff_to_outfile_map[(a, aeff)]
-        if force or not path.exists(fpath_outfile):
+        fpath_egv = a_aeff_to_egvfile_map[(a, aeff)]
+        if force or not path.exists(fpath_egv):
             job = a_aeff_to_jobfile_map[(a, aeff)]
             dpath = a_aeff_to_dpath_map[(a, aeff)]
             args = ['qsub', '%s' % job]
-            p = Popen(args=args, stdout=PIPE, stderr=PIPE)
+            p = Popen(args=args, cwd=dpath, stdout=PIPE, stderr=PIPE)
             out, err = p.communicate()
             if len(out) > 0:
                 fout = open(path.join(dpath, _fname_stdout), 'w')
@@ -702,7 +722,7 @@ def _ncsd_multiple_calculations_s(
 
 
 def _ncsd_multiple_calculations(
-        a_aeff_set, a_aeff_to_dpath_map, a_aeff_to_outfile_map,
+        a_aeff_set, a_aeff_to_dpath_map, a_aeff_to_egvfile_map,
         force, verbose, progress, str_prog_ncsd=_STR_PROG_NCSD
 ):
     # do ncsd
@@ -716,7 +736,7 @@ def _ncsd_multiple_calculations(
             _print_progress(jobs_completed, jobs_total)
         _run_ncsd(
             dpath=a_aeff_to_dpath_map[(a, aeff)],
-            fpath_outfile=a_aeff_to_outfile_map[(a, aeff)],
+            fpath_egv=a_aeff_to_egvfile_map[(a, aeff)],
             force=force, verbose=verbose)
         jobs_completed += 1
     if progress:
@@ -759,16 +779,17 @@ def ncsd_multiple_calculations(
         a_list.append(a)
         aeff_list.append(aeff)
         nhw_list.append(nhw)
-    a_aeff_to_dir, a_aeff_to_outfile, a_aeff_to_job = _prepare_directories(
+    a_aeff_maps = _prepare_directories(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
         z=z, n1=n1, n2=n2, cluster_submit=cluster_submit,
     )
+    a_aeff_to_dir, a_aeff_to_egv, a_aeff_to_job = a_aeff_maps
     a_aeff_set = set([(a, aeff) for a, aeff, nhw in a_aeff_nhw_set])
     if cluster_submit:
         _ncsd_multiple_calculations_s(
             a_aeff_set=a_aeff_set,
             a_aeff_to_dpath_map=a_aeff_to_dir,
-            a_aeff_to_outfile_map=a_aeff_to_outfile,
+            a_aeff_to_egvfile_map=a_aeff_to_egv,
             a_aeff_to_jobfile_map=a_aeff_to_job,
             force=force,
         )
@@ -776,7 +797,7 @@ def ncsd_multiple_calculations(
         _ncsd_multiple_calculations_t(
             a_aeff_set=a_aeff_set,
             a_aeff_to_dpath_map=a_aeff_to_dir,
-            a_aeff_to_outfile_map=a_aeff_to_outfile,
+            a_aeff_to_egvfile_map=a_aeff_to_egv,
             force=force, progress=progress,
             str_prog_ncsd=str_prog_ncsd
         )
@@ -784,7 +805,7 @@ def ncsd_multiple_calculations(
         _ncsd_multiple_calculations(
             a_aeff_set=a_aeff_set,
             a_aeff_to_dpath_map=a_aeff_to_dir,
-            a_aeff_to_outfile_map=a_aeff_to_outfile,
+            a_aeff_to_egvfile_map=a_aeff_to_egv,
             force=force, verbose=verbose, progress=progress,
             str_prog_ncsd=str_prog_ncsd
         )
@@ -879,8 +900,11 @@ def vce_single_calculation(
     a_aeff6 = (a_values[2], a_prescription[2])
     _make_trdens_file(z=z, a=a_values[2], nuc_dir=a_aeff_dir_map[a_aeff6])
     a6_dirpath = a_aeff_dir_map[a_aeff6]
-    _rename_egv_file(a6_dir=a6_dirpath, nhw=nmax+2, a6=a_values[2],
-                     force=force_trdens)
+    try:
+        _rename_egv_file(a6_dir=a6_dirpath, nhw=nmax+2, a6=a_values[2],
+                         force=force_trdens)
+    except EgvFileNotFoundException:
+        raise
     _run_trdens(a6_dir=a6_dirpath, force=force_trdens, verbose=verbose)
 
     # do valence cluster expansion
@@ -941,6 +965,7 @@ def vce_multiple_calculations(
     progress = progress and not verbose
     if progress:
         print _str_prog_vce
+    error_messages = list()
     for ap in a_presc_list:
         if progress:
             _print_progress(jobs_completed, jobs_total)
@@ -954,10 +979,16 @@ def vce_multiple_calculations(
                 verbose=verbose
             )
             jobs_completed += 1
-        except NcsdOutfileNotFoundException:
+        except NcsdOutfileNotFoundException, e:
+            error_messages.append(str(e))
+            continue
+        except EgvFileNotFoundException, e:
+            error_messages.append(str(e))
             continue
     if progress:
         _print_progress(jobs_completed, jobs_total, end=True)
+    for em in error_messages:
+        print em
     if jobs_completed == jobs_total:
         return 1
     else:
