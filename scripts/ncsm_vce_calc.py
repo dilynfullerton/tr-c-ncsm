@@ -620,7 +620,7 @@ def _print_progress(
 
 
 def _prepare_directories(a_list, aeff_list, nhw_list, z, n1, n2,
-                         cluster_submit=False, walltime=None):
+                         cluster_submit=False, walltime=None, progress=False):
     a_aeff_to_dir_map = _get_a_aeff_to_dpath_map(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
         z=z, n1=n1, n2=n2,
@@ -634,16 +634,22 @@ def _prepare_directories(a_list, aeff_list, nhw_list, z, n1, n2,
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
         a_aeff_to_dirpath_map=a_aeff_to_dir_map
     )
+    if progress:
+        print 'Making directories...'
     _make_base_directories(
         a_values=a_list, presc=aeff_list,
         a_aeff_to_dpath_map=a_aeff_to_dir_map
     )
+    if progress:
+        print 'Writing mfdp files...'
     _make_mfdp_files(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
         a_aeff_to_dpath_map=a_aeff_to_dir_map,
         a_aeff_to_outfile_fpath_map=a_aeff_to_outfile_map,
         z=z, n_1=n1, n_2=n2,
     )
+    if progress:
+        print 'Truncating interaction to N1=%d N2=%d...' % (n1, n2)
     _truncate_spaces(n1=n1, n2=n2, dirpaths=a_aeff_to_dir_map.values())
     # todo scale off diagonal interaction terms
     if cluster_submit:
@@ -651,6 +657,8 @@ def _prepare_directories(a_list, aeff_list, nhw_list, z, n1, n2,
             a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
             z=z, n1=n1, n2=n2, a_aeff_to_dirpath_map=a_aeff_to_dir_map,
         )
+        if progress:
+            print 'Writing cluster submit files...'
         _make_job_submit_files(
             a_list=a_list, aeff_list=aeff_list,
             a_aeff_to_jobsub_fpath_map=a_aeff_to_jobfile_map,
@@ -663,12 +671,13 @@ def _prepare_directories(a_list, aeff_list, nhw_list, z, n1, n2,
 
 def ncsd_single_calculation(
         z, a, aeff,
-        nhw=NMAX, n1=N1, n2=N1, force=False, verbose=False,
+        nhw=NMAX, n1=N1, n2=N1, force=False, verbose=False, progress=True,
         cluster_submit=False, walltime=None,
 ):
     a_aeff_to_dpath, a_aeff_to_egv = _prepare_directories(
         a_list=[a], aeff_list=[aeff], nhw_list=[nhw], z=z, n1=n1, n2=n2,
         cluster_submit=cluster_submit, walltime=walltime,
+        progress=progress,
     )[:2]
     _run_ncsd(
         dpath=a_aeff_to_dpath[(a, aeff)], fpath_egv=a_aeff_to_egv[(a, aeff)],
@@ -713,10 +722,12 @@ def _ncsd_multiple_calculations_t(
 def _ncsd_multiple_calculations_s(
         a_aeff_set,
         a_aeff_to_dpath_map, a_aeff_to_egvfile_map, a_aeff_to_jobfile_map,
-        force,
+        force, progress,
         _fname_stdout=_FNAME_QSUB_STDOUT, _fname_stderr=_FNAME_QSUB_STDERR,
 
 ):
+    if progress:
+        print 'Submitting jobs...'
     for a, aeff in a_aeff_set:
         fpath_egv = a_aeff_to_egvfile_map[(a, aeff)]
         if force or not path.exists(fpath_egv):
@@ -800,6 +811,7 @@ def ncsd_multiple_calculations(
     a_aeff_maps = _prepare_directories(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
         z=z, n1=n1, n2=n2, cluster_submit=cluster_submit, walltime=walltime,
+        progress=progress,
     )
     a_aeff_to_dir, a_aeff_to_egv, a_aeff_to_job = a_aeff_maps
     a_aeff_set = set([(a, aeff) for a, aeff, nhw in a_aeff_nhw_set])
@@ -809,7 +821,7 @@ def ncsd_multiple_calculations(
             a_aeff_to_dpath_map=a_aeff_to_dir,
             a_aeff_to_egvfile_map=a_aeff_to_egv,
             a_aeff_to_jobfile_map=a_aeff_to_job,
-            force=force,
+            progress=progress, force=force,
         )
     elif threading and len(a_aeff_nhw_set) > 1:
         _ncsd_multiple_calculations_t(
