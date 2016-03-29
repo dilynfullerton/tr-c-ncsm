@@ -16,6 +16,7 @@ value and Aeff value.
     A and Aeff are interpreted as Amin and Amax,
       which define a range [Amin, Amax] on which exact calculations (A=Aeff)
       are done.
+    nhw is interpreted as nmax
 -v
     regular verbose output of NCSD is printed to
       stdout (unless job is submitted to cluster)
@@ -121,9 +122,9 @@ if __name__ == "__main__":
                 cluster_submit=cluster_submit0, walltime=walltime0,
             )
         elif len(user_args) == 4:
-            z0, amin, amax, nhw0 = [int(x) for x in user_args]
+            z0, amin, amax, nmax0 = [int(x) for x in user_args]
             ncsd_exact_calculations(
-                z=z0, a_range=range(amin, amax+1), nhw=nhw0,
+                z=z0, a_range=range(amin, amax+1), nmax=nmax0,
                 force=force0, verbose=verbose0, progress=progress0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
             )
@@ -135,9 +136,9 @@ if __name__ == "__main__":
                 cluster_submit=cluster_submit0, walltime=walltime0,
             )
         elif len(user_args) == 6:
-            z0, amin, amax, nhw0, n1_, n2_ = [int(x) for x in user_args]
+            z0, amin, amax, nmax0, n1_, n2_ = [int(x) for x in user_args]
             ncsd_exact_calculations(
-                z=z0, a_range=range(amin, amax+1), nhw=nhw0, n1=n1_, n2=n2_,
+                z=z0, a_range=range(amin, amax+1), nmax=nmax0, n1=n1_, n2=n2_,
                 force=force0, verbose=verbose0, progress=progress0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
             )

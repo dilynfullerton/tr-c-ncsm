@@ -830,7 +830,7 @@ def ncsd_multiple_calculations(
 
 def ncsd_exact_calculations(
         z, a_range,
-        nhw=NMAX, n1=N1, n2=N2,
+        nmax=NMAX, n1=N1, n2=N2,
         force=False, verbose=False, progress=True,
         cluster_submit=False, walltime=None,
         _str_prog_ncsd_ex=_STR_PROG_NCSD_EX
@@ -838,7 +838,7 @@ def ncsd_exact_calculations(
     """For each A in a_range, does the NCSD calculation for A=Aeff
     :param z: proton number
     :param a_range: range of A values for which to do NCSD with Aeff=A
-    :param nhw: major oscillator model space truncation. Note: Increased by 1
+    :param nmax: major oscillator model space truncation. Note: Increased by 1
     for each successive A value
     :param n1: max allowed 1-particle state
     :param n2: max allowed 2-particle state
@@ -854,7 +854,7 @@ def ncsd_exact_calculations(
     :param _str_prog_ncsd_ex: string to show before progress bar
     """
     ncsd_multiple_calculations(
-        z=z, a_values=a_range, a_presc_list=[a_range], nmax=nhw, n1=n1, n2=n2,
+        z=z, a_values=a_range, a_presc_list=[a_range], nmax=nmax, n1=n1, n2=n2,
         cluster_submit=cluster_submit, walltime=walltime,
         force=force, verbose=verbose, progress=progress,
         str_prog_ncsd=_str_prog_ncsd_ex
