@@ -4,7 +4,7 @@
 To run as a script:
 
     $ ncsm_single_calc.py [-f] [-e] [-v] [-s] [-t walltime]
-    Z A [Aeff [nhw [n1 n2] | n1 n2]]
+    Z A [Aeff [nhw [n1 n2 [nshell [ncomponent]]] | n1 n2]]
 
 In the current directory, run NCSD for a single element with a single A
 value and Aeff value.
@@ -30,6 +30,10 @@ If 3 arguments are given, these are Z A Aeff.
 If 4 arguments are given, these are Z A Aeff nhw.
 If 5 arguments are given, these are Z A Aeff n1 n2.
 If 6 arguments are given, these are Z A Aeff nhw n1 n2.
+
+If -e and...
+If 7 arguments are given, these are Z A Aeff nhw n1 n2 nshell.
+If 8 arguments are given, these are Z A Aeff nhw n1 n2 nshell ncomponent.
 """
 from __future__ import division
 
@@ -139,6 +143,25 @@ if __name__ == "__main__":
             z0, amin, amax, nmax0, n1_, n2_ = [int(x) for x in user_args]
             ncsd_exact_calculations(
                 z=z0, a_range=range(amin, amax+1), nmax=nmax0, n1=n1_, n2=n2_,
+                force=force0, verbose=verbose0, progress=progress0,
+                cluster_submit=cluster_submit0, walltime=walltime0,
+            )
+        elif len(user_args) == 7:
+            z0, amin, amax, nmax0, n1_, n2_, nshell0 = [int(x)
+                                                        for x in user_args]
+            ncsd_exact_calculations(
+                z=z0, a_range=range(amin, amax+1), nmax=nmax0, n1=n1_, n2=n2_,
+                nshell=nshell0,
+                force=force0, verbose=verbose0, progress=progress0,
+                cluster_submit=cluster_submit0, walltime=walltime0,
+            )
+        elif len(user_args) == 8:
+            z0, amin, amax, nmax0, n1_, n2_, nshell0, ncomp0 = [
+                int(x) for x in user_args
+                ]
+            ncsd_exact_calculations(
+                z=z0, a_range=range(amin, amax+1), nmax=nmax0, n1=n1_, n2=n2_,
+                nshell=nshell0, ncomponent=ncomp0,
                 force=force0, verbose=verbose0, progress=progress0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
             )

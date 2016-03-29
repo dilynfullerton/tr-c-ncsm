@@ -758,7 +758,7 @@ def _ncsd_multiple_calculations(
 
 
 def ncsd_multiple_calculations(
-        a_presc_list, a_values, z, nmax, n1=N1, n2=N1,
+        a_presc_list, a_values, z, nmax, a_0, n1=N1, n2=N1,
         force=False, verbose=False, progress=True, threading=True,
         cluster_submit=False, walltime=None,
         str_prog_ncsd=_STR_PROG_NCSD,
@@ -769,6 +769,7 @@ def ncsd_multiple_calculations(
     :param a_values: three base a values (e.g. 4, 5, 6 for p shell)
     :param z: proton number
     :param nmax: major oscillator shell model space truncation
+    :param a_0: core A (e.g. 4 for p-shell, 16 for sd-shell, ...)
     :param n1: max allowed 1-particle state
     :param n2: max allowed 2-particle state
     :param force: if true, force doing the NCSD calculation, even if it has
@@ -789,7 +790,7 @@ def ncsd_multiple_calculations(
     # prepare directories
     for ap in a_presc_list:
         a_aeff_nhw_set |= set(zip(
-            a_values, ap, [nmax + i for i in range(len(a_values))]
+            a_values, ap, [nmax + a - a_0 for a in a_values]
         ))
     a_list, aeff_list, nhw_list = list(), list(), list(),
     for a, aeff, nhw in a_aeff_nhw_set:
@@ -831,6 +832,7 @@ def ncsd_multiple_calculations(
 def ncsd_exact_calculations(
         z, a_range,
         nmax=NMAX, n1=N1, n2=N2,
+        nshell=N_SHELL, ncomponent=N_COMPONENT,
         force=False, verbose=False, progress=True,
         cluster_submit=False, walltime=None,
         _str_prog_ncsd_ex=_STR_PROG_NCSD_EX
@@ -842,6 +844,8 @@ def ncsd_exact_calculations(
     for each successive A value
     :param n1: max allowed 1-particle state
     :param n2: max allowed 2-particle state
+    :param nshell: nuclear shell (e.g. 0=s, 1=p, 2=sd, ...)
+    :param ncomponent: 1=neutrons, 2=protons and neutrons
     :param force: if true, force calculation of NCSD even if output files are
     present
     :param verbose: if true, print regular NCSD output to stdout; otherwise
@@ -855,6 +859,7 @@ def ncsd_exact_calculations(
     """
     ncsd_multiple_calculations(
         z=z, a_values=a_range, a_presc_list=[a_range], nmax=nmax, n1=n1, n2=n2,
+        a_0=_generating_a_values(n_shell=nshell, n_component=ncomponent)[0],
         cluster_submit=cluster_submit, walltime=walltime,
         force=force, verbose=verbose, progress=progress,
         str_prog_ncsd=_str_prog_ncsd_ex
@@ -1059,7 +1064,7 @@ def ncsd_vce_calculations(
     ncsd_multiple_calculations(
         z=z, a_values=a_values,
         a_presc_list=a_presc_list,
-        nmax=nmax, n1=n1, n2=n2,
+        nmax=nmax, a_0=a_values[0], n1=n1, n2=n2,
         force=force_all or force_ncsd,
         verbose=verbose, progress=progress,
         cluster_submit=cluster_submit, walltime=walltime,
