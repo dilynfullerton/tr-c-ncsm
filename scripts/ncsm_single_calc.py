@@ -6,8 +6,9 @@ To run as a script:
     $ ncsm_single_calc.py [-f] [-e] [-v] [-s] [-t walltime]
     Z A [Aeff [nhw [n1 n2 [nshell [ncomponent]]] | n1 n2]]
 
-In the current directory, run NCSD for a single element with a single A
-value and Aeff value.
+In the current directory run NCSD for a single element with a single A
+value and Aeff value, or (if -e) run NCSD for a range of A values with
+Aeff = A.
 
 -f or -F
     force recalculation of NCSD, even if
@@ -25,7 +26,7 @@ value and Aeff value.
 -t walltime
     NCSD jobs are allotted the given walltime, a string in format hh:mm:ss
 
-If 2 arguments are given, these are Z A. Aeff is taken to be equal to A.
+If 2 arguments are given, these are Z A. (Aeff is taken to be equal to A).
 If 3 arguments are given, these are Z A Aeff.
 If 4 arguments are given, these are Z A Aeff nhw.
 If 5 arguments are given, these are Z A Aeff n1 n2.
