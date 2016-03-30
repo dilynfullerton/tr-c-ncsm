@@ -183,15 +183,17 @@ def _get_mfdp_replace_map(
     else:
         tot2 = 1
     rest_lines = _get_mfdp_restrictions_lines(nmax=max(n_1, n_2))
-    return {'<<TBMEFILE>>': str(fname_tbme),
-            '<<OUTFILE>>': str(outfile_name),
-            '<<Z>>': str(z), '<<N>>': str(n),
-            '<<NHW>>': str(n_hw), '<<PAR>>': str(par), '<<TOT2>>': str(tot2),
-            '<<N1>>': str(n_1), '<<N2>>': str(n_2),
-            '<<RESTRICTIONS>>': str(rest_lines),
-            '<<NUMST>>': str(_num_states),
-            '<<NUMITER>>': str(_num_iter),
-            '<<AEFF>>': str(aeff)}
+    return {
+        '<<TBMEFILE>>': str(fname_tbme),
+        '<<OUTFILE>>': str(outfile_name),
+        '<<Z>>': str(z), '<<N>>': str(n),
+        '<<NHW>>': str(n_hw), '<<PAR>>': str(par), '<<TOT2>>': str(tot2),
+        '<<N1>>': str(n_1), '<<N2>>': str(n_2),
+        '<<RESTRICTIONS>>': str(rest_lines),
+        '<<NUMST>>': str(_num_states),
+        '<<NUMITER>>': str(_num_iter),
+        '<<AEFF>>': str(aeff)
+    }
 
 
 def _rewrite_file(src, dst, replace_map):
@@ -244,8 +246,7 @@ def _make_mfdp_file(
         fname_tbme=fname_fmt_tbme % n1,
         outfile_name=outfile_name, z=z, a=a,
         n_hw=nhw, n_1=n1, n_2=n2, aeff=aeff)
-    _rewrite_file(src=temp_mfdp_path, dst=mfdp_path,
-                  replace_map=replace_map)
+    _rewrite_file(src=temp_mfdp_path, dst=mfdp_path, replace_map=replace_map)
 
 
 def _make_mfdp_files(
@@ -256,10 +257,11 @@ def _make_mfdp_files(
 ):
     for a, aeff, nhw in zip(a_list, aeff_list, nhw_list):
         outfile_name = path.split(a_aeff_to_outfile_fpath_map[(a, aeff)])[1]
-        _make_mfdp_file(z=z, a=a, aeff=aeff, nhw=nhw, n1=n_1, n2=n_2,
-                        path_elt=a_aeff_to_dpath_map[(a, aeff)],
-                        outfile_name=outfile_name,
-                        path_temp=path_temp, mfdp_name=_fname_mfdp)
+        _make_mfdp_file(
+            z=z, a=a, aeff=aeff, nhw=nhw, n1=n_1, n2=n_2,
+            path_elt=a_aeff_to_dpath_map[(a, aeff)], path_temp=path_temp,
+            outfile_name=outfile_name, mfdp_name=_fname_mfdp
+        )
 
 
 class UnknownNumStatesException(Exception):
@@ -695,7 +697,8 @@ def _ncsd_multiple_calculations_t(
         _run_ncsd(
             dpath=a_aeff_to_dpath_map[(a_, aeff_)],
             fpath_egv=a_aeff_to_egvfile_map[(a_, aeff_)],
-            force=force, verbose=False)
+            force=force, verbose=False
+        )
     open_threads = Queue(maxsize=max_open_threads)
     todo_list = list(a_aeff_set)
     jobs_completed = 0
