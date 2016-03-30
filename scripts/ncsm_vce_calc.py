@@ -724,7 +724,6 @@ def _ncsd_multiple_calculations_s(
         a_aeff_to_dpath_map, a_aeff_to_egvfile_map, a_aeff_to_jobfile_map,
         force, progress,
         _fname_stdout=_FNAME_QSUB_STDOUT, _fname_stderr=_FNAME_QSUB_STDERR,
-
 ):
     if progress:
         print 'Submitting jobs...'
