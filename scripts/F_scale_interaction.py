@@ -20,6 +20,7 @@ def ecf_off_diag_outside_valence(a_max):
     """
     def elt_cond_fn(elt):
         a, b, c, d, j, t, = elt
+        # todo this is definitely not correct
         if (a > a_max or b > a_max or c > a_max or d > a_max and
                 set([a, b]) != set([c, d])):
             return True
