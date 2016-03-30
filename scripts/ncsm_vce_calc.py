@@ -161,9 +161,7 @@ def _make_base_directories(a_values, presc, a_aeff_to_dpath_map,
 
 
 def _get_mfdp_restrictions_lines(
-        nmax,
-        _max_allowed_nmax=MAX_NMAX,
-        _str_rest_line=_LINE_FMT_MFDP_RESTR
+        nmax, _max_allowed_nmax=MAX_NMAX, _str_rest_line=_LINE_FMT_MFDP_RESTR
 ):
     lines = list()
     for n in range(min(nmax, _max_allowed_nmax) + 1):
@@ -218,10 +216,10 @@ def _rewrite_file(src, dst, replace_map):
 
 
 def _make_mfdp_file(
-        z, a, aeff, nhw, n1, n2, path_elt, outfile_name,
-        fname_fmt_tbme=_FNAME_FMT_TBME,
-        path_temp=_DPATH_TEMPLATES,
-        mfdp_name=_FNAME_TMP_MFDP
+        z, a, aeff, nhw, n1, n2, dpath_elt, fname_outfile,
+        _dpath_temp=_DPATH_TEMPLATES,
+        _fname_fmt_tbme=_FNAME_FMT_TBME,
+        _fname_mfdp=_FNAME_TMP_MFDP
 ):
     """Reads the mfdp file from path_temp 
     and rewrites it into path_elt in accordance
@@ -232,19 +230,19 @@ def _make_mfdp_file(
     :param nhw: Something something something dark side
     :param n1: Number of allowed states for single particles
     :param n2: Number of allowed states for two particles
-    :param path_elt: path to the directory into which the mfdp file is
+    :param dpath_elt: path to the directory into which the mfdp file is
     to be put
-    :param outfile_name: name of the outfile
-    :param fname_fmt_tbme: Format string for tbme filename to be formatted
+    :param fname_outfile: name of the outfile
+    :param _fname_fmt_tbme: Format string for tbme filename to be formatted
     with n1
-    :param path_temp: path to the template directory
-    :param mfdp_name: name of the mfdp file
+    :param _dpath_temp: path to the template directory
+    :param _fname_mfdp: name of the mfdp file
     """
-    temp_mfdp_path = path.join(path_temp, mfdp_name)
-    mfdp_path = path.join(path_elt, mfdp_name)
+    temp_mfdp_path = path.join(_dpath_temp, _fname_mfdp)
+    mfdp_path = path.join(dpath_elt, _fname_mfdp)
     replace_map = _get_mfdp_replace_map(
-        fname_tbme=fname_fmt_tbme % n1,
-        outfile_name=outfile_name, z=z, a=a,
+        fname_tbme=_fname_fmt_tbme % n1,
+        outfile_name=fname_outfile, z=z, a=a,
         n_hw=nhw, n_1=n1, n_2=n2, aeff=aeff)
     _rewrite_file(src=temp_mfdp_path, dst=mfdp_path, replace_map=replace_map)
 
@@ -252,15 +250,14 @@ def _make_mfdp_file(
 def _make_mfdp_files(
         a_list, aeff_list, nhw_list, z, n_1, n_2,
         a_aeff_to_dpath_map, a_aeff_to_outfile_fpath_map,
-        path_temp=_DPATH_TEMPLATES,
-        _fname_mfdp=_FNAME_TMP_MFDP
+        _dpath_temp=_DPATH_TEMPLATES, _fname_mfdp=_FNAME_TMP_MFDP
 ):
     for a, aeff, nhw in zip(a_list, aeff_list, nhw_list):
         outfile_name = path.split(a_aeff_to_outfile_fpath_map[(a, aeff)])[1]
         _make_mfdp_file(
             z=z, a=a, aeff=aeff, nhw=nhw, n1=n_1, n2=n_2,
-            path_elt=a_aeff_to_dpath_map[(a, aeff)], path_temp=path_temp,
-            outfile_name=outfile_name, mfdp_name=_fname_mfdp
+            dpath_elt=a_aeff_to_dpath_map[(a, aeff)], _dpath_temp=_dpath_temp,
+            fname_outfile=outfile_name, _fname_mfdp=_fname_mfdp
         )
 
 
@@ -289,8 +286,7 @@ def _get_trdens_replace_map(z, a):
 
 def _make_trdens_file(
         z, a, nuc_dir,
-        _dpath_results=_DPATH_RESULTS,
-        _dpath_temp=_DPATH_TEMPLATES,
+        _dpath_results=_DPATH_RESULTS, _dpath_temp=_DPATH_TEMPLATES,
         _fname_trdens_in=_FNAME_TMP_TRDENS_IN
 ):
     """Reads the trdens.in file from path_temp and rewrites it 
@@ -315,9 +311,8 @@ class TBMEFileNotFoundException(Exception):
 
 def _truncate_space(
         n1, n2, dpath_elt,
-        _path_temp=_DPATH_TEMPLATES,
-        _tbme_name_regex=_RGX_TBME,
-        _fname_fmt_tbme=_FNAME_FMT_TBME
+        _dpath_temp=_DPATH_TEMPLATES,
+        _rgx_fname_tbme=_RGX_TBME, _fname_fmt_tbme=_FNAME_FMT_TBME
 ):
     """Run the script that truncates the space by removing extraneous
     interactions from the TBME file
@@ -326,17 +321,17 @@ def _truncate_space(
     :param n2: Maximum state for two particles
     :param dpath_elt: Path to the directory in which the resultant TBME file
     is to be put
-    :param _path_temp: Path to the templates directory in which the full TBME
+    :param _dpath_temp: Path to the templates directory in which the full TBME
     files resides
-    :param _tbme_name_regex: Regular expression that matches only the TBME file
+    :param _rgx_fname_tbme: Regular expression that matches only the TBME file
     in the templates directory
     :param _fname_fmt_tbme: Format string for the TBME file to be formatted
     with n1
     """
-    w = walk(_path_temp)
+    w = walk(_dpath_temp)
     dirpath, dirnames, filenames = w.next()
     for f in filenames:
-        if re.match(_tbme_name_regex, f) is not None:
+        if re.match(_rgx_fname_tbme, f) is not None:
             tbme_filename = f
             break
     else:
@@ -354,8 +349,7 @@ def _get_job_replace_map(walltime):
 
 def _make_job_submit_file(
         dst_fpath, walltime,
-        _dpath_temp=_DPATH_TEMPLATES,
-        _fname_tmp_jobsub=_FNAME_TMP_JOBSUB
+        _dpath_temp=_DPATH_TEMPLATES, _fname_tmp_jobsub=_FNAME_TMP_JOBSUB
 ):
     src_fpath = path.join(_dpath_temp, _fname_tmp_jobsub)
     rep_map = _get_job_replace_map(walltime=walltime)
@@ -438,8 +432,7 @@ def _rename_egv_file(
 
 def _run_ncsd(
         dpath, fpath_egv, force, verbose,
-        _fname_stdout=_FNAME_NCSD_STDOUT,
-        _fname_stderr=_FNAME_NCSD_STDERR
+        _fname_stdout=_FNAME_NCSD_STDOUT, _fname_stderr=_FNAME_NCSD_STDERR
 ):
     if force or not path.exists(path.join(fpath_egv)):
         args = ['NCSD']
@@ -506,8 +499,7 @@ def _run_trdens(
 def _run_vce(
         a_values, a_prescription, a_range,
         a_aeff_to_outfile_fname_map, dirpath_aeff6, dirpath_vce, force,
-        _fname_fmt_vce_int=_FNAME_FMT_VCE,
-        _fname_heff=_FNAME_HEFF,
+        _fname_fmt_vce_int=_FNAME_FMT_VCE, _fname_heff=_FNAME_HEFF,
 ):
     """Do the VCE expansion calculation for each Aeff value in aeff_range
 
@@ -550,8 +542,7 @@ def _run_vce(
 
 def _get_a_aeff_to_dpath_map(
         a_list, aeff_list, nhw_list, z, n1, n2,
-        _dpath_results=_DPATH_RESULTS,
-        _dir_fmt_nuc=_DNAME_FMT_NUC
+        _dpath_results=_DPATH_RESULTS, _dir_fmt_nuc=_DNAME_FMT_NUC
 ):
     a_paths_map = dict()
     path_fmt = path.join(_dpath_results, _dir_fmt_nuc)
@@ -563,8 +554,7 @@ def _get_a_aeff_to_dpath_map(
 
 
 def _get_a_aeff_to_outfile_fpath_map(
-        a_list, aeff_list, nhw_list, z, n1, n2,
-        a_aeff_to_dirpath_map,
+        a_list, aeff_list, nhw_list, z, n1, n2, a_aeff_to_dirpath_map,
         fname_fmt=_FNAME_FMT_NCSD_OUT
 ):
     a_aeff_outfile_map = dict()
@@ -576,8 +566,7 @@ def _get_a_aeff_to_outfile_fpath_map(
 
 
 def _get_a_aeff_to_egv_fpath_map(
-        a_list, aeff_list, nhw_list,
-        a_aeff_to_dirpath_map,
+        a_list, aeff_list, nhw_list, a_aeff_to_dirpath_map,
         _fname_fmt_egv=_FNAME_FMT_EGV,
 ):
     a_aeff_to_egv_map = dict()
@@ -590,8 +579,7 @@ def _get_a_aeff_to_egv_fpath_map(
 
 
 def _get_a_aeff_to_jobsub_fpath_map(
-        a_list, aeff_list, nhw_list, z, n1, n2,
-        a_aeff_to_dirpath_map,
+        a_list, aeff_list, nhw_list, z, n1, n2, a_aeff_to_dirpath_map,
         _fname_fmt_jobsub=_FNAME_FMT_JOBSUB,
 ):
     return _get_a_aeff_to_outfile_fpath_map(
@@ -688,8 +676,7 @@ def ncsd_single_calculation(
 
 
 def _ncsd_multiple_calculations_t(
-        a_aeff_set,
-        a_aeff_to_dpath_map, a_aeff_to_egvfile_map,
+        a_aeff_set, a_aeff_to_dpath_map, a_aeff_to_egvfile_map,
         force, progress=True, str_prog_ncsd=_STR_PROG_NCSD,
         max_open_threads=_MAX_OPEN_THREADS
 ):
@@ -845,8 +832,7 @@ def ncsd_multiple_calculations(
 
 def ncsd_exact_calculations(
         z, a_range,
-        nmax=NMAX, n1=N1, n2=N2,
-        nshell=N_SHELL, ncomponent=N_COMPONENT,
+        nmax=NMAX, n1=N1, n2=N2, nshell=N_SHELL, ncomponent=N_COMPONENT,
         force=False, verbose=False, progress=True,
         cluster_submit=False, walltime=None,
         _str_prog_ncsd_ex=_STR_PROG_NCSD_EX
@@ -889,8 +875,7 @@ def vce_single_calculation(
         n1=N1, n2=N1, nshell=-1, ncomponent=-1,
         force_trdens=False, force_vce=False, verbose=False,
         _dpath_results=_DPATH_RESULTS,
-        _dname_vce=_DNAME_VCE,
-        _dname_fmt_vce=_DNAME_FMT_VCE,
+        _dname_vce=_DNAME_VCE, _dname_fmt_vce=_DNAME_FMT_VCE,
 ):
     """Valence cluster expansion
     :param z: protonn number
@@ -972,8 +957,7 @@ def vce_single_calculation(
 
 
 def vce_multiple_calculations(
-        z, a_values, a_presc_list, a_range,
-        nmax, n1, n2, nshell, ncomponent,
+        z, a_values, a_presc_list, a_range, nmax, n1, n2, nshell, ncomponent,
         force_trdens, force_vce, verbose, progress,
         _str_prog_vce=_STR_PROG_VCE
 ):
@@ -1040,10 +1024,8 @@ def vce_multiple_calculations(
 def ncsd_vce_calculations(
         a_prescriptions, a_range,
         nmax=NMAX, n1=N1, n2=N2, nshell=N_SHELL, ncomponent=N_COMPONENT,
-        force_ncsd=False, force_trdens=False, force_vce=False,
-        force_all=False,
-        verbose=False, progress=True,
-        cluster_submit=False, walltime=None,
+        force_ncsd=False, force_trdens=False, force_vce=False, force_all=False,
+        verbose=False, progress=True, cluster_submit=False, walltime=None,
 ):
     """Given a sequence or generator of A prescriptions, does the NCSD/VCE
     calculation for each prescription
@@ -1259,4 +1241,5 @@ if __name__ == "__main__":
         raise InvalidNumberOfArgumentsException(
             '%d' % (len(argv) - 1,) +
             ' is not a valid number of arguments for ncsm_vce_calc.py.' +
-            'Please enter 3-10 arguments.')
+            'Please enter 3-10 arguments.'
+        )
