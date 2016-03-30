@@ -5,23 +5,24 @@ Reads the interaction TBME file from the given src file path, and writes it to
 dst, changing the float values in accordance with scalefn.
 """
 
+from __future__ import division
 from os import path
-from sys import argv
-from ncsm_vce_calc import InvalidNumberOfArgumentsException
 
 SCALE_FACTOR = 1.0
 _LINE_FMT = ' %2d' * 6 + ' %11.6f' * 6 + '\n'
 
 
-def ecf_off_diag_outside_valence(a_max):
+def ecf_off_diag_outside_valence(nshell):
     """Returns an elt_cond_fn that returns true if matrix element is off
     diagonal and outside the valence range
-    :param a_max: maximum value in the valence space
+    :param nshell: major oscillator shell (0=s, 1=p, 2=sd, ...)
     """
+    idx_max = 1/2 + nshell
+
     def elt_cond_fn(elt):
         a, b, c, d, j, t, = elt
-        # todo this is definitely not correct
-        if (a > a_max or b > a_max or c > a_max or d > a_max and
+        # todo is this correct?
+        if (a > idx_max or b > idx_max or c > idx_max or d > idx_max and
                 set([a, b]) != set([c, d])):
             return True
         else:
