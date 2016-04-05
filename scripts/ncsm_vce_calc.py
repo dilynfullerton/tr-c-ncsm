@@ -72,9 +72,10 @@ _DPATH_MAIN = getcwd()
 _DPATH_TEMPLATES = path.join(_DPATH_MAIN, 'templates')
 _DPATH_RESULTS = path.join(_DPATH_MAIN, 'results')
 _DNAME_FMT_NUC = '%s%d_%d_Nhw%d_%d_%d'  # name, A, Aeff, nhw, n1, n2
+# todo ^ scalefactor
 _DNAME_FMT_VCE = 'vce_presc%d,%d,%d_Nmax%d_%d_%d_shell%d_dim%d'
 #     A presc, Nmax, n1, n2, nshell, ncomponent
-_DNAME_FMT_VCE_SF = _DNAME_FMT_VCE + '_sf%f.2'
+# todo ^ scalefactor
 _DNAME_VCE = 'vce'
 
 # Files
@@ -310,7 +311,7 @@ class TBMEFileNotFoundException(Exception):
 
 
 def _truncate_space(
-        n1, n2, dpath_elt,
+        n1, n2, dpath_elt,  # todo scalefactor
         _dpath_temp=_DPATH_TEMPLATES,
         _rgx_fname_tbme=_RGX_TBME, _fname_fmt_tbme=_FNAME_FMT_TBME
 ):
@@ -340,6 +341,7 @@ def _truncate_space(
     dst_path = path.join(dpath_elt, _fname_fmt_tbme % n1)
     if not path.exists(dst_path):
         truncate_interaction(src_path, n1, n2, dst_path)
+        # todo scale interaction
     return dst_path
 
 
@@ -373,6 +375,7 @@ def _make_job_submit_files(
 
 
 def _truncate_spaces(n1, n2, dirpaths, _fname_fmt_tbme=_FNAME_FMT_TBME):
+    # todo ^ scalefactor
     """For multiple directories, perform the operation of truncate_space
 
     :param n1: max allowed one-particle state
@@ -383,6 +386,7 @@ def _truncate_spaces(n1, n2, dirpaths, _fname_fmt_tbme=_FNAME_FMT_TBME):
     """
     d0 = dirpaths[0]
     fpath0 = _truncate_space(n1=n1, n2=n2, dpath_elt=d0)
+    # todo ^ scalefactor
     if len(dirpaths) > 1:
         fname_tbme = _fname_fmt_tbme % n1
         for d in dirpaths[1:]:
@@ -618,6 +622,7 @@ def _print_progress(
 
 def _prepare_directories(a_list, aeff_list, nhw_list, z, n1, n2,
                          cluster_submit=False, walltime=None, progress=False):
+    # todo ^ scalefactor
     a_aeff_to_dir_map = _get_a_aeff_to_dpath_map(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
         z=z, n1=n1, n2=n2,
@@ -646,7 +651,7 @@ def _prepare_directories(a_list, aeff_list, nhw_list, z, n1, n2,
     if progress:
         print '  Truncating interaction to N1=%d N2=%d...' % (n1, n2)
     _truncate_spaces(n1=n1, n2=n2, dirpaths=a_aeff_to_dir_map.values())
-    # todo scale off diagonal interaction terms
+    # todo ^ scale off diagonal interaction terms
     if cluster_submit:
         a_aeff_to_jobfile_map = _get_a_aeff_to_jobsub_fpath_map(
             a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
@@ -767,6 +772,7 @@ def ncsd_multiple_calculations(
         cluster_submit=False, walltime=None,
         str_prog_ncsd=_STR_PROG_NCSD,
 ):
+    # todo ^ scalefactor
     """For a given list of A prescriptions, do the NCSD calculations
     necessary for doing a valence cluster expansion
     :param a_presc_list: sequence of A prescriptions
@@ -806,6 +812,7 @@ def ncsd_multiple_calculations(
         z=z, n1=n1, n2=n2, cluster_submit=cluster_submit, walltime=walltime,
         progress=progress,
     )
+    # todo ^ scalefactor
     a_aeff_to_dir, a_aeff_to_egv, a_aeff_to_job = a_aeff_maps
     a_aeff_set = set([(a, aeff) for a, aeff, nhw in a_aeff_nhw_set])
     if cluster_submit:
@@ -839,10 +846,12 @@ def ncsd_single_calculation(
         nhw=NMAX, n1=N1, n2=N1, force=False, verbose=False, progress=True,
         cluster_submit=False, walltime=None,
 ):
+    # todo ^ scalefactor
     a_aeff_to_dpath, a_aeff_to_egv, a_aeff_to_job = _prepare_directories(
         a_list=[a], aeff_list=[aeff], nhw_list=[nhw], z=z, n1=n1, n2=n2,
         cluster_submit=cluster_submit, walltime=walltime, progress=progress,
     )[:3]
+    # todo ^ scalefactor
     if cluster_submit:
         return _ncsd_multiple_calculations_s(
             a_aeff_set=set([(a, aeff)]),
@@ -868,6 +877,7 @@ def ncsd_exact_calculations(
         cluster_submit=False, walltime=None,
         _str_prog_ncsd_ex=_STR_PROG_NCSD_EX
 ):
+    # todo ^ scalefactor
     """For each A in a_range, does the NCSD calculation for A=Aeff
     :param z: proton number
     :param a_range: range of A values for which to do NCSD with Aeff=A
@@ -895,6 +905,7 @@ def ncsd_exact_calculations(
         force=force, verbose=verbose, progress=progress,
         str_prog_ncsd=_str_prog_ncsd_ex
     )
+    # todo ^ scalefactor
 
 
 class NcsdOutfileNotFoundException(Exception):
@@ -1131,6 +1142,7 @@ def ncsd_vce_calculations(
         verbose=False, progress=True, threading=True,
         cluster_submit=False, walltime=None,
 ):
+    # todo ^ scalefactor
     """Given a sequence or generator of A prescriptions, does the NCSD/VCE
     calculation for each prescription
     :param a_prescriptions: sequence or generator of A prescription tuples
@@ -1169,6 +1181,7 @@ def ncsd_vce_calculations(
         verbose=verbose, progress=progress, threading=threading,
         cluster_submit=cluster_submit, walltime=walltime,
     )
+    # todo ^ scalefactor
     vce_multiple_calculations(
         z=z, a_values=a_values, a_presc_list=a_presc_list, a_range=a_range,
         nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
