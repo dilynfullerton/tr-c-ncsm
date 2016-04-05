@@ -702,6 +702,7 @@ def _ncsd_multiple_calculations_s(
         force, progress,
         _fname_stdout=_FNAME_QSUB_STDOUT, _fname_stderr=_FNAME_QSUB_STDERR,
 ):
+    submitted_jobs = 0
     if progress:
         print 'Submitting jobs...'
     for a, aeff in a_aeff_set:
@@ -720,6 +721,9 @@ def _ncsd_multiple_calculations_s(
                 ferr = open(path.join(dpath, _fname_stderr), 'w')
                 ferr.write(err)
                 ferr.close()
+            submitted_jobs += 1
+    if progress:
+        print '%d jobs submitted to cluster.' % submitted_jobs
 
 
 def _ncsd_multiple_calculations(
