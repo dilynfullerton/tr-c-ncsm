@@ -525,6 +525,15 @@ def _run_vce(
     he4_fname = a_aeff_to_outfile_fname_map[(a_values[0], a_prescription[0])]
     he5_fname = a_aeff_to_outfile_fname_map[(a_values[1], a_prescription[1])]
     he6_fname = path.join(dirpath_aeff6, _fname_heff)
+    if not path.exists(he4_fname):
+        raise NcsdOutfileNotFoundException(
+            'NCSD outfile not found: %s' % he4_fname)
+    elif not path.exists(he5_fname):
+        raise NcsdOutfileNotFoundException(
+            'NCSD outfile not found: %s' % he5_fname)
+    elif not path.exists(he6_fname):
+        raise NcsdOutfileNotFoundException(
+            'NCSD outfile not found: %s' % he6_fname)
     a_0 = a_range[0]
     fpath_fmt = path.join(dirpath_vce, _fname_fmt_vce_int)
     fpath = fpath_fmt % a_0
@@ -964,15 +973,14 @@ def vce_single_calculation(
             tuple(a_prescription) + (nmax, n1, n2, nshell, ncomponent)))
     if not path.exists(vce_dirpath):
         mkdir(vce_dirpath)
-    _run_vce(
-        a_values=a_values,
-        a_prescription=a_prescription,
-        a_range=a_range,
-        dirpath_aeff6=a6_dirpath,
-        dirpath_vce=vce_dirpath,
-        a_aeff_to_outfile_fname_map=a_aeff_outfile_map,
-        force=force_vce
-    )
+    try:
+        _run_vce(
+            a_values=a_values, a_prescription=a_prescription, a_range=a_range,
+            dirpath_aeff6=a6_dirpath, dirpath_vce=vce_dirpath,
+            a_aeff_to_outfile_fname_map=a_aeff_outfile_map, force=force_vce
+        )
+    except NcsdOutfileNotFoundException:
+        raise
 
 
 def _vce_multiple_calculations_t(
