@@ -136,6 +136,7 @@ if __name__ == "__main__":
     else:
         raise InvalidNumberOfArgumentsException(
             '\nFdoVCE.py called with %d arguments. ' % (len(argv)-1,) +
-            'Please call with 2, 5, or 7 arguments.\n')
+            'Please call with 2, 5, or 7 arguments.\n'
+        )
     run(presc=a_prescription, fname_out=out_fname,
         fname_he4=he4_fname, fname_he5=he5_fname, fname_he6=he6_fname)

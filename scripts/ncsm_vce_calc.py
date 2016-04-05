@@ -142,8 +142,8 @@ def _get_name(z, z_name_map=_Z_NAME_MAP, alt_name=_ZNAME_FMT_ALT):
         return alt_name % z
 
 
-def _make_base_directories(a_values, presc, a_aeff_to_dpath_map,
-                           _dpath_results=_DPATH_RESULTS):
+def _make_base_directories(
+        a_values, presc, a_aeff_to_dpath_map, _dpath_results=_DPATH_RESULTS):
     """Makes directories for first 3 a values if they do not exist yet
     :param a_values: Values of A for which directories are made.
     Example: If in nshell1, would make directories for He4,5,6
@@ -161,8 +161,7 @@ def _make_base_directories(a_values, presc, a_aeff_to_dpath_map,
 
 
 def _get_mfdp_restrictions_lines(
-        nmax, _max_allowed_nmax=MAX_NMAX, _str_rest_line=_LINE_FMT_MFDP_RESTR
-):
+        nmax, _max_allowed_nmax=MAX_NMAX, _str_rest_line=_LINE_FMT_MFDP_RESTR):
     lines = list()
     for n in range(min(nmax, _max_allowed_nmax) + 1):
         i = (n + 1) * (n + 2)
@@ -243,7 +242,8 @@ def _make_mfdp_file(
     replace_map = _get_mfdp_replace_map(
         fname_tbme=_fname_fmt_tbme % n1,
         outfile_name=fname_outfile, z=z, a=a,
-        n_hw=nhw, n_1=n1, n_2=n2, aeff=aeff)
+        n_hw=nhw, n_1=n1, n_2=n2, aeff=aeff
+    )
     _rewrite_file(src=temp_mfdp_path, dst=mfdp_path, replace_map=replace_map)
 
 
@@ -548,8 +548,7 @@ def _get_a_aeff_to_dpath_map(
     path_fmt = path.join(_dpath_results, _dir_fmt_nuc)
     for a, aeff, nhw in zip(a_list, aeff_list, nhw_list):
         a_paths_map[(a, aeff)] = path_fmt % (
-            _get_name(z), a, aeff, nhw, n1, n2
-        )
+            _get_name(z), a, aeff, nhw, n1, n2)
     return a_paths_map
 
 
@@ -561,7 +560,8 @@ def _get_a_aeff_to_outfile_fpath_map(
     for a, aeff, nhw in zip(a_list, aeff_list, nhw_list):
         a_aeff_outfile_map[(a, aeff)] = path.join(
             a_aeff_to_dirpath_map[(a, aeff)],
-            fname_fmt % (_get_name(z), a, aeff, nhw, n1, n2))
+            fname_fmt % (_get_name(z), a, aeff, nhw, n1, n2)
+        )
     return a_aeff_outfile_map
 
 
@@ -572,9 +572,7 @@ def _get_a_aeff_to_egv_fpath_map(
     a_aeff_to_egv_map = dict()
     for a, aeff, nhw in zip(a_list, aeff_list, nhw_list):
         a_aeff_to_egv_map[(a, aeff)] = path.join(
-            a_aeff_to_dirpath_map[(a, aeff)],
-            _fname_fmt_egv % nhw
-        )
+            a_aeff_to_dirpath_map[(a, aeff)], _fname_fmt_egv % nhw)
     return a_aeff_to_egv_map
 
 
@@ -617,8 +615,7 @@ def _prepare_directories(a_list, aeff_list, nhw_list, z, n1, n2,
     )
     a_aeff_to_outfile_map = _get_a_aeff_to_outfile_fpath_map(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
-        z=z, n1=n1, n2=n2,
-        a_aeff_to_dirpath_map=a_aeff_to_dir_map
+        z=z, n1=n1, n2=n2, a_aeff_to_dirpath_map=a_aeff_to_dir_map
     )
     a_aeff_to_egvfile_map = _get_a_aeff_to_egv_fpath_map(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
@@ -627,8 +624,7 @@ def _prepare_directories(a_list, aeff_list, nhw_list, z, n1, n2,
     if progress:
         print 'Making directories...'
     _make_base_directories(
-        a_values=a_list, presc=aeff_list,
-        a_aeff_to_dpath_map=a_aeff_to_dir_map
+        a_values=a_list, presc=aeff_list, a_aeff_to_dpath_map=a_aeff_to_dir_map
     )
     if progress:
         print 'Writing mfdp files...'
@@ -666,8 +662,7 @@ def ncsd_single_calculation(
 ):
     a_aeff_to_dpath, a_aeff_to_egv = _prepare_directories(
         a_list=[a], aeff_list=[aeff], nhw_list=[nhw], z=z, n1=n1, n2=n2,
-        cluster_submit=cluster_submit, walltime=walltime,
-        progress=progress,
+        cluster_submit=cluster_submit, walltime=walltime, progress=progress,
     )[:2]
     _run_ncsd(
         dpath=a_aeff_to_dpath[(a, aeff)], fpath_egv=a_aeff_to_egv[(a, aeff)],
@@ -751,7 +746,8 @@ def _ncsd_multiple_calculations(
         _run_ncsd(
             dpath=a_aeff_to_dpath_map[(a, aeff)],
             fpath_egv=a_aeff_to_egvfile_map[(a, aeff)],
-            force=force, verbose=verbose)
+            force=force, verbose=verbose
+        )
         jobs_completed += 1
     if progress:
         _print_progress(jobs_completed, jobs_total, end=True)
@@ -910,26 +906,24 @@ def vce_single_calculation(
     """
     a_aeff_dir_map = _get_a_aeff_to_dpath_map(
         a_list=a_values, aeff_list=a_prescription,
-        nhw_list=list(range(nmax, nmax+3)),
-        z=z, n1=n1, n2=n2
+        nhw_list=list(range(nmax, nmax+3)), z=z, n1=n1, n2=n2
     )
     a_aeff_outfile_map = _get_a_aeff_to_outfile_fpath_map(
         a_list=a_values, aeff_list=a_prescription,
-        nhw_list=list(range(nmax, nmax+3)),
-        z=z, n1=n1, n2=n2, a_aeff_to_dirpath_map=a_aeff_dir_map
+        nhw_list=list(range(nmax, nmax+3)), z=z, n1=n1, n2=n2,
+        a_aeff_to_dirpath_map=a_aeff_dir_map
     )
     for f in a_aeff_outfile_map.values():
         if not path.exists(f):
             raise NcsdOutfileNotFoundException(
-                'NCSD outfile not found: %s' % f
-            )
+                'NCSD outfile not found: %s' % f)
     # for the 3rd a value, make trdens file and run TRDENS
     a_aeff6 = (a_values[2], a_prescription[2])
     _make_trdens_file(z=z, a=a_values[2], nuc_dir=a_aeff_dir_map[a_aeff6])
     a6_dirpath = a_aeff_dir_map[a_aeff6]
     try:
-        _rename_egv_file(a6_dir=a6_dirpath, nhw=nmax+2, a6=a_values[2],
-                         force=force_trdens)
+        _rename_egv_file(
+            a6_dir=a6_dirpath, nhw=nmax+2, a6=a_values[2], force=force_trdens)
     except EgvFileNotFoundException:
         raise
     _run_trdens(a6_dir=a6_dirpath, force=force_trdens, verbose=verbose)
@@ -940,9 +934,8 @@ def vce_single_calculation(
         mkdir(dpath_vce0)
     vce_dirpath = path.join(
         _dpath_results, _dname_vce,
-        _dname_fmt_vce % tuple(tuple(a_prescription) +
-                               (nmax, n1, n2, nshell, ncomponent))
-    )
+        _dname_fmt_vce % tuple(
+            tuple(a_prescription) + (nmax, n1, n2, nshell, ncomponent)))
     if not path.exists(vce_dirpath):
         mkdir(vce_dirpath)
     _run_vce(
@@ -1058,17 +1051,14 @@ def ncsd_vce_calculations(
     z = int(a_values[0] / ncomponent)
     a_presc_list = list(a_prescriptions)
     ncsd_multiple_calculations(
-        z=z, a_values=a_values,
-        a_presc_list=a_presc_list,
+        z=z, a_values=a_values, a_presc_list=a_presc_list,
         nmax=nmax, a_0=a_values[0], n1=n1, n2=n2,
         force=force_all or force_ncsd,
         verbose=verbose, progress=progress,
         cluster_submit=cluster_submit, walltime=walltime,
     )
     vce_multiple_calculations(
-        z=z, a_values=a_values,
-        a_presc_list=a_presc_list,
-        a_range=a_range,
+        z=z, a_values=a_values, a_presc_list=a_presc_list, a_range=a_range,
         nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
         force_trdens=force_trdens or force_all,
         force_vce=force_vce or force_all,
