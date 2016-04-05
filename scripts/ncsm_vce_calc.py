@@ -655,21 +655,6 @@ def _prepare_directories(a_list, aeff_list, nhw_list, z, n1, n2,
         return a_aeff_to_dir_map, a_aeff_to_egvfile_map, dict()
 
 
-def ncsd_single_calculation(
-        z, a, aeff,
-        nhw=NMAX, n1=N1, n2=N1, force=False, verbose=False, progress=True,
-        cluster_submit=False, walltime=None,
-):
-    a_aeff_to_dpath, a_aeff_to_egv = _prepare_directories(
-        a_list=[a], aeff_list=[aeff], nhw_list=[nhw], z=z, n1=n1, n2=n2,
-        cluster_submit=cluster_submit, walltime=walltime, progress=progress,
-    )[:2]
-    _run_ncsd(
-        dpath=a_aeff_to_dpath[(a, aeff)], fpath_egv=a_aeff_to_egv[(a, aeff)],
-        force=force, verbose=verbose
-    )
-
-
 def _ncsd_multiple_calculations_t(
         a_aeff_set, a_aeff_to_dpath_map, a_aeff_to_egvfile_map,
         force, progress=True, str_prog_ncsd=_STR_PROG_NCSD,
@@ -830,6 +815,33 @@ def ncsd_multiple_calculations(
             a_aeff_to_egvfile_map=a_aeff_to_egv,
             force=force, verbose=verbose, progress=progress,
             str_prog_ncsd=str_prog_ncsd
+        )
+
+
+def ncsd_single_calculation(
+        z, a, aeff,
+        nhw=NMAX, n1=N1, n2=N1, force=False, verbose=False, progress=True,
+        cluster_submit=False, walltime=None,
+):
+    a_aeff_to_dpath, a_aeff_to_egv, a_aeff_to_job = _prepare_directories(
+        a_list=[a], aeff_list=[aeff], nhw_list=[nhw], z=z, n1=n1, n2=n2,
+        cluster_submit=cluster_submit, walltime=walltime, progress=progress,
+    )[:3]
+    if cluster_submit:
+        return _ncsd_multiple_calculations_s(
+            a_aeff_set=set([(a, aeff)]),
+            a_aeff_to_dpath_map=a_aeff_to_dpath,
+            a_aeff_to_egvfile_map=a_aeff_to_egv,
+            a_aeff_to_jobfile_map=a_aeff_to_job,
+            force=force, progress=progress,
+        )
+    else:
+        return _ncsd_multiple_calculations(
+            a_aeff_set=set([(a, aeff)]),
+            a_aeff_to_dpath_map=a_aeff_to_dpath,
+            a_aeff_to_egvfile_map=a_aeff_to_egv,
+            force=force, progress=progress,
+            verbose=verbose,
         )
 
 
