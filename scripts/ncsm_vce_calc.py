@@ -1215,17 +1215,17 @@ if __name__ == "__main__":
         a0 = user_args[0]
         if re.match('^-f[ntv]{0,3}$', a0.lower()):
             f_ncsd, f_trdens, f_vce, f_all = _force_from_argv0(a0)
-        elif '-m' == a0:
+        elif a0 == '-m' or a0 == '--combinations':
             com = True
-        elif '-M' == a0:
+        elif a0 == '-M' or a0 == '--multicombinations':
             multicom = True
-        elif '-e' == a0:
+        elif a0 == '-e' or a0 == '--exact':
             exact = True
-        elif '-v' == a0:
+        elif a0 == '-v' or a0 == '--verbose':
             verbose0, progress0 = True, False
-        elif '-s' == a0:
+        elif a0 == '-s' or a0 == '--submit-job':
             cluster_submit0 = True
-        elif '-t' == a0:
+        elif a0 == '-t' or a0 == '--walltime':
             user_args = user_args[1:]
             cluster_submit0 = True
             walltime0 = user_args[0]
