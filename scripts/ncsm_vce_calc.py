@@ -681,10 +681,12 @@ def _ncsd_multiple_calculations_t(
             fpath_egv=a_aeff_to_egvfile_map[(a_, aeff_)],
             force=force, verbose=False
         )
+
     open_threads = Queue(maxsize=max_open_threads)
     todo_list = list(a_aeff_set)
     jobs_completed = 0
     jobs_total = len(todo_list)
+
     if progress:
         print str_prog_ncsd
     while len(todo_list) > 0 or not open_threads.empty():
@@ -702,6 +704,11 @@ def _ncsd_multiple_calculations_t(
         jobs_completed += 1
     if progress:
         _print_progress(jobs_completed, jobs_total, end=True)
+
+    if jobs_completed == jobs_total:
+        return 1
+    else:
+        return 0
 
 
 def _ncsd_multiple_calculations_s(
@@ -949,36 +956,67 @@ def vce_single_calculation(
     )
 
 
-def vce_multiple_calculations(
+def _vce_multiple_calculations_t(
+        z, a_values, a_presc_list, a_range, nmax, n1, n2, nshell, ncomponent,
+        force_trdens, force_vce, verbose, progress,
+        _str_prog_vce=_STR_PROG_VCE,
+        max_open_threads=_MAX_OPEN_THREADS,
+):
+    error_messages = Queue()
+
+    def _r(ap0):
+        try:
+            vce_single_calculation(
+                z=z, a_values=a_values,
+                a_prescription=ap0, a_range=a_range,
+                nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
+                force_trdens=force_trdens,
+                force_vce=force_vce,
+                verbose=verbose
+            )
+        except EgvFileNotFoundException, e:
+            error_messages.put(str(e))
+        except NcsdOutfileNotFoundException, e:
+            error_messages.put(str(e))
+
+    open_threads = Queue(maxsize=max_open_threads)
+    todo_list = list(a_presc_list)
+    jobs_completed = 0
+    jobs_total = len(todo_list)
+
+    if progress:
+        print _str_prog_vce
+    while len(todo_list) > 0 or not open_threads.empty():
+        if progress:
+            _print_progress(jobs_completed, jobs_total)
+        # if room in queue, start new threads
+        while len(todo_list) > 0 and not open_threads.full():
+            ap = todo_list.pop()
+            t = Thread(target=_r, args=(ap,))
+            open_threads.put(t)
+            t.start()
+        # wait for completion of first thread in queue
+        t = open_threads.get()
+        t.join()
+        jobs_completed += 1
+    if progress:
+        _print_progress(jobs_completed, jobs_total, end=True)
+
+    while not error_messages.empty():
+        em = error_messages.get()
+        print em
+
+    if jobs_completed == jobs_total:
+        return 1
+    else:
+        return 0
+
+
+def _vce_multiple_calculations(
         z, a_values, a_presc_list, a_range, nmax, n1, n2, nshell, ncomponent,
         force_trdens, force_vce, verbose, progress,
         _str_prog_vce=_STR_PROG_VCE
 ):
-    """For every A prescription in a_presc_list, performs the valence
-    cluster expansion to generate an interaction file. Assumes NCSD
-    calculations have already been done sufficiently.
-    :param z: proton number
-    :param a_values: three base A values (e.g. if in p shell these are 4, 5, 6)
-    :param a_presc_list: sequence of 3-tuples representing A prescriptions
-    with which to do the valence cluster expansion
-    :param a_range: sequence of values for which to generate interaction
-    files
-    :param nmax: major oscillator model space truncation
-    :param n1: max allowed one-particle state
-    :param n2: max allowed two-particle state
-    :param nshell: shell number (0=s, 1=p, 2=sd, ...)
-    :param ncomponent: number of components
-    (1=neutrons, 2=protons and neutrons)
-    :param force_trdens: if true, force calculation of TRDENS even if output
-    file is already present
-    :param force_vce: if true, force calculation of valence cluster expansion
-    even if interaction output file is already present
-    :param verbose: if true, regular output of TRDENS is printed to stdout;
-    otherwise output is suppressed and written to a file instead
-    :param progress: if true, display a progress bar. Note: if verbose is
-    true, progress bar will not be displayed.
-    :param _str_prog_vce: string to display before progress bar
-    """
     jobs_total = len(a_presc_list)
     jobs_completed = 0
     progress = progress and not verbose
@@ -1014,11 +1052,57 @@ def vce_multiple_calculations(
         return 0
 
 
+def vce_multiple_calculations(
+        z, a_values, a_presc_list, a_range, nmax, n1, n2, nshell, ncomponent,
+        force_trdens, force_vce, verbose, progress, threading,
+):
+    """For every A prescription in a_presc_list, performs the valence
+    cluster expansion to generate an interaction file. Assumes NCSD
+    calculations have already been done sufficiently.
+    :param z: proton number
+    :param a_values: three base A values (e.g. if in p shell these are 4, 5, 6)
+    :param a_presc_list: sequence of 3-tuples representing A prescriptions
+    with which to do the valence cluster expansion
+    :param a_range: sequence of values for which to generate interaction
+    files
+    :param nmax: major oscillator model space truncation
+    :param n1: max allowed one-particle state
+    :param n2: max allowed two-particle state
+    :param nshell: shell number (0=s, 1=p, 2=sd, ...)
+    :param ncomponent: number of components
+    (1=neutrons, 2=protons and neutrons)
+    :param force_trdens: if true, force calculation of TRDENS even if output
+    file is already present
+    :param force_vce: if true, force calculation of valence cluster expansion
+    even if interaction output file is already present
+    :param verbose: if true, regular output of TRDENS is printed to stdout;
+    otherwise output is suppressed and written to a file instead
+    :param progress: if true, display a progress bar. Note: if verbose is
+    true, progress bar will not be displayed.
+    :param threading: if true, calculations will be multi-threaded
+    """
+    if threading and len(a_presc_list) > 1:
+        _vce_multiple_calculations_t(
+            a_values=a_values, a_presc_list=a_presc_list, a_range=a_range,
+            z=z, nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
+            force_trdens=force_trdens, force_vce=force_vce,
+            verbose=verbose, progress=progress,
+        )
+    else:
+        return _vce_multiple_calculations(
+            a_values=a_values, a_presc_list=a_presc_list, a_range=a_range,
+            z=z, nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
+            force_trdens=force_trdens, force_vce=force_vce,
+            verbose=verbose, progress=progress,
+        )
+
+
 def ncsd_vce_calculations(
         a_prescriptions, a_range,
         nmax=NMAX, n1=N1, n2=N2, nshell=N_SHELL, ncomponent=N_COMPONENT,
         force_ncsd=False, force_trdens=False, force_vce=False, force_all=False,
-        verbose=False, progress=True, cluster_submit=False, walltime=None,
+        verbose=False, progress=True, threading=True,
+        cluster_submit=False, walltime=None,
 ):
     """Given a sequence or generator of A prescriptions, does the NCSD/VCE
     calculation for each prescription
@@ -1041,6 +1125,7 @@ def ncsd_vce_calculations(
     stdout; otherwise this is suppressed and saved in a text file
     :param progress: if true, shows a progress bar. Note if verbose is true,
     progress bar will not be shown.
+    :param threading: if true, calculation are multi-threaded
     :param cluster_submit: if true, NCSD calculation jobs will be submitted
     to the OpenMP cluster. NOTE: This may result in calculations remaining
     undone.
@@ -1054,7 +1139,7 @@ def ncsd_vce_calculations(
         z=z, a_values=a_values, a_presc_list=a_presc_list,
         nmax=nmax, a_0=a_values[0], n1=n1, n2=n2,
         force=force_all or force_ncsd,
-        verbose=verbose, progress=progress,
+        verbose=verbose, progress=progress, threading=threading,
         cluster_submit=cluster_submit, walltime=walltime,
     )
     vce_multiple_calculations(
@@ -1062,7 +1147,7 @@ def ncsd_vce_calculations(
         nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
         force_trdens=force_trdens or force_all,
         force_vce=force_vce or force_all,
-        verbose=verbose, progress=progress,
+        verbose=verbose, progress=progress, threading=threading,
     )
 
 
