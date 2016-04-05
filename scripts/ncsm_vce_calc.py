@@ -100,12 +100,12 @@ _FNAME_TRDENS_STDOUT = '__stdout_trdens__.txt'
 _FNAME_TRDENS_STDERR = '__stderr_trdens__.txt'
 _FNAME_QSUB_STDOUT = '__stdout_qsub__.txt'
 _FNAME_QSUB_STDERR = '__stderr_qsub__.txt'
-_STR_PROG_NCSD = 'Doing NCSD calculations for (A, Aeff) pairs...'
-_STR_PROG_VCE = 'Doing VCE calculations for Aeff prescriptions...'
-_STR_PROG_NCSD_EX = 'Doing NCSD calculations for A=Aeff...'
+_STR_PROG_NCSD = '  Doing NCSD calculations for (A, Aeff) pairs...'
+_STR_PROG_VCE = '  Doing VCE calculations for Aeff prescriptions...'
+_STR_PROG_NCSD_EX = '  Doing NCSD calculations for A=Aeff...'
 WIDTH_TERM = 79
 WIDTH_PROGRESS_BAR = 48
-STR_PROGRESS_BAR = '  Progress: %3d/%-3d '
+STR_PROGRESS_BAR = '    Progress: %3d/%-3d '
 
 # other
 _Z_NAME_MAP = {
@@ -622,12 +622,12 @@ def _prepare_directories(a_list, aeff_list, nhw_list, z, n1, n2,
         a_aeff_to_dirpath_map=a_aeff_to_dir_map
     )
     if progress:
-        print 'Making directories...'
+        print '  Making directories...'
     _make_base_directories(
         a_values=a_list, presc=aeff_list, a_aeff_to_dpath_map=a_aeff_to_dir_map
     )
     if progress:
-        print 'Writing mfdp files...'
+        print '  Writing mfdp files...'
     _make_mfdp_files(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
         a_aeff_to_dpath_map=a_aeff_to_dir_map,
@@ -635,7 +635,7 @@ def _prepare_directories(a_list, aeff_list, nhw_list, z, n1, n2,
         z=z, n_1=n1, n_2=n2,
     )
     if progress:
-        print 'Truncating interaction to N1=%d N2=%d...' % (n1, n2)
+        print '  Truncating interaction to N1=%d N2=%d...' % (n1, n2)
     _truncate_spaces(n1=n1, n2=n2, dirpaths=a_aeff_to_dir_map.values())
     # todo scale off diagonal interaction terms
     if cluster_submit:
@@ -644,7 +644,7 @@ def _prepare_directories(a_list, aeff_list, nhw_list, z, n1, n2,
             z=z, n1=n1, n2=n2, a_aeff_to_dirpath_map=a_aeff_to_dir_map,
         )
         if progress:
-            print 'Writing cluster submit files...'
+            print '  Writing cluster submit files...'
         _make_job_submit_files(
             a_list=a_list, aeff_list=aeff_list,
             a_aeff_to_jobsub_fpath_map=a_aeff_to_jobfile_map,
@@ -704,7 +704,7 @@ def _ncsd_multiple_calculations_s(
 ):
     submitted_jobs = 0
     if progress:
-        print 'Submitting jobs...'
+        print '  Submitting jobs...'
     for a, aeff in a_aeff_set:
         fpath_egv = a_aeff_to_egvfile_map[(a, aeff)]
         if force or not path.exists(fpath_egv):
@@ -723,7 +723,7 @@ def _ncsd_multiple_calculations_s(
                 ferr.close()
             submitted_jobs += 1
     if progress:
-        print '%d jobs submitted to cluster.' % submitted_jobs
+        print '  %d jobs submitted to cluster.' % submitted_jobs
 
 
 def _ncsd_multiple_calculations(
