@@ -723,7 +723,7 @@ def _ncsd_multiple_calculations_s(
                 ferr.close()
             submitted_jobs += 1
     if progress:
-        if len(submitted_jobs) == 1:
+        if submitted_jobs == 1:
             print '  1 job submitted to cluster'
         else:
             print '  %d jobs submitted to cluster' % submitted_jobs
