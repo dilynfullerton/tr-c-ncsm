@@ -240,7 +240,7 @@ def _rewrite_file(src, dst, replace_map):
 
 
 def _make_mfdp_file(
-        z, a, aeff, nhw, n1, n2, dpath_elt, fname_outfile,
+        z, a, aeff, nhw, n1, n2, dpath_elt, fname_outfile, fname_tbme,
         dpath_temp=DPATH_TEMPLATES,
         fname_tmp_mfdp=FNAME_TMP_MFDP,
 ):
@@ -262,24 +262,24 @@ def _make_mfdp_file(
     temp_mfdp_path = path.join(dpath_temp, fname_tmp_mfdp)
     mfdp_path = path.join(dpath_elt, fname_tmp_mfdp)
     replace_map = _get_mfdp_replace_map(
-        fname_tbme=FNAME_FMT_TBME % n1,
-        outfile_name=fname_outfile, z=z, a=a,
-        n_hw=nhw, n_1=n1, n_2=n2, aeff=aeff
+        fname_tbme=fname_tbme, outfile_name=fname_outfile,
+        z=z, a=a, n_hw=nhw, n_1=n1, n_2=n2, aeff=aeff
     )
     _rewrite_file(src=temp_mfdp_path, dst=mfdp_path, replace_map=replace_map)
 
 
 def _make_mfdp_files(
-        a_list, aeff_list, nhw_list, z, n_1, n_2,
+        a_list, aeff_list, nhw_list, z, n_1, n_2, fname_tbme,
         a_aeff_to_dpath_map, a_aeff_to_outfile_fpath_map,
-        dpath_temp=DPATH_TEMPLATES, fname_tmp_mfdp=FNAME_TMP_MFDP
+        dpath_temp=DPATH_TEMPLATES, fname_tmp_mfdp=FNAME_TMP_MFDP,
 ):
     for a, aeff, nhw in zip(a_list, aeff_list, nhw_list):
         outfile_name = path.split(a_aeff_to_outfile_fpath_map[(a, aeff)])[1]
         _make_mfdp_file(
             z=z, a=a, aeff=aeff, nhw=nhw, n1=n_1, n2=n_2,
             dpath_elt=a_aeff_to_dpath_map[(a, aeff)], dpath_temp=dpath_temp,
-            fname_outfile=outfile_name, fname_tmp_mfdp=fname_tmp_mfdp
+            fname_outfile=outfile_name, fname_tmp_mfdp=fname_tmp_mfdp,
+            fname_tbme=fname_tbme,
         )
 
 
@@ -410,6 +410,7 @@ def _truncate_spaces(nshell, n1, n2, dirpaths, scalefactor):
             dst_path = path.join(d, fname_tbme)
             if not path.exists(dst_path):
                 link(fpath0, dst_path)
+    return path.split(fpath0)[1]  # TBME filename
 
 
 class EgvFileNotFoundException(Exception):
@@ -661,18 +662,19 @@ def _prepare_directories(
         a_values=a_list, presc=aeff_list, a_aeff_to_dpath_map=a_aeff_to_dir_map
     )
     if progress:
+        print '  Truncating interaction to N1=%d N2=%d...' % (n1, n2)
+    fname_tbme = _truncate_spaces(
+        nshell=nshell, n1=n1, n2=n2, dirpaths=a_aeff_to_dir_map.values(),
+        scalefactor=scalefactor,
+    )
+    if progress:
         print '  Writing mfdp files...'
     _make_mfdp_files(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
         a_aeff_to_dpath_map=a_aeff_to_dir_map,
         a_aeff_to_outfile_fpath_map=a_aeff_to_outfile_map,
+        fname_tbme=fname_tbme,
         z=z, n_1=n1, n_2=n2,
-    )
-    if progress:
-        print '  Truncating interaction to N1=%d N2=%d...' % (n1, n2)
-    _truncate_spaces(
-        nshell=nshell, n1=n1, n2=n2, dirpaths=a_aeff_to_dir_map.values(),
-        scalefactor=scalefactor,
     )
     if cluster_submit:
         a_aeff_to_jobfile_map = _get_a_aeff_to_jobsub_fpath_map(
@@ -759,8 +761,6 @@ def _ncsd_multiple_calculations_s(
                 ferr.write(err)
                 ferr.close()
             submitted_jobs += 1
-        else:
-            print 'Path found: %s' % fpath_egv
     if progress:
         if submitted_jobs == 1:
             print '  1 job submitted to cluster'
