@@ -77,7 +77,7 @@ DNAME_FMT_NUC = '%s%d_%d_Nhw%d_%d_%d'  # name, A, Aeff, nhw, n1, n2
 DNAME_FMT_NUC_SF = DNAME_FMT_NUC + '_scale%f.2'  # scale factor
 DNAME_FMT_VCE = 'vce_presc%d,%d,%d_Nmax%d_%d_%d_shell%d_dim%d'
 #     A presc, Nmax, n1, n2, nshell, ncomponent
-_DNAME_FMT_VCE_SF = DNAME_FMT_VCE + '_scale%f.2'  # scale factor
+DNAME_FMT_VCE_SF = DNAME_FMT_VCE + '_scale%f.2'  # scale factor
 DNAME_VCE = 'vce'
 
 # Files
@@ -162,6 +162,25 @@ def _make_base_directories(
         dirpath = a_aeff_to_dpath_map[(a, aeff)]
         if not path.exists(dirpath):
             mkdir(dirpath)
+
+
+def _make_vce_directories(
+        a_prescription, nmax, n1, n2, nshell, ncomponent,
+        dpath_results=DPATH_RESULTS, dname_vce=DNAME_VCE, scalefactor=None
+):
+    dpath_vce0 = path.join(dpath_results, dname_vce)
+    if not path.exists(dpath_vce0):
+        mkdir(dpath_vce0)
+    fmt = tuple(tuple(a_prescription) + (nmax, n1, n2, nshell, ncomponent))
+    if scalefactor is not None:
+        fmt += (scalefactor,)
+        dname_fmt_vce = DNAME_FMT_VCE_SF
+    else:
+        dname_fmt_vce = DNAME_FMT_VCE
+    vce_dirpath = path.join(dpath_results, dname_vce, dname_fmt_vce % fmt)
+    if not path.exists(vce_dirpath):
+        mkdir(vce_dirpath)
+    return vce_dirpath
 
 
 def _get_mfdp_restrictions_lines(nmax, max_allowed_nmax=MAX_NMAX):
@@ -501,8 +520,6 @@ def _run_vce(
     :param dirpath_aeff6: Directory for the 3rd A value
     :param dirpath_vce: Path to the directory in which to put generated
     interaction files
-    :param fname_fmt_vce_int: Filename template for generated interaction
-    files
     :param force: If True, force redoing the calculation even if
     output files already exist
     """
@@ -633,9 +650,8 @@ def _prepare_directories(
         print '  Truncating interaction to N1=%d N2=%d...' % (n1, n2)
     _truncate_spaces(
         nshell=nshell, n1=n1, n2=n2, dirpaths=a_aeff_to_dir_map.values(),
-        scalefactor=scalefactor
+        scalefactor=scalefactor,
     )
-    # todo ^ scale off diagonal interaction terms
     if cluster_submit:
         a_aeff_to_jobfile_map = _get_a_aeff_to_jobsub_fpath_map(
             a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
@@ -899,11 +915,9 @@ class NcsdOutfileNotFoundException(Exception):
 
 
 def vce_single_calculation(
-        z, a_values, a_prescription, a_range, nmax,
-        n1=N1, n2=N1, nshell=-1, ncomponent=-1,
+        a_values, a_prescription, a_range, z, nmax,
+        n1=N1, n2=N1, nshell=-1, ncomponent=-1, int_scalefactor=None,
         force_trdens=False, force_vce=False, verbose=False,
-        dpath_results=DPATH_RESULTS,
-        dname_vce=DNAME_VCE, dname_fmt_vce=DNAME_FMT_VCE,
 ):
     """Valence cluster expansion
     :param z: protonn number
@@ -918,6 +932,8 @@ def vce_single_calculation(
     :param n2: max allowed two-particle state
     :param nshell: shell number (0 = s, 1 = p, 2 = sd, ...)
     :param ncomponent: dimension (1 = neutrons, 2 = protons and neutrons)
+    :param int_scalefactor: factor by which to scale the off-diagonal
+    valence coupling terms of the TBME interaction
     :param force_trdens: if true, forces redoing of the TRDENS calculation,
     even if output file(s) are present
     :param force_vce: if true, force redoing of the valence cluster expansion
@@ -925,16 +941,6 @@ def vce_single_calculation(
     present
     :param verbose: if true, prints the regular output of TRDENS to stdout,
     otherwise suppresses output
-    :param dpath_results: Path to the results directory
-    :param dname_fmt_vce: template string for the directory for the vce
-    interaction files
-    :param dname_vce: Template string for the directory for the interactions
-    calculated based on the effective Hamiltonian. Should accept a string
-    representing the A_prescription tuple as a format argument.
-    outputted by the NCSD calculation (which needs to be renamed)
-    directory
-    by the NCSD calculation in prepration for the TRDENS calculation.
-    this operation has been performed).
     """
     a_aeff_dir_map = _get_a_aeff_to_dpath_map(
         a_list=a_values, aeff_list=a_prescription,
@@ -961,15 +967,10 @@ def vce_single_calculation(
     _run_trdens(a6_dir=a6_dirpath, force=force_trdens, verbose=verbose)
 
     # do valence cluster expansion
-    dpath_vce0 = path.join(dpath_results, dname_vce)
-    if not path.exists(dpath_vce0):
-        mkdir(dpath_vce0)
-    vce_dirpath = path.join(
-        dpath_results, dname_vce,
-        dname_fmt_vce % tuple(
-            tuple(a_prescription) + (nmax, n1, n2, nshell, ncomponent)))
-    if not path.exists(vce_dirpath):
-        mkdir(vce_dirpath)
+    vce_dirpath = _make_vce_directories(
+        a_prescription=a_prescription, nmax=nmax, n1=n1, n2=n2,
+        nshell=nshell, ncomponent=ncomponent, scalefactor=int_scalefactor,
+    )
     try:
         _run_vce(
             a_values=a_values, a_prescription=a_prescription, a_range=a_range,
@@ -983,7 +984,7 @@ def vce_single_calculation(
 def _vce_multiple_calculations_t(
         z, a_values, a_presc_list, a_range, nmax, n1, n2, nshell, ncomponent,
         force_trdens, force_vce, verbose, progress,
-        max_open_threads=MAX_OPEN_THREADS,
+        int_scalefactor=None, max_open_threads=MAX_OPEN_THREADS,
         str_prog_vce=STR_PROG_VCE,
 ):
     error_messages = Queue()
@@ -994,9 +995,8 @@ def _vce_multiple_calculations_t(
                 z=z, a_values=a_values,
                 a_prescription=ap0, a_range=a_range,
                 nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
-                force_trdens=force_trdens,
-                force_vce=force_vce,
-                verbose=verbose
+                int_scalefactor=int_scalefactor,
+                force_trdens=force_trdens, force_vce=force_vce, verbose=verbose,
             )
         except EgvFileNotFoundException, e:
             error_messages.put(str(e))
@@ -1039,7 +1039,8 @@ def _vce_multiple_calculations_t(
 def _vce_multiple_calculations(
         z, a_values, a_presc_list, a_range, nmax, n1, n2, nshell, ncomponent,
         force_trdens, force_vce, verbose, progress,
-        str_prog_vce=STR_PROG_VCE
+        int_scalefactor=None,
+        str_prog_vce=STR_PROG_VCE,
 ):
     jobs_total = len(a_presc_list)
     jobs_completed = 0
@@ -1055,9 +1056,8 @@ def _vce_multiple_calculations(
                 z=z, a_values=a_values,
                 a_prescription=ap, a_range=a_range,
                 nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
-                force_trdens=force_trdens,
-                force_vce=force_vce,
-                verbose=verbose
+                int_scalefactor=int_scalefactor,
+                force_trdens=force_trdens, force_vce=force_vce, verbose=verbose,
             )
             jobs_completed += 1
         except NcsdOutfileNotFoundException, e:
@@ -1077,8 +1077,9 @@ def _vce_multiple_calculations(
 
 
 def vce_multiple_calculations(
-        z, a_values, a_presc_list, a_range, nmax, n1, n2, nshell, ncomponent,
+        a_values, a_presc_list, a_range, z, nmax, n1, n2, nshell, ncomponent,
         force_trdens, force_vce, verbose, progress, threading,
+        int_scalefactor=None,
 ):
     """For every A prescription in a_presc_list, performs the valence
     cluster expansion to generate an interaction file. Assumes NCSD
@@ -1095,6 +1096,9 @@ def vce_multiple_calculations(
     :param nshell: shell number (0=s, 1=p, 2=sd, ...)
     :param ncomponent: number of components
     (1=neutrons, 2=protons and neutrons)
+    :param int_scalefactor: factor by which TBME interaction file was scaled
+    (for directory naming purposes); if None, directory will be named as
+    usual
     :param force_trdens: if true, force calculation of TRDENS even if output
     file is already present
     :param force_vce: if true, force calculation of valence cluster expansion
@@ -1109,6 +1113,7 @@ def vce_multiple_calculations(
         _vce_multiple_calculations_t(
             a_values=a_values, a_presc_list=a_presc_list, a_range=a_range,
             z=z, nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
+            int_scalefactor=int_scalefactor,
             force_trdens=force_trdens, force_vce=force_vce,
             verbose=verbose, progress=progress,
         )
@@ -1116,6 +1121,7 @@ def vce_multiple_calculations(
         return _vce_multiple_calculations(
             a_values=a_values, a_presc_list=a_presc_list, a_range=a_range,
             z=z, nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
+            int_scalefactor=int_scalefactor,
             force_trdens=force_trdens, force_vce=force_vce,
             verbose=verbose, progress=progress,
         )
@@ -1173,6 +1179,7 @@ def ncsd_vce_calculations(
     vce_multiple_calculations(
         z=z, a_values=a_values, a_presc_list=a_presc_list, a_range=a_range,
         nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
+        int_scalefactor=int_scalefactor,
         force_trdens=force_trdens or force_all,
         force_vce=force_vce or force_all,
         verbose=verbose, progress=progress, threading=threading,
