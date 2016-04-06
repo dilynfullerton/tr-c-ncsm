@@ -648,7 +648,8 @@ def _prepare_directories(
     )
     a_aeff_to_outfile_map = _get_a_aeff_to_outfile_fpath_map(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
-        z=z, n1=n1, n2=n2, a_aeff_to_dirpath_map=a_aeff_to_dir_map
+        z=z, n1=n1, n2=n2, a_aeff_to_dirpath_map=a_aeff_to_dir_map,
+        scalefactor=scalefactor,
     )
     a_aeff_to_egvfile_map = _get_a_aeff_to_egv_fpath_map(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
@@ -677,6 +678,7 @@ def _prepare_directories(
         a_aeff_to_jobfile_map = _get_a_aeff_to_jobsub_fpath_map(
             a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
             z=z, n1=n1, n2=n2, a_aeff_to_dirpath_map=a_aeff_to_dir_map,
+            scalefactor=scalefactor,
         )
         if progress:
             print '  Writing cluster submit files...'
