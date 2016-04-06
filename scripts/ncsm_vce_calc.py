@@ -49,7 +49,7 @@ If 6 additional arguments given, they are Amax nmax n1 n2 nshell ncomponent.
 from __future__ import division
 
 import re
-from os import getcwd, path, walk, mkdir, symlink, remove, link
+from os import getcwd, path, mkdir, symlink, remove, link, listdir
 from subprocess import Popen, PIPE
 from sys import argv, stdout
 from math import floor
@@ -342,15 +342,14 @@ def _truncate_space(
     :param dpath_elt: Path to the directory in which the resultant TBME file
     is to be put
     """
-    w = walk(dpath_templates)
-    dirpath, dirnames, filenames = w.next()
+    filenames = listdir(dpath_templates)
     for f in filenames:
         if re.match(RGX_FNAME_TBME, f) is not None:
             tbme_filename = f
             break
     else:
         raise TbmeFileNotFoundException()
-    src_path = path.join(dirpath, tbme_filename)
+    src_path = path.join(dpath_templates, tbme_filename)
     dst_path = path.join(dpath_elt, FNAME_FMT_TBME % n1)
     if not path.exists(dst_path):
         truncate_interaction(src_path, n1, n2, dst_path)
@@ -435,7 +434,7 @@ def _rename_egv_file(a6_dir, nhw, a6, force):
             return 0
         else:
             remove(next_egv_path)
-    dirpath, dirnames, filenames = walk(a6_dir).next()
+    filenames = listdir(a6_dir)
     fname_egv = FNAME_FMT_EGV % nhw
     for f in filenames:
         if f == fname_egv:
