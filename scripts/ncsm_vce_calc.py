@@ -85,7 +85,10 @@ RGX_FNAME_TBME = 'TBME'
 FNAME_FMT_EGV = 'mfdp_%d.egv'  # Nhw
 FNAME_FMT_VCE_INT = 'A%d.int'  # A value
 FNAME_FMT_NCSD_OUT = '%s%d_%d_Nhw%d_%d_%d.out'  # name, A, Aeff, Nhw, n1, n2
+FNAME_FMT_NCSD_OUT_SF = FNAME_FMT_NCSD_OUT[:-4] + '_scale%.2f' + '.out'
 FNAME_FMT_JOBSUB = FNAME_FMT_NCSD_OUT[:-4] + '.sh'
+FNAME_FMT_JOBSUB_SF = FNAME_FMT_NCSD_OUT_SF[:-4] + '.sh'
+# todo ^ implement
 FNAME_FMT_TBME = 'TBMEA2srg-n3lo2.O_%d.24'  # n1
 FNAME_FMT_TBME_SF = FNAME_FMT_TBME + '_sf%.2f'  # n1 scalefactor
 FNAME_TMP_MFDP = 'mfdp.dat'
@@ -554,7 +557,8 @@ def _run_vce(
 
 def _get_a_aeff_to_dpath_map(
         a_list, aeff_list, nhw_list, z, n1, n2,
-        dpath_results=DPATH_RESULTS, scalefactor=None):
+        dpath_results=DPATH_RESULTS, scalefactor=None
+):
     a_paths_map = dict()
     if scalefactor is not None:
         dname_fmt_nuc = DNAME_FMT_NUC_SF
@@ -571,14 +575,19 @@ def _get_a_aeff_to_dpath_map(
 
 def _get_a_aeff_to_outfile_fpath_map(
         a_list, aeff_list, nhw_list, z, n1, n2, a_aeff_to_dirpath_map,
-        fname_fmt=FNAME_FMT_NCSD_OUT,
+        scalefactor=None
 ):
     a_aeff_outfile_map = dict()
+    if scalefactor is not None:
+        fname_fmt = FNAME_FMT_NCSD_OUT_SF
+    else:
+        fname_fmt = FNAME_FMT_NCSD_OUT
     for a, aeff, nhw in zip(a_list, aeff_list, nhw_list):
+        args = (_get_name(z), a, aeff, nhw, n1, n2)
+        if scalefactor is not None:
+            args += (scalefactor,)
         a_aeff_outfile_map[(a, aeff)] = path.join(
-            a_aeff_to_dirpath_map[(a, aeff)],
-            fname_fmt % (_get_name(z), a, aeff, nhw, n1, n2)
-        )
+            a_aeff_to_dirpath_map[(a, aeff)], fname_fmt % args)
     return a_aeff_outfile_map
 
 
@@ -594,12 +603,20 @@ def _get_a_aeff_to_egv_fpath_map(
 
 def _get_a_aeff_to_jobsub_fpath_map(
         a_list, aeff_list, nhw_list, z, n1, n2, a_aeff_to_dirpath_map,
+        scalefactor=None,
 ):
-    return _get_a_aeff_to_outfile_fpath_map(
-        a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
-        z=z, n1=n1, n2=n2, a_aeff_to_dirpath_map=a_aeff_to_dirpath_map,
-        fname_fmt=FNAME_FMT_JOBSUB,
-    )
+    a_aeff_jobsub_map = dict()
+    if scalefactor is not None:
+        fname_fmt = FNAME_FMT_JOBSUB_SF
+    else:
+        fname_fmt = FNAME_FMT_JOBSUB
+    for a, aeff, nhw in zip(a_list, aeff_list, nhw_list):
+        args = (_get_name(z), a, aeff, nhw, n1, n2)
+        if scalefactor is not None:
+            args += (scalefactor,)
+        a_aeff_jobsub_map[(a, aeff)] = path.join(
+            a_aeff_to_dirpath_map[(a, aeff)], fname_fmt % args)
+    return a_aeff_jobsub_map
 
 
 def _print_progress(
