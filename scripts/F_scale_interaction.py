@@ -47,8 +47,8 @@ def get_scaleif_fn(elt_cond_fn, rest_cols, scalefactor):
     elt_cond_fn is satisfied
     :param elt_cond_fn: function from the tuple (a, b, c, d, j, t) to a
     boolean value
-    :param rest_cols: columns of float values (relative to the first) to be
-    scaled
+    :param rest_cols: list of indices of columns of float values
+    (relative to the first) to be scaled
     :param scalefactor: float value by which to scale rest_cols
     :return: function that takes elt and rest as arguments and returns a
     tuple of scaled "rest" values, where
@@ -91,3 +91,11 @@ def run(fpath_src, fpath_dst, scalefn0=lambda a, b: b, force=False,
             fout.write(next_line)
         fout.close()
         fin.close()
+
+
+def scale_off_diag_outside_valence(src, dst, nshell, scalefactor):
+    scalefn = get_scaleif_fn(
+        elt_cond_fn=ecf_off_diag_outside_valence(nshell),
+        rest_cols=[3], scalefactor=scalefactor
+    )
+    return run(fpath_src=src, fpath_dst=dst, scalefn0=scalefn)

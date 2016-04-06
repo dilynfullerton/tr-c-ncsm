@@ -3,7 +3,7 @@
 
 To run as a script:
 
-    $ ncsm_vce_calc.py [-f[ntv]{0,3}] [-v] [-s] [-t walltime]
+    $ ncsm_vce_calc.py [-f[ntv]{0,3}] [-v] [-s scalefactor] [-t walltime]
     [ Aeff4 Aeff5 Aeff6 | [-m|-M|-e] Ap_min Ap_max] Amin
     [Amax [nmax [n1 n2 [nshell [ncomponent]]] | n1 n2]]
 
@@ -31,8 +31,9 @@ specified by Ap_min and Ap_max if -m or -M precedes the arguments.
           numbers with repetition in the range [Ap_min, Ap_max]
     -e
          Prescriptions are all (A, A, A) for A in the range [Ap_min, Ap_max]
--s
-    NCSD jobs are submitted to OpenMP cluster
+-s scalefactor
+    Off-diagonal valence space coupling terms in the interaction file are
+      scaled by scalefactor
 -t walltime
     NCSD jobs (submitted to cluster) are allotted the given amount of walltime,
       a string in the format hh:mm:ss
@@ -56,6 +57,7 @@ from threading import Thread
 from Queue import Queue
 
 from FGetSmallerInteraction import run as truncate_interaction
+from F_scale_interaction import scale_off_diag_outside_valence as scale_int
 from FdoVCE import run as vce_calculation
 from InvalidNumberOfArgumentsException import InvalidNumberOfArgumentsException
 
@@ -68,56 +70,57 @@ N2 = 15
 MAX_NMAX = 15
 
 # Directories
-_DPATH_MAIN = getcwd()
-_DPATH_TEMPLATES = path.join(_DPATH_MAIN, 'templates')
-_DPATH_RESULTS = path.join(_DPATH_MAIN, 'results')
-_DNAME_FMT_NUC = '%s%d_%d_Nhw%d_%d_%d'  # name, A, Aeff, nhw, n1, n2
-# todo ^ scalefactor
-_DNAME_FMT_VCE = 'vce_presc%d,%d,%d_Nmax%d_%d_%d_shell%d_dim%d'
+DPATH_MAIN = getcwd()
+DPATH_TEMPLATES = path.join(DPATH_MAIN, 'templates')
+DPATH_RESULTS = path.join(DPATH_MAIN, 'results')
+DNAME_FMT_NUC = '%s%d_%d_Nhw%d_%d_%d'  # name, A, Aeff, nhw, n1, n2
+DNAME_FMT_NUC_SF = DNAME_FMT_NUC + '_scale%f.2'  # scale factor
+DNAME_FMT_VCE = 'vce_presc%d,%d,%d_Nmax%d_%d_%d_shell%d_dim%d'
 #     A presc, Nmax, n1, n2, nshell, ncomponent
-# todo ^ scalefactor
-_DNAME_VCE = 'vce'
+_DNAME_FMT_VCE_SF = DNAME_FMT_VCE + '_scale%f.2'  # scale factor
+DNAME_VCE = 'vce'
 
 # Files
-_RGX_TBME = 'TBME'
-_FNAME_FMT_EGV = 'mfdp_%d.egv'  # Nhw
-_FNAME_FMT_VCE = 'A%d.int'  # A value
-_FNAME_FMT_NCSD_OUT = '%s%d_%d_Nhw%d_%d_%d.out'  # name, A, Aeff, Nhw, n1, n2
-_FNAME_FMT_JOBSUB = _FNAME_FMT_NCSD_OUT[:-4] + '.sh'
-_FNAME_FMT_TBME = 'TBMEA2srg-n3lo2.O_%d.24'  # n1
-_FNAME_FMT_TBME_SF = _FNAME_FMT_TBME + '_sf%f.2'  # n1 scalefactor
-_FNAME_TMP_MFDP = 'mfdp.dat'
-_FNAME_TMP_TRDENS_IN = 'trdens.in'
-_FNAME_TMP_JOBSUB = 'job.sh'
-_FNAME_EGV = 'mfdp.egv'
-_FNAME_TRDENS_OUT = 'trdens.out'
-_FNAME_HEFF = 'Heff_OLS.dat'
-_LINE_FMT_MFDP_RESTR = ' %d %-2d %d %-2d %d %-4d ! N=%d'
+RGX_FNAME_TBME = 'TBME'
+FNAME_FMT_EGV = 'mfdp_%d.egv'  # Nhw
+FNAME_FMT_VCE_INT = 'A%d.int'  # A value
+FNAME_FMT_NCSD_OUT = '%s%d_%d_Nhw%d_%d_%d.out'  # name, A, Aeff, Nhw, n1, n2
+FNAME_FMT_JOBSUB = FNAME_FMT_NCSD_OUT[:-4] + '.sh'
+FNAME_FMT_TBME = 'TBMEA2srg-n3lo2.O_%d.24'  # n1
+FNAME_FMT_TBME_SF = FNAME_FMT_TBME + '_sf%f.2'  # n1 scalefactor
+FNAME_TMP_MFDP = 'mfdp.dat'
+FNAME_TMP_TRDENS_IN = 'trdens.in'
+FNAME_TMP_JOBSUB = 'job.sh'
+LNAME_EGV = 'mfdp.egv'
+FNAME_TRDENS_IN = 'trdens.in'
+FNAME_TRDENS_OUT = 'trdens.out'
+FNAME_HEFF = 'Heff_OLS.dat'
+LINE_FMT_MFDP_RESTR = ' %d %-2d %d %-2d %d %-4d ! N=%d'
 
 # output
-_FNAME_NCSD_STDOUT = '__stdout_ncsd__.txt'
-_FNAME_NCSD_STDERR = '__stderr_ncsd__.txt'
-_FNAME_TRDENS_STDOUT = '__stdout_trdens__.txt'
-_FNAME_TRDENS_STDERR = '__stderr_trdens__.txt'
-_FNAME_QSUB_STDOUT = '__stdout_qsub__.txt'
-_FNAME_QSUB_STDERR = '__stderr_qsub__.txt'
-_STR_PROG_NCSD = '  Doing NCSD calculations for (A, Aeff) pairs...'
-_STR_PROG_VCE = '  Doing VCE calculations for Aeff prescriptions...'
-_STR_PROG_NCSD_EX = '  Doing NCSD calculations for A=Aeff...'
+FNAME_NCSD_STDOUT = '__stdout_ncsd__.txt'
+FNAME_NCSD_STDERR = '__stderr_ncsd__.txt'
+FNAME_TRDENS_STDOUT = '__stdout_trdens__.txt'
+FNAME_TRDENS_STDERR = '__stderr_trdens__.txt'
+FNAME_QSUB_STDOUT = '__stdout_qsub__.txt'
+FNAME_QSUB_STDERR = '__stderr_qsub__.txt'
+STR_PROG_NCSD = '  Doing NCSD calculations for (A, Aeff) pairs...'
+STR_PROG_VCE = '  Doing VCE calculations for Aeff prescriptions...'
+STR_PROG_NCSD_EX = '  Doing NCSD calculations for A=Aeff...'
 WIDTH_TERM = 79
 WIDTH_PROGRESS_BAR = 48
 STR_PROGRESS_BAR = '    Progress: %3d/%-3d '
 
 # other
-_Z_NAME_MAP = {
+Z_NAME_MAP = {
     1: 'h_', 2: 'he', 3: 'li', 4: 'be', 5: 'b_', 6: 'c_', 7: 'n_', 8: 'o_',
     9: 'f_', 10: 'ne', 11: 'na', 12: 'mg', 13: 'al', 14: 'si', 15: 'p_',
     16: 's_', 17: 'cl', 18: 'ar', 19: 'k_', 20: 'ca'
 }
-_ZNAME_FMT_ALT = '%d-'
-_NCSD_NUM_STATES = 15
-_NCSD_NUM_ITER = 200
-_MAX_OPEN_THREADS = 10
+Z_NAME_FMT_ALT = '%d-'
+NCSD_NUM_STATES = 15
+NCSD_NUM_ITER = 200
+MAX_OPEN_THREADS = 10
 NCSD_CLUSTER_WALLTIME = '01:00:00'
 
 
@@ -131,7 +134,7 @@ def _generating_a_values(n_shell, n_component):
     return a_0, a_0 + 1, a_0 + 2
 
 
-def _get_name(z, z_name_map=_Z_NAME_MAP, alt_name=_ZNAME_FMT_ALT):
+def _get_name(z, z_name_map=Z_NAME_MAP, alt_name=Z_NAME_FMT_ALT):
     """Given the proton number, return the short element name
     :param z: number of protons
     :param z_name_map: map from proton number to abbreviated name
@@ -144,35 +147,34 @@ def _get_name(z, z_name_map=_Z_NAME_MAP, alt_name=_ZNAME_FMT_ALT):
 
 
 def _make_base_directories(
-        a_values, presc, a_aeff_to_dpath_map, _dpath_results=_DPATH_RESULTS):
+        a_values, presc, a_aeff_to_dpath_map, dpath_results=DPATH_RESULTS):
     """Makes directories for first 3 a values if they do not exist yet
     :param a_values: Values of A for which directories are made.
     Example: If in nshell1, would make directories for He4,5,6
     :param presc: Aeff prescription for VCE expansion
-    :param _dpath_results: Path to the directory into which these base
+    :param dpath_results: Path to the directory into which these base
     :param a_aeff_to_dpath_map: map from A value to directory path
     directories are put
     """
-    if not path.exists(_dpath_results):
-        mkdir(_dpath_results)
+    if not path.exists(dpath_results):
+        mkdir(dpath_results)
     for a, aeff in zip(a_values, presc):
         dirpath = a_aeff_to_dpath_map[(a, aeff)]
         if not path.exists(dirpath):
             mkdir(dirpath)
 
 
-def _get_mfdp_restrictions_lines(
-        nmax, _max_allowed_nmax=MAX_NMAX, _str_rest_line=_LINE_FMT_MFDP_RESTR):
+def _get_mfdp_restrictions_lines(nmax, max_allowed_nmax=MAX_NMAX):
     lines = list()
-    for n in range(min(nmax, _max_allowed_nmax) + 1):
+    for n in range(min(nmax, max_allowed_nmax) + 1):
         i = (n + 1) * (n + 2)
-        lines.append(_str_rest_line % (0, i, 0, i, 0, 2 * i, n))
+        lines.append(LINE_FMT_MFDP_RESTR % (0, i, 0, i, 0, 2 * i, n))
     return '\n'.join(lines)
 
 
 def _get_mfdp_replace_map(
         fname_tbme, outfile_name, z, a, n_hw, n_1, n_2, aeff,
-        _num_states=_NCSD_NUM_STATES, _num_iter=_NCSD_NUM_ITER
+        num_states=NCSD_NUM_STATES, num_iter=NCSD_NUM_ITER
 ):
     n = a - z
     par = a % 2
@@ -188,8 +190,8 @@ def _get_mfdp_replace_map(
         '<<NHW>>': str(n_hw), '<<PAR>>': str(par), '<<TOT2>>': str(tot2),
         '<<N1>>': str(n_1), '<<N2>>': str(n_2),
         '<<RESTRICTIONS>>': str(rest_lines),
-        '<<NUMST>>': str(_num_states),
-        '<<NUMITER>>': str(_num_iter),
+        '<<NUMST>>': str(num_states),
+        '<<NUMITER>>': str(num_iter),
         '<<AEFF>>': str(aeff)
     }
 
@@ -217,9 +219,8 @@ def _rewrite_file(src, dst, replace_map):
 
 def _make_mfdp_file(
         z, a, aeff, nhw, n1, n2, dpath_elt, fname_outfile,
-        _dpath_temp=_DPATH_TEMPLATES,
-        _fname_fmt_tbme=_FNAME_FMT_TBME,
-        _fname_mfdp=_FNAME_TMP_MFDP
+        dpath_temp=DPATH_TEMPLATES,
+        fname_tmp_mfdp=FNAME_TMP_MFDP,
 ):
     """Reads the mfdp file from path_temp 
     and rewrites it into path_elt in accordance
@@ -233,15 +234,13 @@ def _make_mfdp_file(
     :param dpath_elt: path to the directory into which the mfdp file is
     to be put
     :param fname_outfile: name of the outfile
-    :param _fname_fmt_tbme: Format string for tbme filename to be formatted
-    with n1
-    :param _dpath_temp: path to the template directory
-    :param _fname_mfdp: name of the mfdp file
+    :param dpath_temp: path to the template directory
+    :param fname_tmp_mfdp: name of the mfdp file
     """
-    temp_mfdp_path = path.join(_dpath_temp, _fname_mfdp)
-    mfdp_path = path.join(dpath_elt, _fname_mfdp)
+    temp_mfdp_path = path.join(dpath_temp, fname_tmp_mfdp)
+    mfdp_path = path.join(dpath_elt, fname_tmp_mfdp)
     replace_map = _get_mfdp_replace_map(
-        fname_tbme=_fname_fmt_tbme % n1,
+        fname_tbme=FNAME_FMT_TBME % n1,
         outfile_name=fname_outfile, z=z, a=a,
         n_hw=nhw, n_1=n1, n_2=n2, aeff=aeff
     )
@@ -251,14 +250,14 @@ def _make_mfdp_file(
 def _make_mfdp_files(
         a_list, aeff_list, nhw_list, z, n_1, n_2,
         a_aeff_to_dpath_map, a_aeff_to_outfile_fpath_map,
-        _dpath_temp=_DPATH_TEMPLATES, _fname_mfdp=_FNAME_TMP_MFDP
+        dpath_temp=DPATH_TEMPLATES, fname_tmp_mfdp=FNAME_TMP_MFDP
 ):
     for a, aeff, nhw in zip(a_list, aeff_list, nhw_list):
         outfile_name = path.split(a_aeff_to_outfile_fpath_map[(a, aeff)])[1]
         _make_mfdp_file(
             z=z, a=a, aeff=aeff, nhw=nhw, n1=n_1, n2=n_2,
-            dpath_elt=a_aeff_to_dpath_map[(a, aeff)], _dpath_temp=_dpath_temp,
-            fname_outfile=outfile_name, _fname_mfdp=_fname_mfdp
+            dpath_elt=a_aeff_to_dpath_map[(a, aeff)], dpath_temp=dpath_temp,
+            fname_outfile=outfile_name, fname_tmp_mfdp=fname_tmp_mfdp
         )
 
 
@@ -287,61 +286,59 @@ def _get_trdens_replace_map(z, a):
 
 def _make_trdens_file(
         z, a, nuc_dir,
-        _dpath_results=_DPATH_RESULTS, _dpath_temp=_DPATH_TEMPLATES,
-        _fname_trdens_in=_FNAME_TMP_TRDENS_IN
+        dpath_results=DPATH_RESULTS, dpath_temp=DPATH_TEMPLATES,
+        fname_tmp_trdens_in=FNAME_TMP_TRDENS_IN
 ):
     """Reads the trdens.in file from path_temp and rewrites it 
     into path_elt in accordance with the given z, a
     :param z: proton number
     :param a: mass number
     :param nuc_dir: directory name
-    :param _dpath_results: path to the results directory
-    :param _dpath_temp: path to the templates directory
-    :param _fname_trdens_in: name of the trdens file in the templates dir
+    :param dpath_results: path to the results directory
+    :param dpath_temp: path to the templates directory
+    :param fname_tmp_trdens_in: name of the trdens file in the templates dir
     """
-    src = path.join(_dpath_temp, _fname_trdens_in)
-    path_elt = path.join(_dpath_results, nuc_dir)
-    dst = path.join(path_elt, _fname_trdens_in)
+    src = path.join(dpath_temp, fname_tmp_trdens_in)
+    path_elt = path.join(dpath_results, nuc_dir)
+    dst = path.join(path_elt, FNAME_TRDENS_IN)
     rep_map = _get_trdens_replace_map(z=z, a=a)
     _rewrite_file(src=src, dst=dst, replace_map=rep_map)
 
 
-class TBMEFileNotFoundException(Exception):
+class TbmeFileNotFoundException(Exception):
     pass
 
 
 def _truncate_space(
-        n1, n2, dpath_elt,  # todo scalefactor
-        _dpath_temp=_DPATH_TEMPLATES,
-        _rgx_fname_tbme=_RGX_TBME, _fname_fmt_tbme=_FNAME_FMT_TBME
+        nshell, n1, n2, dpath_elt, scalefactor,
+        dpath_templates=DPATH_TEMPLATES,
 ):
     """Run the script that truncates the space by removing extraneous
     interactions from the TBME file
-
     :param n1: Maximum state for single particle
     :param n2: Maximum state for two particles
     :param dpath_elt: Path to the directory in which the resultant TBME file
     is to be put
-    :param _dpath_temp: Path to the templates directory in which the full TBME
-    files resides
-    :param _rgx_fname_tbme: Regular expression that matches only the TBME file
-    in the templates directory
-    :param _fname_fmt_tbme: Format string for the TBME file to be formatted
-    with n1
     """
-    w = walk(_dpath_temp)
+    w = walk(dpath_templates)
     dirpath, dirnames, filenames = w.next()
     for f in filenames:
-        if re.match(_rgx_fname_tbme, f) is not None:
+        if re.match(RGX_FNAME_TBME, f) is not None:
             tbme_filename = f
             break
     else:
-        raise TBMEFileNotFoundException()
+        raise TbmeFileNotFoundException()
     src_path = path.join(dirpath, tbme_filename)
-    dst_path = path.join(dpath_elt, _fname_fmt_tbme % n1)
+    dst_path = path.join(dpath_elt, FNAME_FMT_TBME % n1)
     if not path.exists(dst_path):
         truncate_interaction(src_path, n1, n2, dst_path)
-        # todo scale interaction
+        if scalefactor is not None:
+            next_dst_path = path.join(
+                dpath_elt, FNAME_FMT_TBME_SF % (n1, scalefactor))
+            scale_int(
+                src=dst_path, dst=next_dst_path,
+                nshell=nshell, scalefactor=scalefactor
+            )
     return dst_path
 
 
@@ -351,9 +348,9 @@ def _get_job_replace_map(walltime):
 
 def _make_job_submit_file(
         dst_fpath, walltime,
-        _dpath_temp=_DPATH_TEMPLATES, _fname_tmp_jobsub=_FNAME_TMP_JOBSUB
+        dpath_temp=DPATH_TEMPLATES, fname_tmp_jobsub=FNAME_TMP_JOBSUB
 ):
-    src_fpath = path.join(_dpath_temp, _fname_tmp_jobsub)
+    src_fpath = path.join(dpath_temp, fname_tmp_jobsub)
     rep_map = _get_job_replace_map(walltime=walltime)
     _rewrite_file(src=src_fpath, dst=dst_fpath, replace_map=rep_map)
 
@@ -374,21 +371,17 @@ def _make_job_submit_files(
             link(src, dst)
 
 
-def _truncate_spaces(n1, n2, dirpaths, _fname_fmt_tbme=_FNAME_FMT_TBME):
-    # todo ^ scalefactor
+def _truncate_spaces(nshell, n1, n2, dirpaths, scalefactor):
     """For multiple directories, perform the operation of truncate_space
-
     :param n1: max allowed one-particle state
     :param n2: max allowed two-particle state
     :param dirpaths: Paths to the destination directories
-    :param _fname_fmt_tbme: unformatted string template for TBME file name,
-    which takes a single integer (n1) as an argument
     """
     d0 = dirpaths[0]
-    fpath0 = _truncate_space(n1=n1, n2=n2, dpath_elt=d0)
-    # todo ^ scalefactor
+    fpath0 = _truncate_space(
+        nshell=nshell, n1=n1, n2=n2, dpath_elt=d0, scalefactor=scalefactor)
     if len(dirpaths) > 1:
-        fname_tbme = _fname_fmt_tbme % n1
+        fname_tbme = FNAME_FMT_TBME % n1
         for d in dirpaths[1:]:
             dst_path = path.join(d, fname_tbme)
             if not path.exists(dst_path):
@@ -399,10 +392,7 @@ class EgvFileNotFoundException(Exception):
     pass
 
 
-def _rename_egv_file(
-        a6_dir, nhw, a6, force,
-        _fname_fmt_egv=_FNAME_FMT_EGV, _fname_egv_next=_FNAME_EGV,
-):
+def _rename_egv_file(a6_dir, nhw, a6, force):
     """Renames the egv file from its default output name to the name needed
     for running TRDENS
 
@@ -411,20 +401,17 @@ def _rename_egv_file(
     :param a6: third A value, for which Heff is generated
     :param force: If True, replaces any existing files by the name of
     next_egv_name
-    :param _fname_fmt_egv: Regular expression that matches the defualt output
-    name
-    :param _fname_egv_next: Name that the file is renamed to
     """
     if nhw % 2 != a6 % 2:
         nhw += 1
-    next_egv_path = path.join(a6_dir, _fname_egv_next)
+    next_egv_path = path.join(a6_dir, LNAME_EGV)
     if path.lexists(next_egv_path):
         if not force:
             return 0
         else:
             remove(next_egv_path)
     dirpath, dirnames, filenames = walk(a6_dir).next()
-    fname_egv = _fname_fmt_egv % nhw
+    fname_egv = FNAME_FMT_EGV % nhw
     for f in filenames:
         if f == fname_egv:
             symlink(f, next_egv_path)
@@ -436,7 +423,7 @@ def _rename_egv_file(
 
 def _run_ncsd(
         dpath, fpath_egv, force, verbose,
-        _fname_stdout=_FNAME_NCSD_STDOUT, _fname_stderr=_FNAME_NCSD_STDERR
+        fname_stdout=FNAME_NCSD_STDOUT, fname_stderr=FNAME_NCSD_STDERR
 ):
     if force or not path.exists(path.join(fpath_egv)):
         args = ['NCSD']
@@ -447,36 +434,32 @@ def _run_ncsd(
             p = Popen(args=args, cwd=dpath, stdout=PIPE, stderr=PIPE)
             out, err = p.communicate()
             if len(out) > 0:
-                fout = open(path.join(dpath, _fname_stdout), 'w')
+                fout = open(path.join(dpath, fname_stdout), 'w')
                 fout.write(out)
                 fout.close()
             if len(err) > 0:
-                ferr = open(path.join(dpath, _fname_stderr), 'w')
+                ferr = open(path.join(dpath, fname_stderr), 'w')
                 ferr.write(err)
                 ferr.close()
 
 
 def _run_trdens(
         a6_dir, force, verbose,
-        _fname_trdens_out=_FNAME_TRDENS_OUT,
-        _fname_stdout=_FNAME_TRDENS_STDOUT,
-        _fname_stderr=_FNAME_TRDENS_STDERR
+        fname_stdout=FNAME_TRDENS_STDOUT, fname_stderr=FNAME_TRDENS_STDERR
 ):
     """Run the TRDENS calculation in a6_dir
     :param a6_dir: Directory in which to run the calulation
-    :param _fname_trdens_out: Name of the output file generated by the TRDENS
-    calculation. (If force is False, will not run if outfile already exists)
     :param force: If True, redoes the calculation even if output files
     already exist
     :param verbose: if true, prints regular output of TRDENS to stdout,
     otherwise suppresses output and writes it to
     _fname_stdout and _fname_stderr
-    :param _fname_stdout: filename to which to write standard output of
+    :param fname_stdout: filename to which to write standard output of
     TRDENS if verbose is false
-    :param _fname_stderr: filename to which to write standard error output
+    :param fname_stderr: filename to which to write standard error output
     of TRDENS if verbose is false
     """
-    outfile_path = path.join(a6_dir, _fname_trdens_out)
+    outfile_path = path.join(a6_dir, FNAME_TRDENS_OUT)
     if path.exists(outfile_path):
         if not force:
             return 0
@@ -490,11 +473,11 @@ def _run_trdens(
         p = Popen(args=args, cwd=a6_dir, stdout=PIPE, stderr=PIPE)
         out, err = p.communicate()
         if len(out) > 0:
-            fout = open(path.join(a6_dir, _fname_stdout), 'w')
+            fout = open(path.join(a6_dir, fname_stdout), 'w')
             fout.write(out)
             fout.close()
         if len(err) > 0:
-            ferr = open(path.join(a6_dir, _fname_stderr), 'w')
+            ferr = open(path.join(a6_dir, fname_stderr), 'w')
             ferr.write(err)
             ferr.close()
     return 1
@@ -502,8 +485,7 @@ def _run_trdens(
 
 def _run_vce(
         a_values, a_prescription, a_range,
-        a_aeff_to_outfile_fname_map, dirpath_aeff6, dirpath_vce, force,
-        _fname_fmt_vce_int=_FNAME_FMT_VCE, _fname_heff=_FNAME_HEFF,
+        a_aeff_to_outfile_fpath_map, dirpath_aeff6, dirpath_vce, force,
 ):
     """Do the VCE expansion calculation for each Aeff value in aeff_range
 
@@ -514,35 +496,33 @@ def _run_vce(
     Note: All generated interaction files will be the same (linked), the
     only difference is their file names, such that the shell_calc.py
     script interprets them as interactions for different A values.
-    :param a_aeff_to_outfile_fname_map: Map from A values to their
+    :param a_aeff_to_outfile_fpath_map: Map from A values to their
     respective NCSD output files
     :param dirpath_aeff6: Directory for the 3rd A value
     :param dirpath_vce: Path to the directory in which to put generated
     interaction files
-    :param _fname_fmt_vce_int: Filename template for generated interaction
+    :param fname_fmt_vce_int: Filename template for generated interaction
     files
-    :param _fname_heff: Name of the effective Hamiltonian output file
-    generated by the TRDENS calculation for the 3rd A value
     :param force: If True, force redoing the calculation even if
     output files already exist
     """
-    he4_fname = a_aeff_to_outfile_fname_map[(a_values[0], a_prescription[0])]
-    he5_fname = a_aeff_to_outfile_fname_map[(a_values[1], a_prescription[1])]
-    he6_fname = path.join(dirpath_aeff6, _fname_heff)
-    if not path.exists(he4_fname):
+    he4_fpath = a_aeff_to_outfile_fpath_map[(a_values[0], a_prescription[0])]
+    he5_fpath = a_aeff_to_outfile_fpath_map[(a_values[1], a_prescription[1])]
+    he6_fpath = path.join(dirpath_aeff6, FNAME_HEFF)
+    if not path.exists(he4_fpath):
         raise NcsdOutfileNotFoundException(
-            'NCSD outfile not found: %s' % he4_fname)
-    elif not path.exists(he5_fname):
+            'NCSD outfile not found: %s' % he4_fpath)
+    elif not path.exists(he5_fpath):
         raise NcsdOutfileNotFoundException(
-            'NCSD outfile not found: %s' % he5_fname)
-    elif not path.exists(he6_fname):
+            'NCSD outfile not found: %s' % he5_fpath)
+    elif not path.exists(he6_fpath):
         raise NcsdOutfileNotFoundException(
-            'NCSD outfile not found: %s' % he6_fname)
+            'NCSD outfile not found: %s' % he6_fpath)
     a_0 = a_range[0]
-    fpath_fmt = path.join(dirpath_vce, _fname_fmt_vce_int)
+    fpath_fmt = path.join(dirpath_vce, FNAME_FMT_VCE_INT)
     fpath = fpath_fmt % a_0
     if force or not path.exists(fpath):
-        vce_calculation(a_prescription, fpath, he4_fname, he5_fname, he6_fname)
+        vce_calculation(a_prescription, fpath, he4_fpath, he5_fpath, he6_fpath)
     if len(a_range) > 1:
         for a in a_range[1:]:
             next_fpath = fpath_fmt % a
@@ -555,10 +535,9 @@ def _run_vce(
 
 def _get_a_aeff_to_dpath_map(
         a_list, aeff_list, nhw_list, z, n1, n2,
-        _dpath_results=_DPATH_RESULTS, _dir_fmt_nuc=_DNAME_FMT_NUC
-):
+        dpath_results=DPATH_RESULTS, dname_fmt_nuc=DNAME_FMT_NUC):
     a_paths_map = dict()
-    path_fmt = path.join(_dpath_results, _dir_fmt_nuc)
+    path_fmt = path.join(dpath_results, dname_fmt_nuc)
     for a, aeff, nhw in zip(a_list, aeff_list, nhw_list):
         a_paths_map[(a, aeff)] = path_fmt % (
             _get_name(z), a, aeff, nhw, n1, n2)
@@ -567,7 +546,7 @@ def _get_a_aeff_to_dpath_map(
 
 def _get_a_aeff_to_outfile_fpath_map(
         a_list, aeff_list, nhw_list, z, n1, n2, a_aeff_to_dirpath_map,
-        fname_fmt=_FNAME_FMT_NCSD_OUT
+        fname_fmt=FNAME_FMT_NCSD_OUT,
 ):
     a_aeff_outfile_map = dict()
     for a, aeff, nhw in zip(a_list, aeff_list, nhw_list):
@@ -580,23 +559,21 @@ def _get_a_aeff_to_outfile_fpath_map(
 
 def _get_a_aeff_to_egv_fpath_map(
         a_list, aeff_list, nhw_list, a_aeff_to_dirpath_map,
-        _fname_fmt_egv=_FNAME_FMT_EGV,
 ):
     a_aeff_to_egv_map = dict()
     for a, aeff, nhw in zip(a_list, aeff_list, nhw_list):
         a_aeff_to_egv_map[(a, aeff)] = path.join(
-            a_aeff_to_dirpath_map[(a, aeff)], _fname_fmt_egv % nhw)
+            a_aeff_to_dirpath_map[(a, aeff)], FNAME_FMT_EGV % nhw)
     return a_aeff_to_egv_map
 
 
 def _get_a_aeff_to_jobsub_fpath_map(
         a_list, aeff_list, nhw_list, z, n1, n2, a_aeff_to_dirpath_map,
-        _fname_fmt_jobsub=_FNAME_FMT_JOBSUB,
 ):
     return _get_a_aeff_to_outfile_fpath_map(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
         z=z, n1=n1, n2=n2, a_aeff_to_dirpath_map=a_aeff_to_dirpath_map,
-        fname_fmt=_fname_fmt_jobsub,
+        fname_fmt=FNAME_FMT_JOBSUB,
     )
 
 
@@ -620,12 +597,16 @@ def _print_progress(
         stdout.flush()
 
 
-def _prepare_directories(a_list, aeff_list, nhw_list, z, n1, n2,
-                         cluster_submit=False, walltime=None, progress=False):
-    # todo ^ scalefactor
+def _prepare_directories(
+        a_list, aeff_list, nhw_list, z, n1, n2, nshell, scalefactor,
+        cluster_submit=False, walltime=None, progress=False):
+    if scalefactor is not None:
+        dname_nuc = DNAME_FMT_NUC
+    else:
+        dname_nuc = DNAME_FMT_NUC_SF
     a_aeff_to_dir_map = _get_a_aeff_to_dpath_map(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
-        z=z, n1=n1, n2=n2,
+        z=z, n1=n1, n2=n2, dname_fmt_nuc=dname_nuc
     )
     a_aeff_to_outfile_map = _get_a_aeff_to_outfile_fpath_map(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
@@ -650,7 +631,10 @@ def _prepare_directories(a_list, aeff_list, nhw_list, z, n1, n2,
     )
     if progress:
         print '  Truncating interaction to N1=%d N2=%d...' % (n1, n2)
-    _truncate_spaces(n1=n1, n2=n2, dirpaths=a_aeff_to_dir_map.values())
+    _truncate_spaces(
+        nshell=nshell, n1=n1, n2=n2, dirpaths=a_aeff_to_dir_map.values(),
+        scalefactor=scalefactor
+    )
     # todo ^ scale off diagonal interaction terms
     if cluster_submit:
         a_aeff_to_jobfile_map = _get_a_aeff_to_jobsub_fpath_map(
@@ -671,8 +655,8 @@ def _prepare_directories(a_list, aeff_list, nhw_list, z, n1, n2,
 
 def _ncsd_multiple_calculations_t(
         a_aeff_set, a_aeff_to_dpath_map, a_aeff_to_egvfile_map,
-        force, progress=True, str_prog_ncsd=_STR_PROG_NCSD,
-        max_open_threads=_MAX_OPEN_THREADS
+        force, progress=True, str_prog_ncsd=STR_PROG_NCSD,
+        max_open_threads=MAX_OPEN_THREADS
 ):
     def _r(a_, aeff_):
         _run_ncsd(
@@ -714,7 +698,7 @@ def _ncsd_multiple_calculations_s(
         a_aeff_set,
         a_aeff_to_dpath_map, a_aeff_to_egvfile_map, a_aeff_to_jobfile_map,
         force, progress,
-        _fname_stdout=_FNAME_QSUB_STDOUT, _fname_stderr=_FNAME_QSUB_STDERR,
+        fname_stdout=FNAME_QSUB_STDOUT, fname_stderr=FNAME_QSUB_STDERR,
 ):
     submitted_jobs = 0
     if progress:
@@ -728,11 +712,11 @@ def _ncsd_multiple_calculations_s(
             p = Popen(args=args, cwd=dpath, stdout=PIPE, stderr=PIPE)
             out, err = p.communicate()
             if len(out) > 0:
-                fout = open(path.join(dpath, _fname_stdout), 'w')
+                fout = open(path.join(dpath, fname_stdout), 'w')
                 fout.write(out)
                 fout.close()
             if len(err) > 0:
-                ferr = open(path.join(dpath, _fname_stderr), 'w')
+                ferr = open(path.join(dpath, fname_stderr), 'w')
                 ferr.write(err)
                 ferr.close()
             submitted_jobs += 1
@@ -745,7 +729,7 @@ def _ncsd_multiple_calculations_s(
 
 def _ncsd_multiple_calculations(
         a_aeff_set, a_aeff_to_dpath_map, a_aeff_to_egvfile_map,
-        force, verbose, progress, str_prog_ncsd=_STR_PROG_NCSD
+        force, verbose, progress, str_prog_ncsd=STR_PROG_NCSD
 ):
     # do ncsd
     jobs_total = len(a_aeff_set)
@@ -767,12 +751,12 @@ def _ncsd_multiple_calculations(
 
 
 def ncsd_multiple_calculations(
-        a_presc_list, a_values, z, nmax, a_0, n1=N1, n2=N1,
+        a_presc_list, a_values, z, nmax, a_0,
+        nshell=N_SHELL,  n1=N1, n2=N1, scalefactor=None,
         force=False, verbose=False, progress=True, threading=True,
         cluster_submit=False, walltime=None,
-        str_prog_ncsd=_STR_PROG_NCSD,
+        str_prog_ncsd=STR_PROG_NCSD,
 ):
-    # todo ^ scalefactor
     """For a given list of A prescriptions, do the NCSD calculations
     necessary for doing a valence cluster expansion
     :param a_presc_list: sequence of A prescriptions
@@ -780,8 +764,11 @@ def ncsd_multiple_calculations(
     :param z: proton number
     :param nmax: major oscillator shell model space truncation
     :param a_0: core A (e.g. 4 for p-shell, 16 for sd-shell, ...)
+    :param nshell: shell (0: s, 1: p, 2: sd, ...)
     :param n1: max allowed 1-particle state
     :param n2: max allowed 2-particle state
+    :param scalefactor: float value by which the off-diagonal valence
+    coupling terms in the interaction are scaled; if None, no scaling is done
     :param force: if true, force doing the NCSD calculation, even if it has
     already been done
     :param verbose: if true, prints the regular NCSD output to stdout; else
@@ -809,10 +796,9 @@ def ncsd_multiple_calculations(
         nhw_list.append(nhw)
     a_aeff_maps = _prepare_directories(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
-        z=z, n1=n1, n2=n2, cluster_submit=cluster_submit, walltime=walltime,
-        progress=progress,
+        z=z, n1=n1, n2=n2, nshell=nshell, scalefactor=scalefactor,
+        cluster_submit=cluster_submit, walltime=walltime, progress=progress,
     )
-    # todo ^ scalefactor
     a_aeff_to_dir, a_aeff_to_egv, a_aeff_to_job = a_aeff_maps
     a_aeff_set = set([(a, aeff) for a, aeff, nhw in a_aeff_nhw_set])
     if cluster_submit:
@@ -842,16 +828,15 @@ def ncsd_multiple_calculations(
 
 
 def ncsd_single_calculation(
-        z, a, aeff,
-        nhw=NMAX, n1=N1, n2=N1, force=False, verbose=False, progress=True,
+        z, a, aeff, scalefactor, nhw=NMAX, n1=N1, n2=N1, nshell=N_SHELL,
+        force=False, verbose=False, progress=True,
         cluster_submit=False, walltime=None,
 ):
-    # todo ^ scalefactor
     a_aeff_to_dpath, a_aeff_to_egv, a_aeff_to_job = _prepare_directories(
-        a_list=[a], aeff_list=[aeff], nhw_list=[nhw], z=z, n1=n1, n2=n2,
+        a_list=[a], aeff_list=[aeff], nhw_list=[nhw],
+        z=z, n1=n1, n2=n2, nshell=nshell, scalefactor=scalefactor,
         cluster_submit=cluster_submit, walltime=walltime, progress=progress,
     )[:3]
-    # todo ^ scalefactor
     if cluster_submit:
         return _ncsd_multiple_calculations_s(
             a_aeff_set=set([(a, aeff)]),
@@ -871,13 +856,12 @@ def ncsd_single_calculation(
 
 
 def ncsd_exact_calculations(
-        z, a_range,
-        nmax=NMAX, n1=N1, n2=N2, nshell=N_SHELL, ncomponent=N_COMPONENT,
+        z, a_range, nmax=NMAX, n1=N1, n2=N2,
+        nshell=N_SHELL, ncomponent=N_COMPONENT, int_scalefactor=None,
         force=False, verbose=False, progress=True,
         cluster_submit=False, walltime=None,
-        _str_prog_ncsd_ex=_STR_PROG_NCSD_EX
+        str_prog_ncsd_ex=STR_PROG_NCSD_EX
 ):
-    # todo ^ scalefactor
     """For each A in a_range, does the NCSD calculation for A=Aeff
     :param z: proton number
     :param a_range: range of A values for which to do NCSD with Aeff=A
@@ -887,6 +871,8 @@ def ncsd_exact_calculations(
     :param n2: max allowed 2-particle state
     :param nshell: nuclear shell (e.g. 0=s, 1=p, 2=sd, ...)
     :param ncomponent: 1=neutrons, 2=protons and neutrons
+    :param int_scalefactor: float factor by which the off-diagonal valence
+    coupling terms in the TBME interaction are scaled
     :param force: if true, force calculation of NCSD even if output files are
     present
     :param verbose: if true, print regular NCSD output to stdout; otherwise
@@ -896,16 +882,16 @@ def ncsd_exact_calculations(
     :param cluster_submit: if true, submit job to cluster
     :param walltime: if cluster_submit is true, this string hh:mm:ss specifies
     how much wall time is to be allotted each NCSD calculation
-    :param _str_prog_ncsd_ex: string to show before progress bar
+    :param str_prog_ncsd_ex: string to show before progress bar
     """
     ncsd_multiple_calculations(
-        z=z, a_values=a_range, a_presc_list=[a_range], nmax=nmax, n1=n1, n2=n2,
+        z=z, a_values=a_range, a_presc_list=[a_range],
+        nmax=nmax, n1=n1, n2=n2, nshell=nshell, scalefactor=int_scalefactor,
         a_0=_generating_a_values(n_shell=nshell, n_component=ncomponent)[0],
         cluster_submit=cluster_submit, walltime=walltime,
         force=force, verbose=verbose, progress=progress,
-        str_prog_ncsd=_str_prog_ncsd_ex
+        str_prog_ncsd=str_prog_ncsd_ex
     )
-    # todo ^ scalefactor
 
 
 class NcsdOutfileNotFoundException(Exception):
@@ -916,8 +902,8 @@ def vce_single_calculation(
         z, a_values, a_prescription, a_range, nmax,
         n1=N1, n2=N1, nshell=-1, ncomponent=-1,
         force_trdens=False, force_vce=False, verbose=False,
-        _dpath_results=_DPATH_RESULTS,
-        _dname_vce=_DNAME_VCE, _dname_fmt_vce=_DNAME_FMT_VCE,
+        dpath_results=DPATH_RESULTS,
+        dname_vce=DNAME_VCE, dname_fmt_vce=DNAME_FMT_VCE,
 ):
     """Valence cluster expansion
     :param z: protonn number
@@ -939,10 +925,10 @@ def vce_single_calculation(
     present
     :param verbose: if true, prints the regular output of TRDENS to stdout,
     otherwise suppresses output
-    :param _dpath_results: Path to the results directory
-    :param _dname_fmt_vce: template string for the directory for the vce
+    :param dpath_results: Path to the results directory
+    :param dname_fmt_vce: template string for the directory for the vce
     interaction files
-    :param _dname_vce: Template string for the directory for the interactions
+    :param dname_vce: Template string for the directory for the interactions
     calculated based on the effective Hamiltonian. Should accept a string
     representing the A_prescription tuple as a format argument.
     outputted by the NCSD calculation (which needs to be renamed)
@@ -975,12 +961,12 @@ def vce_single_calculation(
     _run_trdens(a6_dir=a6_dirpath, force=force_trdens, verbose=verbose)
 
     # do valence cluster expansion
-    dpath_vce0 = path.join(_dpath_results, _dname_vce)
+    dpath_vce0 = path.join(dpath_results, dname_vce)
     if not path.exists(dpath_vce0):
         mkdir(dpath_vce0)
     vce_dirpath = path.join(
-        _dpath_results, _dname_vce,
-        _dname_fmt_vce % tuple(
+        dpath_results, dname_vce,
+        dname_fmt_vce % tuple(
             tuple(a_prescription) + (nmax, n1, n2, nshell, ncomponent)))
     if not path.exists(vce_dirpath):
         mkdir(vce_dirpath)
@@ -988,7 +974,7 @@ def vce_single_calculation(
         _run_vce(
             a_values=a_values, a_prescription=a_prescription, a_range=a_range,
             dirpath_aeff6=a6_dirpath, dirpath_vce=vce_dirpath,
-            a_aeff_to_outfile_fname_map=a_aeff_outfile_map, force=force_vce
+            a_aeff_to_outfile_fpath_map=a_aeff_outfile_map, force=force_vce
         )
     except NcsdOutfileNotFoundException:
         raise
@@ -997,8 +983,8 @@ def vce_single_calculation(
 def _vce_multiple_calculations_t(
         z, a_values, a_presc_list, a_range, nmax, n1, n2, nshell, ncomponent,
         force_trdens, force_vce, verbose, progress,
-        _str_prog_vce=_STR_PROG_VCE,
-        max_open_threads=_MAX_OPEN_THREADS,
+        max_open_threads=MAX_OPEN_THREADS,
+        str_prog_vce=STR_PROG_VCE,
 ):
     error_messages = Queue()
 
@@ -1023,7 +1009,7 @@ def _vce_multiple_calculations_t(
     jobs_total = len(todo_list)
 
     if progress:
-        print _str_prog_vce
+        print str_prog_vce
     while len(todo_list) > 0 or not open_threads.empty():
         if progress:
             _print_progress(jobs_completed, jobs_total)
@@ -1053,13 +1039,13 @@ def _vce_multiple_calculations_t(
 def _vce_multiple_calculations(
         z, a_values, a_presc_list, a_range, nmax, n1, n2, nshell, ncomponent,
         force_trdens, force_vce, verbose, progress,
-        _str_prog_vce=_STR_PROG_VCE
+        str_prog_vce=STR_PROG_VCE
 ):
     jobs_total = len(a_presc_list)
     jobs_completed = 0
     progress = progress and not verbose
     if progress:
-        print _str_prog_vce
+        print str_prog_vce
     error_messages = list()
     for ap in a_presc_list:
         if progress:
@@ -1138,11 +1124,11 @@ def vce_multiple_calculations(
 def ncsd_vce_calculations(
         a_prescriptions, a_range,
         nmax=NMAX, n1=N1, n2=N2, nshell=N_SHELL, ncomponent=N_COMPONENT,
+        int_scalefactor=None,
         force_ncsd=False, force_trdens=False, force_vce=False, force_all=False,
         verbose=False, progress=True, threading=True,
         cluster_submit=False, walltime=None,
 ):
-    # todo ^ scalefactor
     """Given a sequence or generator of A prescriptions, does the NCSD/VCE
     calculation for each prescription
     :param a_prescriptions: sequence or generator of A prescription tuples
@@ -1153,6 +1139,8 @@ def ncsd_vce_calculations(
     :param n2: max allowed two-particle state
     :param nshell: major oscillator shell (0 = s, 1 = p, 2 = sd, ...)
     :param ncomponent: num components (1=neutrons, 2=protons and neutrons)
+    :param int_scalefactor: float factor by which the off-diagonal valence
+    coupling terms in the interaction are scaled
     :param force_ncsd: if true, forces recalculation of NCSD, even if output
     files already exist
     :param force_trdens: if true, forces recalculation of TRDENS, even if
@@ -1176,12 +1164,12 @@ def ncsd_vce_calculations(
     a_presc_list = list(a_prescriptions)
     ncsd_multiple_calculations(
         z=z, a_values=a_values, a_presc_list=a_presc_list,
-        nmax=nmax, a_0=a_values[0], n1=n1, n2=n2,
+        nmax=nmax, a_0=a_values[0], n1=n1, n2=n2, nshell=nshell,
+        scalefactor=int_scalefactor,
         force=force_all or force_ncsd,
         verbose=verbose, progress=progress, threading=threading,
         cluster_submit=cluster_submit, walltime=walltime,
     )
-    # todo ^ scalefactor
     vce_multiple_calculations(
         z=z, a_values=a_values, a_presc_list=a_presc_list, a_range=a_range,
         nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
@@ -1251,6 +1239,7 @@ if __name__ == "__main__":
     verbose0, progress0 = False, True
     cluster_submit0 = False
     walltime0 = NCSD_CLUSTER_WALLTIME
+    scalefactor0 = None
     while True:
         a0 = user_args[0]
         if re.match('^-f[ntv]{0,3}$', a0.lower()):
@@ -1263,8 +1252,9 @@ if __name__ == "__main__":
             exact = True
         elif a0 == '-v' or a0 == '--verbose':
             verbose0, progress0 = True, False
-        elif a0 == '-s' or a0 == '--submit-job':
-            cluster_submit0 = True
+        elif a0 == '-s' or a0 == '--scale-int':
+            user_args = user_args[1:]
+            scalefactor0 = float(user_args[0])
         elif a0 == '-t' or a0 == '--walltime':
             user_args = user_args[1:]
             cluster_submit0 = True
@@ -1289,6 +1279,7 @@ if __name__ == "__main__":
         a_range0 = [int(other_args[0])]
         ncsd_vce_calculations(
             a_prescriptions=a_prescriptions0, a_range=a_range0,
+            int_scalefactor=scalefactor0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0,
             cluster_submit=cluster_submit0, walltime=walltime0,
@@ -1297,6 +1288,7 @@ if __name__ == "__main__":
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
         ncsd_vce_calculations(
             a_prescriptions=a_prescriptions0, a_range=a_range0,
+            int_scalefactor=scalefactor0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0,
             cluster_submit=cluster_submit0, walltime=walltime0,
@@ -1306,6 +1298,7 @@ if __name__ == "__main__":
         nmax_0 = int(other_args[2])
         ncsd_vce_calculations(
             a_prescriptions=a_prescriptions0, a_range=a_range0, nmax=nmax_0,
+            int_scalefactor=scalefactor0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0,
             cluster_submit=cluster_submit0, walltime=walltime0,
@@ -1315,7 +1308,7 @@ if __name__ == "__main__":
         n1_0, n2_0 = [int(x) for x in other_args[2:]]
         ncsd_vce_calculations(
             a_prescriptions=a_prescriptions0, a_range=a_range0,
-            n1=n1_0, n2=n2_0,
+            n1=n1_0, n2=n2_0, int_scalefactor=scalefactor0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0,
             cluster_submit=cluster_submit0, walltime=walltime0,
@@ -1325,7 +1318,7 @@ if __name__ == "__main__":
         nmax_0, n1_0, n2_0 = [int(x) for x in other_args[2:]]
         ncsd_vce_calculations(
             a_prescriptions=a_prescriptions0, a_range=a_range0,
-            nmax=nmax_0, n1=n1_0, n2=n2_0,
+            nmax=nmax_0, n1=n1_0, n2=n2_0, int_scalefactor=scalefactor0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0,
             cluster_submit=cluster_submit0, walltime=walltime0,
@@ -1336,6 +1329,7 @@ if __name__ == "__main__":
         ncsd_vce_calculations(
             a_prescriptions=a_prescriptions0, a_range=a_range0,
             nmax=nmax_0, n1=n1_0, n2=n2_0, nshell=nshell_0,
+            int_scalefactor=scalefactor0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0,
             cluster_submit=cluster_submit0, walltime=walltime0,
@@ -1348,6 +1342,7 @@ if __name__ == "__main__":
             a_prescriptions=a_prescriptions0, a_range=a_range0,
             nmax=nmax_0, n1=n1_0, n2=n2_0,
             nshell=nshell_0, ncomponent=ncomponent_0,
+            int_scalefactor=scalefactor0,
             force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
             force_all=f_all, verbose=verbose0, progress=progress0,
             cluster_submit=cluster_submit0, walltime=walltime0,

@@ -52,6 +52,7 @@ if __name__ == "__main__":
     verbose0, progress0 = False, True
     cluster_submit0 = False
     walltime0 = NCSD_CLUSTER_WALLTIME
+    scalefactor0 = None
     while True:
         a0 = user_args[0]
         if '-f' == a0.lower():
@@ -61,7 +62,8 @@ if __name__ == "__main__":
         elif '-v' == a0:
             verbose0, progress0 = True, False
         elif '-s' == a0:
-            cluster_submit0 = True
+            user_args = user_args[1:]
+            scalefactor0 = float(user_args[0])
         elif '-t' == a0:
             user_args = user_args[1:]
             cluster_submit0 = True
@@ -74,6 +76,7 @@ if __name__ == "__main__":
             z0, a0 = [int(x) for x in user_args]
             ncsd_single_calculation(
                 z=z0, a=a0, aeff=a0,
+                scalefactor=scalefactor0,
                 force=force0, verbose=verbose0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
             )
@@ -81,6 +84,7 @@ if __name__ == "__main__":
             z0, a0, aeff0 = [int(x) for x in user_args]
             ncsd_single_calculation(
                 z=z0, a=a0, aeff=aeff0,
+                scalefactor=scalefactor0,
                 force=force0, verbose=verbose0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
             )
@@ -88,6 +92,7 @@ if __name__ == "__main__":
             z0, a0, aeff0, nhw0 = [int(x) for x in user_args]
             ncsd_single_calculation(
                 z=z0, a=a0, aeff=aeff0, nhw=nhw0,
+                scalefactor=scalefactor0,
                 force=force0, verbose=verbose0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
             )
@@ -95,6 +100,7 @@ if __name__ == "__main__":
             z0, a0, aeff0, n1_0, n2_0 = [int(x) for x in user_args]
             ncsd_single_calculation(
                 z=z0, a=a0, aeff=aeff0, n1=n1_0, n2=n2_0,
+                scalefactor=scalefactor0,
                 force=force0, verbose=verbose0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
             )
@@ -102,6 +108,7 @@ if __name__ == "__main__":
             z0, a0, aeff0, nhw0, n1_0, n2_0 = [int(x) for x in user_args]
             ncsd_single_calculation(
                 z=z0, a=a0, aeff=aeff0, nhw=nhw0, n1=n1_0, n2=n2_0,
+                scalefactor=scalefactor0,
                 force=force0, verbose=verbose0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
             )
@@ -116,6 +123,7 @@ if __name__ == "__main__":
             z0, amin = [int(x) for x in user_args]
             ncsd_exact_calculations(
                 z=z0, a_range=[amin],
+                int_scalefactor=scalefactor0,
                 force=force0, verbose=verbose0, progress=progress0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
             )
@@ -123,6 +131,7 @@ if __name__ == "__main__":
             z0, amin, amax = [int(x) for x in user_args]
             ncsd_exact_calculations(
                 z=z0, a_range=range(amin, amax+1),
+                int_scalefactor=scalefactor0,
                 force=force0, verbose=verbose0, progress=progress0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
             )
@@ -130,6 +139,7 @@ if __name__ == "__main__":
             z0, amin, amax, nmax0 = [int(x) for x in user_args]
             ncsd_exact_calculations(
                 z=z0, a_range=range(amin, amax+1), nmax=nmax0,
+                int_scalefactor=scalefactor0,
                 force=force0, verbose=verbose0, progress=progress0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
             )
@@ -137,6 +147,7 @@ if __name__ == "__main__":
             z0, amin, amax, n1_, n2_ = [int(x) for x in user_args]
             ncsd_exact_calculations(
                 z=z0, a_range=range(amin, amax+1), n1=n1_, n2=n2_,
+                int_scalefactor=scalefactor0,
                 force=force0, verbose=verbose0, progress=progress0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
             )
@@ -144,6 +155,7 @@ if __name__ == "__main__":
             z0, amin, amax, nmax0, n1_, n2_ = [int(x) for x in user_args]
             ncsd_exact_calculations(
                 z=z0, a_range=range(amin, amax+1), nmax=nmax0, n1=n1_, n2=n2_,
+                int_scalefactor=scalefactor0,
                 force=force0, verbose=verbose0, progress=progress0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
             )
@@ -152,7 +164,7 @@ if __name__ == "__main__":
                                                         for x in user_args]
             ncsd_exact_calculations(
                 z=z0, a_range=range(amin, amax+1), nmax=nmax0, n1=n1_, n2=n2_,
-                nshell=nshell0,
+                nshell=nshell0, int_scalefactor=scalefactor0,
                 force=force0, verbose=verbose0, progress=progress0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
             )
@@ -162,7 +174,7 @@ if __name__ == "__main__":
                 ]
             ncsd_exact_calculations(
                 z=z0, a_range=range(amin, amax+1), nmax=nmax0, n1=n1_, n2=n2_,
-                nshell=nshell0, ncomponent=ncomp0,
+                nshell=nshell0, ncomponent=ncomp0, int_scalefactor=scalefactor0,
                 force=force0, verbose=verbose0, progress=progress0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
             )
