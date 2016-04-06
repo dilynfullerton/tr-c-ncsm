@@ -23,11 +23,13 @@ def ecf_off_diag_outside_valence(nshell):
     the outside space.
     :param nshell: major oscillator shell (0=s, 1=p, 2=sd, ...)
     """
-    idx_max = (nshell + 1) * (nshell + 2) / 2
+    idx_max_core = nshell * (nshell + 1) / 2
+    idx_max_valn = (nshell + 1) * (nshell + 2) / 2
 
     def elt_cond_fn(elt):
         a, b, c, d, j, t, = elt
-        return (a <= b <= idx_max < d) or (c <= d <= idx_max < b)
+        return ((b <= idx_max_valn < d) or (d <= idx_max_valn < b) or
+                (b <= idx_max_core < d) or (d <= idx_max_core < b))
     return elt_cond_fn
 
 

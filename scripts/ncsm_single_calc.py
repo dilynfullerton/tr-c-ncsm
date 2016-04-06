@@ -3,7 +3,7 @@
 
 To run as a script:
 
-    $ ncsm_single_calc.py [-f] [-e] [-v] [-s] [-t walltime]
+    $ ncsm_single_calc.py [-f] [-e] [-v] [-s scalefactor] [-t walltime]
     Z A [Aeff [nhw [n1 n2 [nshell [ncomponent]]] | n1 n2]]
 
 In the current directory run NCSD for a single element with a single A
@@ -21,8 +21,8 @@ Aeff = A.
 -v
     regular verbose output of NCSD is printed to
       stdout (unless job is submitted to cluster)
--s
-    NCSD jobs are submitted to cluster
+-s scalefactor
+    off-diagonal valence coupling terms of the TBME interaction are scaled
 -t walltime
     NCSD jobs are allotted the given walltime, a string in format hh:mm:ss
 
