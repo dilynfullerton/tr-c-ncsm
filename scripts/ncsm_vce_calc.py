@@ -74,10 +74,10 @@ DPATH_MAIN = getcwd()
 DPATH_TEMPLATES = path.join(DPATH_MAIN, 'templates')
 DPATH_RESULTS = path.join(DPATH_MAIN, 'results')
 DNAME_FMT_NUC = '%s%d_%d_Nhw%d_%d_%d'  # name, A, Aeff, nhw, n1, n2
-DNAME_FMT_NUC_SF = DNAME_FMT_NUC + '_scale%f.2'  # scale factor
+DNAME_FMT_NUC_SF = DNAME_FMT_NUC + '_scale%.2f'  # scale factor
 DNAME_FMT_VCE = 'vce_presc%d,%d,%d_Nmax%d_%d_%d_shell%d_dim%d'
 #     A presc, Nmax, n1, n2, nshell, ncomponent
-DNAME_FMT_VCE_SF = DNAME_FMT_VCE + '_scale%f.2'  # scale factor
+DNAME_FMT_VCE_SF = DNAME_FMT_VCE + '_scale%.2f'  # scale factor
 DNAME_VCE = 'vce'
 
 # Files
@@ -87,7 +87,7 @@ FNAME_FMT_VCE_INT = 'A%d.int'  # A value
 FNAME_FMT_NCSD_OUT = '%s%d_%d_Nhw%d_%d_%d.out'  # name, A, Aeff, Nhw, n1, n2
 FNAME_FMT_JOBSUB = FNAME_FMT_NCSD_OUT[:-4] + '.sh'
 FNAME_FMT_TBME = 'TBMEA2srg-n3lo2.O_%d.24'  # n1
-FNAME_FMT_TBME_SF = FNAME_FMT_TBME + '_sf%f.2'  # n1 scalefactor
+FNAME_FMT_TBME_SF = FNAME_FMT_TBME + '_sf%.2f'  # n1 scalefactor
 FNAME_TMP_MFDP = 'mfdp.dat'
 FNAME_TMP_TRDENS_IN = 'trdens.in'
 FNAME_TMP_JOBSUB = 'job.sh'
@@ -358,6 +358,8 @@ def _truncate_space(
                 src=dst_path, dst=next_dst_path,
                 nshell=nshell, scalefactor=scalefactor
             )
+            remove(dst_path)
+            dst_path = next_dst_path
     return dst_path
 
 
@@ -552,12 +554,18 @@ def _run_vce(
 
 def _get_a_aeff_to_dpath_map(
         a_list, aeff_list, nhw_list, z, n1, n2,
-        dpath_results=DPATH_RESULTS, dname_fmt_nuc=DNAME_FMT_NUC):
+        dpath_results=DPATH_RESULTS, scalefactor=None):
     a_paths_map = dict()
+    if scalefactor is not None:
+        dname_fmt_nuc = DNAME_FMT_NUC_SF
+    else:
+        dname_fmt_nuc = DNAME_FMT_NUC
     path_fmt = path.join(dpath_results, dname_fmt_nuc)
     for a, aeff, nhw in zip(a_list, aeff_list, nhw_list):
-        a_paths_map[(a, aeff)] = path_fmt % (
-            _get_name(z), a, aeff, nhw, n1, n2)
+        args = (_get_name(z), a, aeff, nhw, n1, n2)
+        if scalefactor is not None:
+            args += (scalefactor,)
+        a_paths_map[(a, aeff)] = path_fmt % args
     return a_paths_map
 
 
@@ -617,13 +625,9 @@ def _print_progress(
 def _prepare_directories(
         a_list, aeff_list, nhw_list, z, n1, n2, nshell, scalefactor,
         cluster_submit=False, walltime=None, progress=False):
-    if scalefactor is not None:
-        dname_nuc = DNAME_FMT_NUC
-    else:
-        dname_nuc = DNAME_FMT_NUC_SF
     a_aeff_to_dir_map = _get_a_aeff_to_dpath_map(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
-        z=z, n1=n1, n2=n2, dname_fmt_nuc=dname_nuc
+        z=z, n1=n1, n2=n2, scalefactor=scalefactor,
     )
     a_aeff_to_outfile_map = _get_a_aeff_to_outfile_fpath_map(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
@@ -736,6 +740,8 @@ def _ncsd_multiple_calculations_s(
                 ferr.write(err)
                 ferr.close()
             submitted_jobs += 1
+        else:
+            print 'Path found: %s' % fpath_egv
     if progress:
         if submitted_jobs == 1:
             print '  1 job submitted to cluster'
@@ -1261,7 +1267,7 @@ if __name__ == "__main__":
             verbose0, progress0 = True, False
         elif a0 == '-s' or a0 == '--scale-int':
             user_args = user_args[1:]
-            scalefactor0 = float(user_args[0])
+            scalefactor0 = round(float(user_args[0]), 2)
         elif a0 == '-t' or a0 == '--walltime':
             user_args = user_args[1:]
             cluster_submit0 = True

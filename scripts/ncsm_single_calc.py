@@ -63,7 +63,7 @@ if __name__ == "__main__":
             verbose0, progress0 = True, False
         elif '-s' == a0:
             user_args = user_args[1:]
-            scalefactor0 = float(user_args[0])
+            scalefactor0 = round(float(user_args[0]), 2)
         elif '-t' == a0:
             user_args = user_args[1:]
             cluster_submit0 = True
