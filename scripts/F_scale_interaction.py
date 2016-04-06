@@ -27,7 +27,7 @@ def ecf_off_diag_outside_valence(nshell):
 
     def elt_cond_fn(elt):
         a, b, c, d, j, t, = elt
-        return a <= idx_max and b <= idx_max < d
+        return (a <= b <= idx_max < d) or (c <= d <= idx_max < b)
     return elt_cond_fn
 
 
