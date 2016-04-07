@@ -320,7 +320,6 @@ class EgvFileNotFoundException(Exception):
 def rename_egv_file(a6_dir, nhw, a6, force):
     """Renames the egv file from its default output name to the name needed
     for running TRDENS
-
     :param a6_dir: Directory in which the file resides
     :param nhw: major oscillator model space truncation
     :param a6: third A value, for which Heff is generated
@@ -383,8 +382,7 @@ def get_a_aeff_to_outfile_fpath_map(
 
 
 def _get_a_aeff_to_egv_fpath_map(
-        a_list, aeff_list, nhw_list, a_aeff_to_dirpath_map,
-):
+        a_list, aeff_list, nhw_list, a_aeff_to_dirpath_map):
     a_aeff_to_egv_map = dict()
     for a, aeff, nhw in zip(a_list, aeff_list, nhw_list):
         a_aeff_to_egv_map[(a, aeff)] = path.join(
