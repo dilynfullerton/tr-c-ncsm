@@ -410,11 +410,14 @@ def _get_a_aeff_to_jobsub_fpath_map(
 
 def prepare_directories(
         a_list, aeff_list, nhw_list, z, n1, n2, nshell, scalefactor,
-        cluster_submit=False, walltime=None, progress=False):
+        dpath_templates, dpath_results,
+        cluster_submit=False, walltime=None, progress=False,
+):
     # get maps
     a_aeff_to_dir_map = get_a_aeff_to_dpath_map(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
         z=z, n1=n1, n2=n2, scalefactor=scalefactor,
+        dpath_results=dpath_results,
     )
     a_aeff_to_outfile_map = get_a_aeff_to_outfile_fpath_map(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
@@ -437,7 +440,8 @@ def prepare_directories(
     # make stuff
     if progress:
         print '  Making directories...'
-    _make_base_directories(a_aeff_to_dpath_map=a_aeff_to_dir_map)
+    _make_base_directories(
+        a_aeff_to_dpath_map=a_aeff_to_dir_map, dpath_results=dpath_results)
     if progress:
         print '  Truncating interaction to N1=%d N2=%d...' % (n1, n2)
     fname_tbme = _truncate_spaces(
@@ -450,7 +454,7 @@ def prepare_directories(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
         a_aeff_to_dpath_map=a_aeff_to_dir_map,
         a_aeff_to_outfile_fpath_map=a_aeff_to_outfile_map,
-        fname_tbme=fname_tbme,
+        fname_tbme=fname_tbme, dpath_temp=dpath_templates,
         z=z, n_1=n1, n_2=n2,
     )
     if cluster_submit:

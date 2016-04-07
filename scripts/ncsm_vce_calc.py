@@ -3,7 +3,7 @@
 
 To run as a script:
 
-    $ ncsm_vce_calc.py [-f[ntv]{0,3}] [-v] [-s scalefactor] [-t walltime]
+    $ ncsm_vce_calc.py [-f[ntv]] [-v] [-s scalefactor] [-t walltime]
     [ Aeff4 Aeff5 Aeff6 | [-m|-M|-e] Ap_min Ap_max] Amin
     [Amax [nmax [n1 n2 [nshell [ncomponent]]] | n1 n2]]
 
@@ -24,11 +24,11 @@ specified by Ap_min and Ap_max if -m or -M precedes the arguments.
 -m or -M or -e
     The first two arguments are used to determine a range of A prescriptions
     -m
-        Prescriptions are all increasing length-3 combinations of
-          integers in the range [Ap_min, Ap_max]
+        Prescriptions are all increasing length-3 combinations
+          of integers in the range [Ap_min, Ap_max]
     -M
-        Prescriptions are all increasing length-3 combinations of
-          numbers with repetition in the range [Ap_min, Ap_max]
+        Prescriptions are all increasing length-3 combinations with repetition
+          of integers in the range [Ap_min, Ap_max]
     -e
          Prescriptions are all (A, A, A) for A in the range [Ap_min, Ap_max]
 -s scalefactor
@@ -59,6 +59,7 @@ from threading import Thread
 from FdoVCE import run as vce_calculation
 from InvalidNumberOfArgumentsException import InvalidNumberOfArgumentsException
 
+from _make_dirs import DPATH_TEMPLATES, DPATH_RESULTS
 from _make_dirs import make_vce_directories, make_trdens_file, rename_egv_file
 from _make_dirs import get_a_aeff_to_dpath_map
 from _make_dirs import get_a_aeff_to_outfile_fpath_map
@@ -333,6 +334,7 @@ def ncsd_multiple_calculations(
         force=False, verbose=False, progress=True, threading=True,
         cluster_submit=False, walltime=None,
         str_prog_ncsd=STR_PROG_NCSD,
+        dpath_templates=DPATH_TEMPLATES, dpath_results=DPATH_RESULTS,
 ):
     """For a given list of A prescriptions, do the NCSD calculations
     necessary for doing a valence cluster expansion
@@ -359,6 +361,8 @@ def ncsd_multiple_calculations(
     hh:mm:ss specifies how much time is to be allotted each NCSD
     calculation
     :param str_prog_ncsd: string to show before progress bar
+    :param dpath_templates: path to the templates directory
+    :param dpath_results: path to the results directory
     """
     # make (A, Aeff, Nhw) set
     a_aeff_nhw_set = set()
@@ -377,6 +381,7 @@ def ncsd_multiple_calculations(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
         z=z, n1=n1, n2=n2, nshell=nshell, scalefactor=scalefactor,
         cluster_submit=cluster_submit, walltime=walltime, progress=progress,
+        dpath_results=dpath_results, dpath_templates=dpath_templates,
     )
     a_aeff_to_dir, a_aeff_to_egv, a_aeff_to_job = a_aeff_maps
     # make (A, Aeff) set and do NCSD
@@ -408,14 +413,17 @@ def ncsd_multiple_calculations(
 
 
 def ncsd_single_calculation(
-        z, a, aeff, scalefactor, nhw=NMAX, n1=N1, n2=N1, nshell=N_SHELL,
+        z, a, aeff, scalefactor,
+        nhw=NMAX, n1=N1, n2=N1, nshell=N_SHELL,
         force=False, verbose=False, progress=True,
         cluster_submit=False, walltime=None,
+        dpath_templates=DPATH_TEMPLATES, dpath_results=DPATH_RESULTS,
 ):
     a_aeff_to_dpath, a_aeff_to_egv, a_aeff_to_job = prepare_directories(
         a_list=[a], aeff_list=[aeff], nhw_list=[nhw],
         z=z, n1=n1, n2=n2, nshell=nshell, scalefactor=scalefactor,
         cluster_submit=cluster_submit, walltime=walltime, progress=progress,
+        dpath_templates=dpath_templates, dpath_results=dpath_results,
     )[:3]
     if cluster_submit:
         return _ncsd_multiple_calculations_s(
@@ -436,11 +444,13 @@ def ncsd_single_calculation(
 
 
 def ncsd_exact_calculations(
-        z, a_range, nmax=NMAX, n1=N1, n2=N2,
+        z, a_range,
+        nmax=NMAX, n1=N1, n2=N2,
         nshell=N_SHELL, ncomponent=N_COMPONENT, int_scalefactor=None,
         force=False, verbose=False, progress=True,
         cluster_submit=False, walltime=None,
-        str_prog_ncsd_ex=STR_PROG_NCSD_EX
+        str_prog_ncsd_ex=STR_PROG_NCSD_EX,
+        dpath_templates=DPATH_TEMPLATES, dpath_results=DPATH_RESULTS,
 ):
     """For each A in a_range, does the NCSD calculation for A=Aeff
     :param z: proton number
@@ -463,6 +473,8 @@ def ncsd_exact_calculations(
     :param walltime: if cluster_submit is true, this string hh:mm:ss specifies
     how much wall time is to be allotted each NCSD calculation
     :param str_prog_ncsd_ex: string to show before progress bar
+    :param dpath_templates: path to the templates directory
+    :param dpath_results: path to the results directory
     """
     ncsd_multiple_calculations(
         z=z, a_values=a_range, a_presc_list=[a_range],
@@ -470,7 +482,8 @@ def ncsd_exact_calculations(
         a_0=_generating_a_values(n_shell=nshell, n_component=ncomponent)[0],
         cluster_submit=cluster_submit, walltime=walltime,
         force=force, verbose=verbose, progress=progress,
-        str_prog_ncsd=str_prog_ncsd_ex
+        str_prog_ncsd=str_prog_ncsd_ex,
+        dpath_templates=dpath_templates, dpath_results=dpath_results,
     )
 
 
@@ -482,6 +495,7 @@ def vce_single_calculation(
         a_values, a_prescription, a_range, z, nmax,
         n1=N1, n2=N1, nshell=-1, ncomponent=-1, int_scalefactor=None,
         force_trdens=False, force_vce=False, verbose=False,
+        dpath_results=DPATH_RESULTS, dpath_templates=DPATH_TEMPLATES,
 ):
     """Valence cluster expansion
     :param a_values: 3-tuple of A values that form the base for constructing
@@ -505,6 +519,8 @@ def vce_single_calculation(
     present
     :param verbose: if true, prints the regular output of TRDENS to stdout,
     otherwise suppresses output
+    :param dpath_templates: path to the templates directory
+    :param dpath_results: path to the results directory
     """
     # todo pass a_aeff_dir_map and a_aeff_otufile_map as args instead of
     # todo     creating them here
@@ -512,6 +528,7 @@ def vce_single_calculation(
         a_list=a_values, aeff_list=a_prescription,
         nhw_list=list(range(nmax, nmax+3)), z=z, n1=n1, n2=n2,
         scalefactor=int_scalefactor,
+        dpath_results=dpath_results,
     )
     a_aeff_outfile_map = get_a_aeff_to_outfile_fpath_map(
         a_list=a_values, aeff_list=a_prescription,
@@ -525,7 +542,8 @@ def vce_single_calculation(
                 'NCSD outfile not found: %s' % f)
     # for the 3rd a value, make trdens file and run TRDENS
     a_aeff6 = (a_values[2], a_prescription[2])
-    make_trdens_file(z=z, a=a_values[2], nuc_dir=a_aeff_dir_map[a_aeff6])
+    make_trdens_file(z=z, a=a_values[2], nuc_dir=a_aeff_dir_map[a_aeff6],
+                     dpath_results=dpath_results, dpath_temp=dpath_templates)
     a6_dirpath = a_aeff_dir_map[a_aeff6]
     try:
         rename_egv_file(
@@ -538,6 +556,7 @@ def vce_single_calculation(
     vce_dirpath = make_vce_directories(
         a_prescription=a_prescription, nmax=nmax, n1=n1, n2=n2,
         nshell=nshell, ncomponent=ncomponent, scalefactor=int_scalefactor,
+        dpath_results=dpath_results,
     )
     try:
         _run_vce(
@@ -551,6 +570,7 @@ def vce_single_calculation(
 
 def _vce_multiple_calculations_t(
         z, a_values, a_presc_list, a_range, nmax, n1, n2, nshell, ncomponent,
+        dpath_templates, dpath_results,
         force_trdens, force_vce, verbose, progress,
         int_scalefactor=None, max_open_threads=MAX_OPEN_THREADS,
         str_prog_vce=STR_PROG_VCE,
@@ -565,6 +585,7 @@ def _vce_multiple_calculations_t(
                 nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
                 int_scalefactor=int_scalefactor,
                 force_trdens=force_trdens, force_vce=force_vce, verbose=verbose,
+                dpath_templates=dpath_templates, dpath_results=dpath_results,
             )
         except EgvFileNotFoundException, e:
             error_messages.put(str(e))
@@ -599,6 +620,7 @@ def _vce_multiple_calculations_t(
 
 def _vce_multiple_calculations(
         z, a_values, a_presc_list, a_range, nmax, n1, n2, nshell, ncomponent,
+        dpath_templates, dpath_results,
         force_trdens, force_vce, verbose, progress,
         int_scalefactor=None,
         str_prog_vce=STR_PROG_VCE,
@@ -619,6 +641,7 @@ def _vce_multiple_calculations(
                 nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
                 int_scalefactor=int_scalefactor,
                 force_trdens=force_trdens, force_vce=force_vce, verbose=verbose,
+                dpath_results=dpath_results, dpath_templates=dpath_templates,
             )
             jobs_completed += 1
         except NcsdOutfileNotFoundException, e:
@@ -638,6 +661,7 @@ def vce_multiple_calculations(
         a_values, a_presc_list, a_range, z, nmax, n1, n2, nshell, ncomponent,
         force_trdens, force_vce, verbose, progress, threading,
         int_scalefactor=None,
+        dpath_templates=DPATH_TEMPLATES, dpath_results=DPATH_RESULTS,
 ):
     """For every A prescription in a_presc_list, performs the valence
     cluster expansion to generate an interaction file. Assumes NCSD
@@ -666,6 +690,8 @@ def vce_multiple_calculations(
     :param progress: if true, display a progress bar. Note: if verbose is
     true, progress bar will not be displayed.
     :param threading: if true, calculations will be multi-threaded
+    :param dpath_templates: path to the templates directory
+    :param dpath_results: path to the results directory
     """
     if threading and len(a_presc_list) > 1:
         _vce_multiple_calculations_t(
@@ -674,6 +700,7 @@ def vce_multiple_calculations(
             int_scalefactor=int_scalefactor,
             force_trdens=force_trdens, force_vce=force_vce,
             verbose=verbose, progress=progress,
+            dpath_results=dpath_results, dpath_templates=dpath_templates,
         )
     else:
         return _vce_multiple_calculations(
@@ -682,6 +709,7 @@ def vce_multiple_calculations(
             int_scalefactor=int_scalefactor,
             force_trdens=force_trdens, force_vce=force_vce,
             verbose=verbose, progress=progress,
+            dpath_results=dpath_results, dpath_templates=dpath_templates,
         )
 
 
@@ -692,6 +720,7 @@ def ncsd_vce_calculations(
         force_ncsd=False, force_trdens=False, force_vce=False, force_all=False,
         verbose=False, progress=True, threading=True,
         cluster_submit=False, walltime=None,
+        dpath_templates=DPATH_TEMPLATES, dpath_results=DPATH_RESULTS,
 ):
     """Given a sequence or generator of A prescriptions, does the NCSD/VCE
     calculation for each prescription
@@ -722,6 +751,8 @@ def ncsd_vce_calculations(
     undone.
     :param walltime: if cluster_submit, this string hh:mm:ss specifies how
     much wall time is to be allotted each NCSD calculation
+    :param dpath_templates: path to the templates directory
+    :param dpath_results: path to the results directory
     """
     a_values = _generating_a_values(n_shell=nshell, n_component=ncomponent)
     z = int(a_values[0] / ncomponent)
@@ -733,6 +764,7 @@ def ncsd_vce_calculations(
         force=force_all or force_ncsd,
         verbose=verbose, progress=progress, threading=threading,
         cluster_submit=cluster_submit, walltime=walltime,
+        dpath_templates=dpath_templates, dpath_results=dpath_results,
     )
     vce_multiple_calculations(
         z=z, a_values=a_values, a_presc_list=a_presc_list, a_range=a_range,
@@ -741,6 +773,7 @@ def ncsd_vce_calculations(
         force_trdens=force_trdens or force_all,
         force_vce=force_vce or force_all,
         verbose=verbose, progress=progress, threading=threading,
+        dpath_results=dpath_results, dpath_templates=dpath_templates,
     )
 
 
