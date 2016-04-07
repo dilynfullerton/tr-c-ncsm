@@ -506,6 +506,8 @@ def vce_single_calculation(
     :param verbose: if true, prints the regular output of TRDENS to stdout,
     otherwise suppresses output
     """
+    # todo pass a_aeff_dir_map and a_aeff_otufile_map as args instead of
+    # todo     creating them here
     a_aeff_dir_map = get_a_aeff_to_dpath_map(
         a_list=a_values, aeff_list=a_prescription,
         nhw_list=list(range(nmax, nmax+3)), z=z, n1=n1, n2=n2,
@@ -514,7 +516,7 @@ def vce_single_calculation(
     a_aeff_outfile_map = get_a_aeff_to_outfile_fpath_map(
         a_list=a_values, aeff_list=a_prescription,
         nhw_list=list(range(nmax, nmax+3)), z=z, n1=n1, n2=n2,
-        a_aeff_to_dirpath_map=a_aeff_dir_map
+        a_aeff_to_dirpath_map=a_aeff_dir_map, scalefactor=int_scalefactor,
     )
     # check that files exist
     for f in a_aeff_outfile_map.values():
