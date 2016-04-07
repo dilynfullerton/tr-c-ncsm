@@ -255,15 +255,21 @@ def _truncate_space(
             break
     else:
         raise TbmeFileNotFoundException()
+    print 'Found template TBME file: %s' % tbme_filename
     src_path = path.join(dpath_templates, tbme_filename)
     tmp_path = path.join(dpath_elt, FNAME_FMT_TBME % n1)
     if scalefactor is None:
         dst_path = tmp_path
+        print 'No scale factor provided, destination path is: %s' % dst_path
     else:
         dst_path = path.join(dpath_elt, FNAME_FMT_TBME_SF % (n1, scalefactor))
+        print 'Scale factor is %f' % scalefactor
+        print 'Destination path is %s' % dst_path
     if not path.exists(dst_path):
+        print 'Destination path does not exist; truncating space...'
         truncate_interaction(src_path, n1, n2, tmp_path)
         if scalefactor is not None:
+            print 'Scaling interaction...'
             scale_int(src=tmp_path, dst=dst_path, nshell=nshell,
                       scalefactor=scalefactor)
             remove(tmp_path)
@@ -305,7 +311,7 @@ def _truncate_spaces(nshell, n1, n2, dirpaths, scalefactor):
     fpath0 = _truncate_space(
         nshell=nshell, n1=n1, n2=n2, dpath_elt=d0, scalefactor=scalefactor)
     if len(dirpaths) > 1:
-        fname_tbme = FNAME_FMT_TBME % n1
+        fname_tbme = path.split(fpath0)[1]
         for d in dirpaths[1:]:
             dst_path = path.join(d, fname_tbme)
             if not path.exists(dst_path):
