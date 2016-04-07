@@ -60,21 +60,17 @@ def _get_name(z, z_name_map=Z_NAME_MAP, alt_name=Z_NAME_FMT_ALT):
 
 
 def _make_base_directories(
-        a_values, presc, a_aeff_to_dpath_map, dpath_results=DPATH_RESULTS):
+        a_aeff_to_dpath_map, dpath_results=DPATH_RESULTS):
     """Makes directories for first 3 a values if they do not exist yet
-    :param a_values: Values of A for which directories are made.
-    Example: If in nshell1, would make directories for He4,5,6
-    :param presc: Aeff prescription for VCE expansion
     :param dpath_results: Path to the directory into which these base
     :param a_aeff_to_dpath_map: map from A value to directory path
     directories are put
     """
     if not path.exists(dpath_results):
         mkdir(dpath_results)
-    for a, aeff in zip(a_values, presc):
-        dirpath = a_aeff_to_dpath_map[(a, aeff)]
-        if not path.exists(dirpath):
-            mkdir(dirpath)
+    for d in a_aeff_to_dpath_map.values():
+        if not path.exists(d):
+            mkdir(d)
 
 
 def make_vce_directories(
@@ -260,18 +256,17 @@ def _truncate_space(
     else:
         raise TbmeFileNotFoundException()
     src_path = path.join(dpath_templates, tbme_filename)
-    dst_path = path.join(dpath_elt, FNAME_FMT_TBME % n1)
+    tmp_path = path.join(dpath_elt, FNAME_FMT_TBME % n1)
+    if scalefactor is None:
+        dst_path = tmp_path
+    else:
+        dst_path = path.join(dpath_elt, FNAME_FMT_TBME_SF % (n1, scalefactor))
     if not path.exists(dst_path):
-        truncate_interaction(src_path, n1, n2, dst_path)
+        truncate_interaction(src_path, n1, n2, tmp_path)
         if scalefactor is not None:
-            next_dst_path = path.join(
-                dpath_elt, FNAME_FMT_TBME_SF % (n1, scalefactor))
-            scale_int(
-                src=dst_path, dst=next_dst_path,
-                nshell=nshell, scalefactor=scalefactor
-            )
-            remove(dst_path)
-            dst_path = next_dst_path
+            scale_int(src=tmp_path, dst=dst_path, nshell=nshell,
+                      scalefactor=scalefactor)
+            remove(tmp_path)
     return dst_path
 
 
@@ -288,17 +283,13 @@ def _make_job_submit_file(
     _rewrite_file(src=src_fpath, dst=dst_fpath, replace_map=rep_map)
 
 
-def _make_job_submit_files(
-        a_list, aeff_list, a_aeff_to_jobsub_fpath_map, walltime,
-):
-    a = a_list.pop()
-    aeff = aeff_list.pop()
-    dst = a_aeff_to_jobsub_fpath_map[(a, aeff)]
+def _make_job_submit_files(a_aeff_to_jobsub_fpath_map, walltime):
+    job_files = list(a_aeff_to_jobsub_fpath_map.values())
+    dst = job_files.pop()
     _make_job_submit_file(dst_fpath=dst, walltime=walltime)
-    if len(a_list) > 0:
+    if len(job_files) > 0:
         src = dst
-        for a, aeff in zip(a_list, aeff_list):
-            dst = a_aeff_to_jobsub_fpath_map[(a, aeff)]
+        for dst in job_files:
             if path.exists(dst):
                 remove(dst)
             link(src, dst)
@@ -422,6 +413,7 @@ def _get_a_aeff_to_jobsub_fpath_map(
 def prepare_directories(
         a_list, aeff_list, nhw_list, z, n1, n2, nshell, scalefactor,
         cluster_submit=False, walltime=None, progress=False):
+    # get maps
     a_aeff_to_dir_map = get_a_aeff_to_dpath_map(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
         z=z, n1=n1, n2=n2, scalefactor=scalefactor,
@@ -435,11 +427,19 @@ def prepare_directories(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
         a_aeff_to_dirpath_map=a_aeff_to_dir_map
     )
+    if cluster_submit:
+        a_aeff_to_jobfile_map = _get_a_aeff_to_jobsub_fpath_map(
+            a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
+            z=z, n1=n1, n2=n2, a_aeff_to_dirpath_map=a_aeff_to_dir_map,
+            scalefactor=scalefactor,
+        )
+    else:
+        a_aeff_to_jobfile_map = dict()
+
+    # make stuff
     if progress:
         print '  Making directories...'
-    _make_base_directories(
-        a_values=a_list, presc=aeff_list, a_aeff_to_dpath_map=a_aeff_to_dir_map
-    )
+    _make_base_directories(a_aeff_to_dpath_map=a_aeff_to_dir_map)
     if progress:
         print '  Truncating interaction to N1=%d N2=%d...' % (n1, n2)
     fname_tbme = _truncate_spaces(
@@ -456,18 +456,10 @@ def prepare_directories(
         z=z, n_1=n1, n_2=n2,
     )
     if cluster_submit:
-        a_aeff_to_jobfile_map = _get_a_aeff_to_jobsub_fpath_map(
-            a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
-            z=z, n1=n1, n2=n2, a_aeff_to_dirpath_map=a_aeff_to_dir_map,
-            scalefactor=scalefactor,
-        )
         if progress:
             print '  Writing cluster submit files...'
         _make_job_submit_files(
-            a_list=a_list, aeff_list=aeff_list,
             a_aeff_to_jobsub_fpath_map=a_aeff_to_jobfile_map,
             walltime=walltime,
         )
-        return a_aeff_to_dir_map, a_aeff_to_egvfile_map, a_aeff_to_jobfile_map
-    else:
-        return a_aeff_to_dir_map, a_aeff_to_egvfile_map, dict()
+    return a_aeff_to_dir_map, a_aeff_to_egvfile_map, a_aeff_to_jobfile_map
