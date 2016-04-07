@@ -600,25 +600,20 @@ def _vce_multiple_calculations_t(
     if progress:
         print str_prog_vce
     while len(todo_list) > 0 or not open_threads.empty():
-        # if progress:
-        #     _print_progress(jobs_completed, jobs_total)
+        if progress:
+            _print_progress(jobs_completed, jobs_total)
         # if room in queue, start new threads
         while len(todo_list) > 0 and not open_threads.full():
             ap = todo_list.pop()
             t = Thread(target=_r, args=(ap,))
-            print 'Opening thread for prescription %s...' % str(ap)
-            # open_threads.put(t)
-            open_threads.put((t, ap))
-            print 'Starting thread...'
+            open_threads.put(t)
             t.start()
         # wait for completion of first thread in queue
-        # t = open_threads.get()
-        t, ap = open_threads.get()
+        t = open_threads.get()
         t.join()
-        print 'Closed thread for prescription %s...' % str(ap)
         jobs_completed += 1
-    # if progress:
-    #     _print_progress(jobs_completed, jobs_total, end=True)
+    if progress:
+        _print_progress(jobs_completed, jobs_total, end=True)
     while not error_messages.empty():
         em = error_messages.get()
         print em
