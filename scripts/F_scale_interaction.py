@@ -15,12 +15,11 @@ _LINE_FMT = ' %2d' * 6 + ' %11.6f' * 6 + '\n'
 def ecf_off_diag_outside_valence(nshell):
     """Returns an elt_cond_fn that returns true if matrix element is off
     diagonal and couples the valence + core space to the outside space
+    or the core space to the valence space
     Assumes that the interaction file's format satisfies:
         (1) a <= b
         (2) a <= c
         (3) c <= d
-    Due to this format, we want a, b in the core + valence space and c or d in
-    the outside space.
     :param nshell: major oscillator shell (0=s, 1=p, 2=sd, ...)
     """
     idx_max_core = nshell * (nshell + 1) / 2

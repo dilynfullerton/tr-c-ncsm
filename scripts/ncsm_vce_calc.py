@@ -508,7 +508,8 @@ def vce_single_calculation(
     """
     a_aeff_dir_map = get_a_aeff_to_dpath_map(
         a_list=a_values, aeff_list=a_prescription,
-        nhw_list=list(range(nmax, nmax+3)), z=z, n1=n1, n2=n2
+        nhw_list=list(range(nmax, nmax+3)), z=z, n1=n1, n2=n2,
+        scalefactor=int_scalefactor,
     )
     a_aeff_outfile_map = get_a_aeff_to_outfile_fpath_map(
         a_list=a_values, aeff_list=a_prescription,
