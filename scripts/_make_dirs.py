@@ -473,4 +473,5 @@ def prepare_directories(
             a_aeff_to_jobsub_fpath_map=a_aeff_to_jobfile_map,
             walltime=walltime,
         )
-    return a_aeff_to_dir_map, a_aeff_to_egvfile_map, a_aeff_to_jobfile_map
+    return (a_aeff_to_dir_map, a_aeff_to_egvfile_map, a_aeff_to_jobfile_map,
+            a_aeff_to_outfile_map)

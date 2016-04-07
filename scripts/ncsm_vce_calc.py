@@ -61,8 +61,6 @@ from InvalidNumberOfArgumentsException import InvalidNumberOfArgumentsException
 
 from _make_dirs import DPATH_TEMPLATES, DPATH_RESULTS
 from _make_dirs import make_vce_directories, make_trdens_file, rename_egv_file
-from _make_dirs import get_a_aeff_to_dpath_map
-from _make_dirs import get_a_aeff_to_outfile_fpath_map
 from _make_dirs import prepare_directories
 from _make_dirs import EgvFileNotFoundException
 
@@ -384,7 +382,7 @@ def ncsd_multiple_calculations(
         dpath_results=dpath_results, dpath_templates=dpath_templates,
         force=force,
     )
-    a_aeff_to_dir, a_aeff_to_egv, a_aeff_to_job = a_aeff_maps
+    a_aeff_to_dir, a_aeff_to_egv, a_aeff_to_job, a_aeff_to_out = a_aeff_maps
     # make (A, Aeff) set and do NCSD
     a_aeff_set = set([(a, aeff) for a, aeff, nhw in a_aeff_nhw_set])
     if cluster_submit:
@@ -411,6 +409,7 @@ def ncsd_multiple_calculations(
             force=force, verbose=verbose, progress=progress,
             str_prog_ncsd=str_prog_ncsd
         )
+    return a_aeff_maps
 
 
 def ncsd_single_calculation(
@@ -495,6 +494,7 @@ class NcsdOutfileNotFoundException(Exception):
 
 def vce_single_calculation(
         a_values, a_prescription, a_range, z, nmax,
+        a_aeff_dir_map, a_aeff_outfile_map,
         n1=N1, n2=N1, nshell=-1, ncomponent=-1, int_scalefactor=None,
         force_trdens=False, force_vce=False, verbose=False,
         dpath_results=DPATH_RESULTS, dpath_templates=DPATH_TEMPLATES,
@@ -508,6 +508,10 @@ def vce_single_calculation(
     are to be generated
     :param z: protonn number
     :param nmax: major oscillator model space truncation
+    :param a_aeff_dir_map: map from (A, Aeff) tuple to the directory in which
+    this calculation is being done
+    :param a_aeff_outfile_map: map from (A, Aeff) tuple to the *.out file
+    produced by NCSD for this pair
     :param n1: max allowed single particle state
     :param n2: max allowed two-particle state
     :param nshell: shell number (0 = s, 1 = p, 2 = sd, ...)
@@ -524,19 +528,6 @@ def vce_single_calculation(
     :param dpath_templates: path to the templates directory
     :param dpath_results: path to the results directory
     """
-    # todo pass a_aeff_dir_map and a_aeff_otufile_map as args instead of
-    # todo     creating them here
-    a_aeff_dir_map = get_a_aeff_to_dpath_map(
-        a_list=a_values, aeff_list=a_prescription,
-        nhw_list=list(range(nmax, nmax+3)), z=z, n1=n1, n2=n2,
-        scalefactor=int_scalefactor,
-        dpath_results=dpath_results,
-    )
-    a_aeff_outfile_map = get_a_aeff_to_outfile_fpath_map(
-        a_list=a_values, aeff_list=a_prescription,
-        nhw_list=list(range(nmax, nmax+3)), z=z, n1=n1, n2=n2,
-        a_aeff_to_dirpath_map=a_aeff_dir_map, scalefactor=int_scalefactor,
-    )
     # check that files exist
     for f in a_aeff_outfile_map.values():
         if not path.exists(f):
@@ -572,6 +563,7 @@ def vce_single_calculation(
 
 def _vce_multiple_calculations_t(
         z, a_values, a_presc_list, a_range, nmax, n1, n2, nshell, ncomponent,
+        a_aeff_to_dpath_map, a_aeff_to_out_fpath_map,
         dpath_templates, dpath_results,
         force_trdens, force_vce, verbose, progress,
         int_scalefactor=None, max_open_threads=MAX_OPEN_THREADS,
@@ -588,6 +580,8 @@ def _vce_multiple_calculations_t(
                 int_scalefactor=int_scalefactor,
                 force_trdens=force_trdens, force_vce=force_vce, verbose=verbose,
                 dpath_templates=dpath_templates, dpath_results=dpath_results,
+                a_aeff_dir_map=a_aeff_to_dpath_map,
+                a_aeff_outfile_map=a_aeff_to_out_fpath_map,
             )
         except EgvFileNotFoundException, e:
             error_messages.put(str(e))
@@ -622,6 +616,7 @@ def _vce_multiple_calculations_t(
 
 def _vce_multiple_calculations(
         z, a_values, a_presc_list, a_range, nmax, n1, n2, nshell, ncomponent,
+        a_aeff_to_out_fpath_map, a_aeff_to_dpath_map,
         dpath_templates, dpath_results,
         force_trdens, force_vce, verbose, progress,
         int_scalefactor=None,
@@ -644,6 +639,8 @@ def _vce_multiple_calculations(
                 int_scalefactor=int_scalefactor,
                 force_trdens=force_trdens, force_vce=force_vce, verbose=verbose,
                 dpath_results=dpath_results, dpath_templates=dpath_templates,
+                a_aeff_outfile_map=a_aeff_to_out_fpath_map,
+                a_aeff_dir_map=a_aeff_to_dpath_map,
             )
             jobs_completed += 1
         except NcsdOutfileNotFoundException, e:
@@ -661,6 +658,7 @@ def _vce_multiple_calculations(
 
 def vce_multiple_calculations(
         a_values, a_presc_list, a_range, z, nmax, n1, n2, nshell, ncomponent,
+        a_aeff_to_out_fpath_map, a_aeff_to_dpath_map,
         force_trdens, force_vce, verbose, progress, threading,
         int_scalefactor=None,
         dpath_templates=DPATH_TEMPLATES, dpath_results=DPATH_RESULTS,
@@ -680,6 +678,10 @@ def vce_multiple_calculations(
     :param nshell: shell number (0=s, 1=p, 2=sd, ...)
     :param ncomponent: number of components
     (1=neutrons, 2=protons and neutrons)
+    :param a_aeff_to_dpath_map: map from (A, Aeff) to the directory in which
+    this calculation is being done
+    :param a_aeff_to_out_fpath_map: map from (A, Aeff) to the *.out file
+    produced by NCSD for this pair
     :param int_scalefactor: factor by which TBME interaction file was scaled
     (for directory naming purposes); if None, directory will be named as
     usual
@@ -703,6 +705,8 @@ def vce_multiple_calculations(
             force_trdens=force_trdens, force_vce=force_vce,
             verbose=verbose, progress=progress,
             dpath_results=dpath_results, dpath_templates=dpath_templates,
+            a_aeff_to_out_fpath_map=a_aeff_to_out_fpath_map,
+            a_aeff_to_dpath_map=a_aeff_to_dpath_map,
         )
     else:
         return _vce_multiple_calculations(
@@ -712,6 +716,8 @@ def vce_multiple_calculations(
             force_trdens=force_trdens, force_vce=force_vce,
             verbose=verbose, progress=progress,
             dpath_results=dpath_results, dpath_templates=dpath_templates,
+            a_aeff_to_out_fpath_map=a_aeff_to_out_fpath_map,
+            a_aeff_to_dpath_map=a_aeff_to_dpath_map,
         )
 
 
@@ -759,7 +765,7 @@ def ncsd_vce_calculations(
     a_values = _generating_a_values(n_shell=nshell, n_component=ncomponent)
     z = int(a_values[0] / ncomponent)
     a_presc_list = list(a_prescriptions)
-    ncsd_multiple_calculations(
+    a_aeff_maps = ncsd_multiple_calculations(
         z=z, a_values=a_values, a_presc_list=a_presc_list,
         nmax=nmax, a_0=a_values[0], n1=n1, n2=n2, nshell=nshell,
         scalefactor=int_scalefactor,
@@ -768,6 +774,7 @@ def ncsd_vce_calculations(
         cluster_submit=cluster_submit, walltime=walltime,
         dpath_templates=dpath_templates, dpath_results=dpath_results,
     )
+    a_aeff_to_dir, a_aeff_to_egv, a_aeff_to_job, a_aeff_to_out = a_aeff_maps
     vce_multiple_calculations(
         z=z, a_values=a_values, a_presc_list=a_presc_list, a_range=a_range,
         nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
@@ -776,6 +783,8 @@ def ncsd_vce_calculations(
         force_vce=force_vce or force_all,
         verbose=verbose, progress=progress, threading=threading,
         dpath_results=dpath_results, dpath_templates=dpath_templates,
+        a_aeff_to_out_fpath_map=a_aeff_to_out,
+        a_aeff_to_dpath_map=a_aeff_to_dir,
     )
 
 
