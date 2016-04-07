@@ -382,6 +382,7 @@ def ncsd_multiple_calculations(
         z=z, n1=n1, n2=n2, nshell=nshell, scalefactor=scalefactor,
         cluster_submit=cluster_submit, walltime=walltime, progress=progress,
         dpath_results=dpath_results, dpath_templates=dpath_templates,
+        force=force,
     )
     a_aeff_to_dir, a_aeff_to_egv, a_aeff_to_job = a_aeff_maps
     # make (A, Aeff) set and do NCSD
@@ -424,6 +425,7 @@ def ncsd_single_calculation(
         z=z, n1=n1, n2=n2, nshell=nshell, scalefactor=scalefactor,
         cluster_submit=cluster_submit, walltime=walltime, progress=progress,
         dpath_templates=dpath_templates, dpath_results=dpath_results,
+        force=force,
     )[:3]
     if cluster_submit:
         return _ncsd_multiple_calculations_s(
@@ -598,20 +600,25 @@ def _vce_multiple_calculations_t(
     if progress:
         print str_prog_vce
     while len(todo_list) > 0 or not open_threads.empty():
-        if progress:
-            _print_progress(jobs_completed, jobs_total)
+        # if progress:
+        #     _print_progress(jobs_completed, jobs_total)
         # if room in queue, start new threads
         while len(todo_list) > 0 and not open_threads.full():
             ap = todo_list.pop()
             t = Thread(target=_r, args=(ap,))
-            open_threads.put(t)
+            print 'Opening thread for prescription %s...' % str(ap)
+            # open_threads.put(t)
+            open_threads.put((t, ap))
+            print 'Starting thread...'
             t.start()
         # wait for completion of first thread in queue
-        t = open_threads.get()
+        # t = open_threads.get()
+        t, ap = open_threads.get()
         t.join()
+        print 'Closed thread for prescription %s...' % str(ap)
         jobs_completed += 1
-    if progress:
-        _print_progress(jobs_completed, jobs_total, end=True)
+    # if progress:
+    #     _print_progress(jobs_completed, jobs_total, end=True)
     while not error_messages.empty():
         em = error_messages.get()
         print em

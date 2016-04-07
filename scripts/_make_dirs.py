@@ -239,7 +239,7 @@ class TbmeFileNotFoundException(Exception):
 
 def _truncate_space(
         nshell, n1, n2, dpath_elt, scalefactor,
-        dpath_templates=DPATH_TEMPLATES,
+        dpath_templates=DPATH_TEMPLATES, force=False,
 ):
     """Run the script that truncates the space by removing extraneous
     interactions from the TBME file
@@ -254,14 +254,17 @@ def _truncate_space(
             tbme_filename = f
             break
     else:
-        raise TbmeFileNotFoundException()
+        raise TbmeFileNotFoundException(
+            '\nTBME interaction file not found in directory '
+            '%s' % dpath_templates
+        )
     src_path = path.join(dpath_templates, tbme_filename)
     tmp_path = path.join(dpath_elt, FNAME_FMT_TBME % n1)
     if scalefactor is None:
         dst_path = tmp_path
     else:
         dst_path = path.join(dpath_elt, FNAME_FMT_TBME_SF % (n1, scalefactor))
-    if not path.exists(dst_path):
+    if force or not path.exists(dst_path):
         truncate_interaction(src_path, n1, n2, tmp_path)
         if scalefactor is not None:
             scale_int(src=tmp_path, dst=dst_path, nshell=nshell,
@@ -295,7 +298,7 @@ def _make_job_submit_files(a_aeff_to_jobsub_fpath_map, walltime):
             link(src, dst)
 
 
-def _truncate_spaces(nshell, n1, n2, dirpaths, scalefactor):
+def _truncate_spaces(nshell, n1, n2, dirpaths, scalefactor, force=False):
     """For multiple directories, perform the operation of truncate_space
     :param n1: max allowed one-particle state
     :param n2: max allowed two-particle state
@@ -303,12 +306,17 @@ def _truncate_spaces(nshell, n1, n2, dirpaths, scalefactor):
     """
     d0 = dirpaths[0]
     fpath0 = _truncate_space(
-        nshell=nshell, n1=n1, n2=n2, dpath_elt=d0, scalefactor=scalefactor)
+        nshell=nshell, n1=n1, n2=n2, dpath_elt=d0, scalefactor=scalefactor,
+        force=force
+    )
     if len(dirpaths) > 1:
         fname_tbme = path.split(fpath0)[1]
         for d in dirpaths[1:]:
             dst_path = path.join(d, fname_tbme)
             if not path.exists(dst_path):
+                link(fpath0, dst_path)
+            elif force:
+                remove(dst_path)
                 link(fpath0, dst_path)
     return path.split(fpath0)[1]  # TBME filename
 
@@ -412,6 +420,7 @@ def prepare_directories(
         a_list, aeff_list, nhw_list, z, n1, n2, nshell, scalefactor,
         dpath_templates, dpath_results,
         cluster_submit=False, walltime=None, progress=False,
+        force=False,
 ):
     # get maps
     a_aeff_to_dir_map = get_a_aeff_to_dpath_map(
@@ -446,7 +455,7 @@ def prepare_directories(
         print '  Truncating interaction to N1=%d N2=%d...' % (n1, n2)
     fname_tbme = _truncate_spaces(
         nshell=nshell, n1=n1, n2=n2, dirpaths=a_aeff_to_dir_map.values(),
-        scalefactor=scalefactor,
+        scalefactor=scalefactor, force=force
     )
     if progress:
         print '  Writing mfdp files...'
