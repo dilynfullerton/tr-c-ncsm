@@ -174,7 +174,6 @@ def _run_vce(
         a_aeff_to_outfile_fpath_map, dirpath_aeff6, dirpath_vce, force,
 ):
     """Do the VCE expansion calculation for each Aeff value in aeff_range
-
     :param a_values: A values used to form the effective Hamiltonian
     :param a_prescription: Range of Aeff values to evaluate based on
     the effective Hamiltonian
@@ -193,20 +192,18 @@ def _run_vce(
     he4_fpath = a_aeff_to_outfile_fpath_map[(a_values[0], a_prescription[0])]
     he5_fpath = a_aeff_to_outfile_fpath_map[(a_values[1], a_prescription[1])]
     he6_fpath = path.join(dirpath_aeff6, FNAME_HEFF)
-    if not path.exists(he4_fpath):
-        raise NcsdOutfileNotFoundException(
-            'NCSD outfile not found: %s' % he4_fpath)
-    elif not path.exists(he5_fpath):
-        raise NcsdOutfileNotFoundException(
-            'NCSD outfile not found: %s' % he5_fpath)
-    elif not path.exists(he6_fpath):
-        raise NcsdOutfileNotFoundException(
-            'NCSD outfile not found: %s' % he6_fpath)
+    # Check that files exist
+    for f in [he4_fpath, he5_fpath, he6_fpath]:
+        if not path.exists(f):
+            raise NcsdOutfileNotFoundException(
+                'NCSD outfile not found: %s' % f)
+    # Do vce
     a_0 = a_range[0]
     fpath_fmt = path.join(dirpath_vce, FNAME_FMT_VCE_INT)
     fpath = fpath_fmt % a_0
     if force or not path.exists(fpath):
         vce_calculation(a_prescription, fpath, he4_fpath, he5_fpath, he6_fpath)
+    # Same interaction is used for all masses
     if len(a_range) > 1:
         for a in a_range[1:]:
             next_fpath = fpath_fmt % a
@@ -271,11 +268,7 @@ def _ncsd_multiple_calculations_t(
         jobs_completed += 1
     if progress:
         _print_progress(jobs_completed, jobs_total, end=True)
-
-    if jobs_completed == jobs_total:
-        return 1
-    else:
-        return 0
+    return jobs_completed == jobs_total
 
 
 def _ncsd_multiple_calculations_s(
@@ -367,23 +360,26 @@ def ncsd_multiple_calculations(
     calculation
     :param str_prog_ncsd: string to show before progress bar
     """
+    # make (A, Aeff, Nhw) set
     a_aeff_nhw_set = set()
-    # prepare directories
     for ap in a_presc_list:
         a_aeff_nhw_set |= set(zip(
             a_values, ap, [nmax + a - a_0 for a in a_values]
         ))
+    # separate set into lists
     a_list, aeff_list, nhw_list = list(), list(), list(),
     for a, aeff, nhw in a_aeff_nhw_set:
         a_list.append(a)
         aeff_list.append(aeff)
         nhw_list.append(nhw)
+    # prepare directories and get maps
     a_aeff_maps = prepare_directories(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
         z=z, n1=n1, n2=n2, nshell=nshell, scalefactor=scalefactor,
         cluster_submit=cluster_submit, walltime=walltime, progress=progress,
     )
     a_aeff_to_dir, a_aeff_to_egv, a_aeff_to_job = a_aeff_maps
+    # make (A, Aeff) set and do NCSD
     a_aeff_set = set([(a, aeff) for a, aeff, nhw in a_aeff_nhw_set])
     if cluster_submit:
         _ncsd_multiple_calculations_s(
@@ -488,13 +484,13 @@ def vce_single_calculation(
         force_trdens=False, force_vce=False, verbose=False,
 ):
     """Valence cluster expansion
-    :param z: protonn number
     :param a_values: 3-tuple of A values that form the base for constructing
     Heff
     :param a_prescription: 3-tuple of Aeff values used in place of the actual
     A values in constructing Heff
     :param a_range: sequence of A values for which effective interaction files
     are to be generated
+    :param z: protonn number
     :param nmax: major oscillator model space truncation
     :param n1: max allowed single particle state
     :param n2: max allowed two-particle state
@@ -519,6 +515,7 @@ def vce_single_calculation(
         nhw_list=list(range(nmax, nmax+3)), z=z, n1=n1, n2=n2,
         a_aeff_to_dirpath_map=a_aeff_dir_map
     )
+    # check that files exist
     for f in a_aeff_outfile_map.values():
         if not path.exists(f):
             raise NcsdOutfileNotFoundException(
@@ -570,12 +567,10 @@ def _vce_multiple_calculations_t(
             error_messages.put(str(e))
         except NcsdOutfileNotFoundException, e:
             error_messages.put(str(e))
-
     open_threads = Queue(maxsize=max_open_threads)
     todo_list = list(a_presc_list)
     jobs_completed = 0
     jobs_total = len(todo_list)
-
     if progress:
         print str_prog_vce
     while len(todo_list) > 0 or not open_threads.empty():
@@ -593,15 +588,10 @@ def _vce_multiple_calculations_t(
         jobs_completed += 1
     if progress:
         _print_progress(jobs_completed, jobs_total, end=True)
-
     while not error_messages.empty():
         em = error_messages.get()
         print em
-
-    if jobs_completed == jobs_total:
-        return 1
-    else:
-        return 0
+    return jobs_total == jobs_completed
 
 
 def _vce_multiple_calculations(
@@ -638,10 +628,7 @@ def _vce_multiple_calculations(
         _print_progress(jobs_completed, jobs_total, end=True)
     for em in error_messages:
         print em
-    if jobs_completed == jobs_total:
-        return 1
-    else:
-        return 0
+    return jobs_completed == jobs_total
 
 
 def vce_multiple_calculations(
