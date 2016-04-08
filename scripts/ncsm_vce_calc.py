@@ -54,7 +54,7 @@ from math import floor
 from os import path, remove, link
 from subprocess import Popen, PIPE
 from sys import argv, stdout
-from threading import Thread
+from threading import Thread, currentThread
 
 from FdoVCE import run as vce_calculation
 from InvalidNumberOfArgumentsException import InvalidNumberOfArgumentsException
@@ -238,36 +238,42 @@ def _ncsd_multiple_calculations_t(
         force, progress=True, str_prog_ncsd=STR_PROG_NCSD,
         max_open_threads=MAX_OPEN_THREADS
 ):
-    def _r(a_, aeff_):
+    def _r(a_, aeff_, q):
         _run_ncsd(
             dpath=a_aeff_to_dpath_map[(a_, aeff_)],
             fpath_egv=a_aeff_to_egvfile_map[(a_, aeff_)],
             force=force, verbose=False
         )
+        q.put(currentThread())
 
-    open_threads = Queue(maxsize=max_open_threads)
     todo_list = list(a_aeff_set)
+    active_list = list()
+    done_queue = Queue()
+
     jobs_completed = 0
     jobs_total = len(todo_list)
 
     if progress:
         print str_prog_ncsd
-    while len(todo_list) > 0 or not open_threads.empty():
-        if progress:
-            _print_progress(jobs_completed, jobs_total)
-        # if room in queue, start new threads
-        while len(todo_list) > 0 and not open_threads.full():
+        _print_progress(jobs_completed, jobs_total)
+    while len(todo_list) > 0 or len(active_list) > 0:
+        # if room, start new threads
+        while len(todo_list) > 0 and len(active_list) < max_open_threads:
             a, aeff = todo_list.pop()
-            t = Thread(target=_r, args=(a, aeff))
-            open_threads.put(t)
+            t = Thread(target=_r, args=(a, aeff, done_queue))
+            active_list.append(t)
             t.start()
-        # wait for completion of first thread in queue
-        t = open_threads.get()
-        t.join()
-        jobs_completed += 1
+        # remove any threads that have finished
+        if not done_queue.empty():
+            while not done_queue.empty():
+                t = done_queue.get()
+                t.join()
+                active_list.remove(t)
+                jobs_completed += 1
+            if progress:
+                _print_progress(jobs_completed, jobs_total)
     if progress:
         _print_progress(jobs_completed, jobs_total, end=True)
-    return jobs_completed == jobs_total
 
 
 def _ncsd_multiple_calculations_s(
@@ -571,7 +577,7 @@ def _vce_multiple_calculations_t(
 ):
     error_messages = Queue()
 
-    def _r(ap0):
+    def _r(ap0, q):
         try:
             vce_single_calculation(
                 z=z, a_values=a_values,
@@ -583,29 +589,40 @@ def _vce_multiple_calculations_t(
                 a_aeff_dir_map=a_aeff_to_dpath_map,
                 a_aeff_outfile_map=a_aeff_to_out_fpath_map,
             )
+            q.put(currentThread())
         except EgvFileNotFoundException, e:
             error_messages.put(str(e))
+            q.put(currentThread())
         except NcsdOutfileNotFoundException, e:
             error_messages.put(str(e))
-    open_threads = Queue(maxsize=max_open_threads)
+            q.put(currentThread())
+
     todo_list = list(a_presc_list)
+    active_list = list()
+    done_queue = Queue()
+
     jobs_completed = 0
     jobs_total = len(todo_list)
+
     if progress:
         print str_prog_vce
-    while len(todo_list) > 0 or not open_threads.empty():
-        if progress:
-            _print_progress(jobs_completed, jobs_total)
-        # if room in queue, start new threads
-        while len(todo_list) > 0 and not open_threads.full():
+        _print_progress(jobs_completed, jobs_total)
+    while len(todo_list) > 0 or len(active_list) > 0:
+        # if room, start new threads
+        while len(todo_list) > 0 and len(active_list) < max_open_threads:
             ap = todo_list.pop()
-            t = Thread(target=_r, args=(ap,))
-            open_threads.put(t)
+            t = Thread(target=_r, args=(ap, done_queue))
+            active_list.append(t)
             t.start()
-        # wait for completion of first thread in queue
-        t = open_threads.get()
-        t.join()
-        jobs_completed += 1
+        # remove any threads that have finished
+        if not done_queue.empty():
+            while not done_queue.empty():
+                t = done_queue.get()
+                t.join()
+                active_list.remove(t)
+                jobs_completed += 1
+            if progress:
+                _print_progress(jobs_completed, jobs_total)
     if progress:
         _print_progress(jobs_completed, jobs_total, end=True)
     while not error_messages.empty():
