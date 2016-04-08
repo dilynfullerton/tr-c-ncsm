@@ -17,6 +17,7 @@ DNAME_FMT_NUC_SF = DNAME_FMT_NUC + '_scale%.2f'  # scale factor
 DNAME_FMT_VCE = 'vce_presc%d,%d,%d_Nmax%d_%d_%d_shell%d_dim%d'
 #     A presc, Nmax, n1, n2, nshell, ncomponent
 DNAME_FMT_VCE_SF = DNAME_FMT_VCE + '_scale%.2f'  # scale factor
+DNAME_NCSD = 'ncsd'
 DNAME_VCE = 'vce'
 
 # Files
@@ -355,14 +356,14 @@ def rename_egv_file(a6_dir, nhw, a6, force):
 
 def get_a_aeff_to_dpath_map(
         a_list, aeff_list, nhw_list, z, n1, n2,
-        dpath_results=DPATH_RESULTS, scalefactor=None
+        dpath_results=DPATH_RESULTS, dname_ncsd=DNAME_NCSD, scalefactor=None,
 ):
     a_paths_map = dict()
     if scalefactor is not None:
         dname_fmt_nuc = DNAME_FMT_NUC_SF
     else:
         dname_fmt_nuc = DNAME_FMT_NUC
-    path_fmt = path.join(dpath_results, dname_fmt_nuc)
+    path_fmt = path.join(dpath_results, dname_ncsd, dname_fmt_nuc)
     for a, aeff, nhw in zip(a_list, aeff_list, nhw_list):
         args = (_get_name(z), a, aeff, nhw, n1, n2)
         if scalefactor is not None:
