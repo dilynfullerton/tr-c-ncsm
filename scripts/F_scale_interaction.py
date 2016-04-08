@@ -9,7 +9,7 @@ from __future__ import division
 from os import path
 
 SCALE_FACTOR = 1.0
-_LINE_FMT = ' %2d' * 6 + ' %11.6f' * 6 + '\n'
+_LINE_FMT = ' %3d' * 6 + ' %11.6f' * 6 + '\n'
 
 
 def ecf_off_diag_outside_valence(nshell):
