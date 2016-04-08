@@ -1,5 +1,5 @@
 import re
-from os import path, mkdir, listdir, remove, link, symlink, getcwd
+from os import path, mkdir, listdir, remove, link, symlink, getcwd, makedirs
 
 from FGetSmallerInteraction import run as truncate_interaction
 from F_scale_interaction import scale_off_diag_outside_valence as scale_int
@@ -71,7 +71,7 @@ def _make_base_directories(
         mkdir(dpath_results)
     for d in a_aeff_to_dpath_map.values():
         if not path.exists(d):
-            mkdir(d)
+            makedirs(d)
 
 
 def make_vce_directories(
