@@ -1,2 +1,2 @@
 #!/bin/bash
-rsync -Hrl cougar:~/NCSM/calc/mcalc/results ./
+rsync -Hrl --exclude="*.tmp" cougar:~/NCSM/calc/mcalc/results ./
