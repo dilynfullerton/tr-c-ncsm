@@ -97,6 +97,6 @@ def run(fpath_src, fpath_dst, scalefn0=lambda a, b: b, force=False,
 def scale_off_diag_outside_valence(src, dst, nshell, scalefactor):
     scalefn = get_scaleif_fn(
         elt_cond_fn=ecf_off_diag_outside_valence(nshell),
-        rest_cols=[3], scalefactor=scalefactor
+        rest_cols=range(3, 6), scalefactor=scalefactor
     )
     return run(fpath_src=src, fpath_dst=dst, scalefn0=scalefn)
