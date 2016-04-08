@@ -78,9 +78,6 @@ def make_vce_directories(
         a_prescription, nmax, n1, n2, nshell, ncomponent,
         dpath_results=DPATH_RESULTS, dname_vce=DNAME_VCE, scalefactor=None
 ):
-    dpath_vce0 = path.join(dpath_results, dname_vce)
-    if not path.exists(dpath_vce0):
-        mkdir(dpath_vce0)
     fmt = tuple(tuple(a_prescription) + (nmax, n1, n2, nshell, ncomponent))
     if scalefactor is not None:
         fmt += (scalefactor,)
@@ -89,7 +86,7 @@ def make_vce_directories(
         dname_fmt_vce = DNAME_FMT_VCE
     vce_dirpath = path.join(dpath_results, dname_vce, dname_fmt_vce % fmt)
     if not path.exists(vce_dirpath):
-        mkdir(vce_dirpath)
+        makedirs(vce_dirpath)
     return vce_dirpath
 
 
