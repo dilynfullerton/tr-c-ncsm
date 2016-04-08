@@ -1,2 +1,2 @@
 #!/bin/bash
-rsync -Hrl --ignore-existing cougar:~/NCSM/calc/mcalc/results ./
+rsync -Hrl --exclue="*.tmp" --ignore-existing cougar:~/NCSM/calc/mcalc/results ./
