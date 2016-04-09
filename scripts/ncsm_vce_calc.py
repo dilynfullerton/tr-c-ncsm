@@ -253,7 +253,7 @@ def _ncsd_multiple_calculations_t(
     jobs_completed = 0
     jobs_total = len(todo_list)
 
-    if progress:
+    if progress and jobs_total > 0:
         print str_prog_ncsd
         _print_progress(jobs_completed, jobs_total)
     while len(todo_list) > 0 or len(active_list) > 0:
@@ -283,7 +283,7 @@ def _ncsd_multiple_calculations_s(
         fname_stdout=FNAME_QSUB_STDOUT, fname_stderr=FNAME_QSUB_STDERR,
 ):
     submitted_jobs = 0
-    if progress:
+    if progress and len(a_aeff_set) > 0:
         print '  Submitting jobs...'
     for a, aeff in a_aeff_set:
         fpath_egv = a_aeff_to_egvfile_map[(a, aeff)]
@@ -317,7 +317,7 @@ def _ncsd_multiple_calculations(
     jobs_total = len(a_aeff_set)
     jobs_completed = 0
     progress = progress and not verbose
-    if progress:
+    if progress and jobs_total > 0:
         print str_prog_ncsd
     for a, aeff in sorted(a_aeff_set):
         if progress:
@@ -604,7 +604,7 @@ def _vce_multiple_calculations_t(
     jobs_completed = 0
     jobs_total = len(todo_list)
 
-    if progress:
+    if progress and jobs_total > 0:
         print str_prog_vce
         _print_progress(jobs_completed, jobs_total)
     while len(todo_list) > 0 or len(active_list) > 0:
@@ -642,7 +642,7 @@ def _vce_multiple_calculations(
     jobs_total = len(a_presc_list)
     jobs_completed = 0
     progress = progress and not verbose
-    if progress:
+    if progress and jobs_total > 0:
         print str_prog_vce
     error_messages = list()
     for ap in a_presc_list:
