@@ -43,13 +43,14 @@ def ecf_isospin(t):
     return elt_cond_fn
 
 
-def get_scaleif_fn(elt_cond_fn, rest_cols, scalefactor):
+def get_scaleif_fn(elt_cond_fn, rest_cols_to_scale, scalefactor):
     """Returns a scale function that does the scaling only if
     elt_cond_fn is satisfied
     :param elt_cond_fn: function from the tuple (a, b, c, d, j, t) to a
     boolean value
-    :param rest_cols: list of indices of columns of float values
-    (relative to the first) to be scaled
+    :param rest_cols_to_scale: list of indices of columns of float values
+    to be scaled. These can be relative to the first float column [0, 6) or
+    relative to the first column [6, 12)
     :param scalefactor: float value by which to scale rest_cols
     :return: function that takes elt and rest as arguments and returns a
     tuple of scaled "rest" values, where
@@ -58,8 +59,9 @@ def get_scaleif_fn(elt_cond_fn, rest_cols, scalefactor):
     """
     def scaleif(elt, rest):
         if elt_cond_fn(elt):
-            for col in rest_cols:
-                rest[col] = scalefactor * rest[col]
+            for col in rest_cols_to_scale:
+                col_idx = col % 6
+                rest[col_idx] = scalefactor * rest[col_idx]
         return rest
     return scaleif
 
@@ -97,6 +99,6 @@ def run(fpath_src, fpath_dst, scalefn0=lambda a, b: b, force=False,
 def scale_off_diag_outside_valence(src, dst, nshell, scalefactor):
     scalefn = get_scaleif_fn(
         elt_cond_fn=ecf_off_diag_outside_valence(nshell),
-        rest_cols=range(3, 6), scalefactor=scalefactor
+        rest_cols_to_scale=range(3, 6), scalefactor=scalefactor
     )
     return run(fpath_src=src, fpath_dst=dst, scalefn0=scalefn)
