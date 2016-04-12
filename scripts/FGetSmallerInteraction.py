@@ -50,7 +50,7 @@ def run(fname, n1, n2, f_out_name=None):
         next_lines.append(line.rstrip('\n'))
         ntbme += 1
     
-    s = '%d  %d  %d  %.4f  %.4f' % (ntbme, n1, n2, hw, a_tbme)
+    s = ' %9d   %4d %4d %10.4f %10.4f' % (ntbme, n1, n2, hw, a_tbme)
     next_lines.insert(0, s)
     f.close()
     
