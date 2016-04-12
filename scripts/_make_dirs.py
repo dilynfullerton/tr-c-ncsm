@@ -32,8 +32,9 @@ FNAME_FMT_EGV = 'mfdp_%d.egv'  # Nhw
 FNAME_TMP_MFDP = 'mfdp.dat'
 FNAME_TMP_TRDENS_IN = 'trdens.in'
 FNAME_TMP_JOBSUB = 'job.sh'
-LNAME_EGV = 'mfdp.egv'
 FNAME_TRDENS_IN = 'trdens.in'
+LNAME_TBME = 'TBME.int'
+LNAME_EGV = 'mfdp.egv'
 LINE_FMT_MFDP_RESTR = ' %d %-2d %d %-2d %d %-4d ! N=%d'
 
 # other
@@ -43,7 +44,7 @@ Z_NAME_MAP = {
     16: 's_', 17: 'cl', 18: 'ar', 19: 'k_', 20: 'ca'
 }
 Z_NAME_FMT_ALT = '%d-'
-NCSD_NUM_STATES = 15
+NCSD_NUM_STATES = 20
 NCSD_NUM_ITER = 200
 
 
@@ -258,17 +259,23 @@ def _truncate_space(
         )
     src_path = path.join(dpath_templates, tbme_filename)
     tmp_path = path.join(dpath_elt, FNAME_FMT_TBME % n1)
+    link_path = path.join(dpath_elt, LNAME_TBME)
+    if path.exists(link_path):
+        remove(link_path)
     if scalefactor is None:
         dst_path = tmp_path
     else:
         dst_path = path.join(dpath_elt, FNAME_FMT_TBME_SF % (n1, scalefactor))
     if force or not path.exists(dst_path):
+        if path.exists(dst_path):
+            remove(dst_path)
         truncate_interaction(src_path, n1, n2, tmp_path)
         if scalefactor is not None:
             scale_int(src=tmp_path, dst=dst_path, nshell=nshell,
                       scalefactor=scalefactor)
             remove(tmp_path)
-    return dst_path
+    symlink(dst_path, link_path)
+    return dst_path, link_path
 
 
 def _get_job_replace_map(walltime):
@@ -303,20 +310,25 @@ def _truncate_spaces(nshell, n1, n2, dirpaths, scalefactor, force=False):
     :param dirpaths: Paths to the destination directories
     """
     d0 = dirpaths[0]
-    fpath0 = _truncate_space(
+    fpath0, lpath0 = _truncate_space(
         nshell=nshell, n1=n1, n2=n2, dpath_elt=d0, scalefactor=scalefactor,
         force=force
     )
+    fname_tbme = path.split(fpath0)[1]
+    lname_tbme = path.split(lpath0)[1]
     if len(dirpaths) > 1:
-        fname_tbme = path.split(fpath0)[1]
         for d in dirpaths[1:]:
             dst_path = path.join(d, fname_tbme)
+            sl_path = path.join(d, lname_tbme)
+            if path.exists(sl_path):
+                remove(sl_path)
             if not path.exists(dst_path):
                 link(fpath0, dst_path)
             elif force:
                 remove(dst_path)
                 link(fpath0, dst_path)
-    return path.split(fpath0)[1]  # TBME filename
+            symlink(dst_path, sl_path)
+    return fname_tbme, lname_tbme
 
 
 class EgvFileNotFoundException(Exception):
@@ -451,7 +463,7 @@ def prepare_directories(
         a_aeff_to_dpath_map=a_aeff_to_dir_map, dpath_results=dpath_results)
     if progress:
         print '  Truncating interaction to N1=%d N2=%d...' % (n1, n2)
-    fname_tbme = _truncate_spaces(
+    fname_tbme, lname_tbme = _truncate_spaces(
         nshell=nshell, n1=n1, n2=n2, dirpaths=a_aeff_to_dir_map.values(),
         scalefactor=scalefactor, force=force
     )
@@ -461,7 +473,7 @@ def prepare_directories(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
         a_aeff_to_dpath_map=a_aeff_to_dir_map,
         a_aeff_to_outfile_fpath_map=a_aeff_to_outfile_map,
-        fname_tbme=fname_tbme, dpath_temp=dpath_templates,
+        fname_tbme=lname_tbme, dpath_temp=dpath_templates,
         z=z, n_1=n1, n_2=n2,
     )
     if cluster_submit:
