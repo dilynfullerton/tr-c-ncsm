@@ -16,11 +16,11 @@ specified by Ap_min and Ap_max if -m or -M precedes the arguments.
     force recalculation of all steps (NCSD, TRDENS, and VCE)
 -f[ntv]*
     n
-        force recalculation of NCSD.
+        force recalculation of NCSD; this also forces TRDENS and VCE
     t
-        force recalculation of TRDENS.
+        force recalculation of TRDENS; this also forces VCE
     v
-        force recalculation of VCE.
+        force recalculation of VCE
 -m or -M or -e
     The first two arguments are used to determine a range of A prescriptions
     -m
@@ -849,8 +849,11 @@ def _force_from_argv0(argv0):
     force_ncsd, force_trdens, force_vce, force_all = (False,) * 4
     if 'n' in argv0:
         force_ncsd = True
+        force_trdens = True
+        force_vce = True
     if 't' in argv0:
         force_trdens = True
+        force_vce = True
     if 'v' in argv0:
         force_vce = True
     force_all = not (force_ncsd or force_trdens or force_vce)
