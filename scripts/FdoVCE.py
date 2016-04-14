@@ -95,7 +95,7 @@ def get_tbme(aeff, e0, spe, fname_out, fname_he6, presc=None):
                 continue
             v = float(ldat[j])
             if i == j:
-                v -= e0 + spe[kets[i]['p'] - 1] + spe[kets[i]['q'] - 1]
+                v -= (e0 + spe[kets[i]['p'] - 1] + spe[kets[i]['q'] - 1])
             next_line = '%3d %3d %3d %3d  %3d %3d  %10.6f' % (
                 kets[i]['p'], kets[i]['q'], kets[j]['p'], kets[j]['q'],
                 kets[i]['J'], kets[i]['T'], v)
