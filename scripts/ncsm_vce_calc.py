@@ -61,7 +61,7 @@ from InvalidNumberOfArgumentsException import InvalidNumberOfArgumentsException
 
 from _make_dirs import DPATH_TEMPLATES, DPATH_RESULTS
 from _make_dirs import make_vce_directories, make_trdens_file, rename_egv_file
-from _make_dirs import prepare_directories
+from _make_dirs import prepare_directories, remove_ncsd_tmp_files
 from _make_dirs import EgvFileNotFoundException
 
 
@@ -253,6 +253,9 @@ def _ncsd_multiple_calculations_t(
     jobs_completed = 0
     jobs_total = len(todo_list)
 
+    completed_dpath_list = list()
+    thread_dpath_map = dict()
+
     if progress and jobs_total > 0:
         print str_prog_ncsd
         _print_progress(jobs_completed, jobs_total)
@@ -262,6 +265,7 @@ def _ncsd_multiple_calculations_t(
             a, aeff = todo_list.pop()
             t = Thread(target=_r, args=(a, aeff, done_queue))
             active_list.append(t)
+            thread_dpath_map[t] = a_aeff_to_dpath_map(a, aeff)
             t.start()
         # remove any threads that have finished
         if not done_queue.empty():
@@ -269,11 +273,13 @@ def _ncsd_multiple_calculations_t(
                 t = done_queue.get()
                 t.join()
                 active_list.remove(t)
+                completed_dpath_list.append(thread_dpath_map[t])
                 jobs_completed += 1
             if progress:
                 _print_progress(jobs_completed, jobs_total)
     if progress:
         _print_progress(jobs_completed, jobs_total, end=True)
+    return completed_dpath_list
 
 
 def _ncsd_multiple_calculations_s(
@@ -285,9 +291,12 @@ def _ncsd_multiple_calculations_s(
     submitted_jobs = 0
     if progress and len(a_aeff_set) > 0:
         print '  Submitting jobs...'
+    completed_dpath_list = list()
     for a, aeff in a_aeff_set:
         fpath_egv = a_aeff_to_egvfile_map[(a, aeff)]
-        if force or not path.exists(fpath_egv):
+        if path.exists(fpath_egv) and not force:
+            completed_dpath_list.append(a_aeff_to_dpath_map[(a, aeff)])
+        else:
             job = a_aeff_to_jobfile_map[(a, aeff)]
             dpath = a_aeff_to_dpath_map[(a, aeff)]
             args = ['qsub', '%s' % job]
@@ -307,6 +316,7 @@ def _ncsd_multiple_calculations_s(
             print '  1 job submitted to cluster'
         else:
             print '  %d jobs submitted to cluster' % submitted_jobs
+    return completed_dpath_list
 
 
 def _ncsd_multiple_calculations(
@@ -319,24 +329,27 @@ def _ncsd_multiple_calculations(
     progress = progress and not verbose
     if progress and jobs_total > 0:
         print str_prog_ncsd
+    completed_dpath_list = list()
     for a, aeff in sorted(a_aeff_set):
+        dpath = a_aeff_to_dpath_map[(a, aeff)]
         if progress:
             _print_progress(jobs_completed, jobs_total)
         _run_ncsd(
-            dpath=a_aeff_to_dpath_map[(a, aeff)],
-            fpath_egv=a_aeff_to_egvfile_map[(a, aeff)],
+            dpath=dpath, fpath_egv=a_aeff_to_egvfile_map[(a, aeff)],
             force=force, verbose=verbose
         )
+        completed_dpath_list.append(dpath)
         jobs_completed += 1
     if progress:
         _print_progress(jobs_completed, jobs_total, end=True)
+    return completed_dpath_list
 
 
 def ncsd_multiple_calculations(
         a_presc_list, a_values, z, nmax, a_0,
         nshell=N_SHELL,  n1=N1, n2=N1, scalefactor=None,
         force=False, verbose=False, progress=True, threading=True,
-        cluster_submit=False, walltime=None,
+        cluster_submit=False, walltime=None, remove_tmp_files=True,
         str_prog_ncsd=STR_PROG_NCSD,
         dpath_templates=DPATH_TEMPLATES, dpath_results=DPATH_RESULTS,
 ):
@@ -364,6 +377,8 @@ def ncsd_multiple_calculations(
     :param walltime: if cluster submit is true, this string in the format
     hh:mm:ss specifies how much time is to be allotted each NCSD
     calculation
+    :param remove_tmp_files: if true, removes all of the remnant *.tmp files
+    following the NCSD calculation
     :param str_prog_ncsd: string to show before progress bar
     :param dpath_templates: path to the templates directory
     :param dpath_results: path to the results directory
@@ -392,7 +407,7 @@ def ncsd_multiple_calculations(
     # make (A, Aeff) set and do NCSD
     a_aeff_set = set([(a, aeff) for a, aeff, nhw in a_aeff_nhw_set])
     if cluster_submit:
-        _ncsd_multiple_calculations_s(
+        completed_dpath_list = _ncsd_multiple_calculations_s(
             a_aeff_set=a_aeff_set,
             a_aeff_to_dpath_map=a_aeff_to_dir,
             a_aeff_to_egvfile_map=a_aeff_to_egv,
@@ -400,7 +415,7 @@ def ncsd_multiple_calculations(
             progress=progress, force=force,
         )
     elif threading and len(a_aeff_nhw_set) > 1:
-        _ncsd_multiple_calculations_t(
+        completed_dpath_list = _ncsd_multiple_calculations_t(
             a_aeff_set=a_aeff_set,
             a_aeff_to_dpath_map=a_aeff_to_dir,
             a_aeff_to_egvfile_map=a_aeff_to_egv,
@@ -408,23 +423,49 @@ def ncsd_multiple_calculations(
             str_prog_ncsd=str_prog_ncsd
         )
     else:
-        _ncsd_multiple_calculations(
+        completed_dpath_list = _ncsd_multiple_calculations(
             a_aeff_set=a_aeff_set,
             a_aeff_to_dpath_map=a_aeff_to_dir,
             a_aeff_to_egvfile_map=a_aeff_to_egv,
             force=force, verbose=verbose, progress=progress,
             str_prog_ncsd=str_prog_ncsd
         )
+    if remove_tmp_files:
+        remove_ncsd_tmp_files(completed_dpath_list)
     return a_aeff_maps
 
 
 def ncsd_single_calculation(
-        z, a, aeff, scalefactor,
+        a, aeff, z, scalefactor,
         nhw=NMAX, n1=N1, n2=N1, nshell=N_SHELL,
         force=False, verbose=False, progress=True,
-        cluster_submit=False, walltime=None,
+        cluster_submit=False, walltime=None, remove_tmp_files=True,
         dpath_templates=DPATH_TEMPLATES, dpath_results=DPATH_RESULTS,
 ):
+    """Performs a single NCSD calculation for the given (A, Aeff) pair
+    :param a: actual mass number A
+    :param aeff: effective mass number Aeff
+    :param z: proton number Z
+    :param scalefactor: factor by which to scale off-diagonal coupling terms of
+    the TBME interaction
+    :param nhw: model space truncation
+    :param n1: max allowed 1-particle state
+    :param n2: max allowed 2-particle state
+    :param nshell: shell (0: s, 1: p, 2: sd, ...)
+    :param force: if true, does the calculation even if output files already
+    exist
+    :param verbose: if true, prints the regular output of NCSD to stdout, else
+    suppresses this and saves it in a file
+    :param progress: if true, shows a progress bar (verbose mode will be off)
+    :param cluster_submit: if true, submits the job to the OpenMP cluster
+    using qsub
+    :param walltime: walltime to be allotted to a cluster submission
+    :param remove_tmp_files: if true, removes remnant *.tmp files following
+    the NCSD calculation (Note this will not be the case for a job submitted
+    to the cluster)
+    :param dpath_templates: path to the templates directory
+    :param dpath_results: path to the results directory
+    """
     a_aeff_to_dpath, a_aeff_to_egv, a_aeff_to_job = prepare_directories(
         a_list=[a], aeff_list=[aeff], nhw_list=[nhw],
         z=z, n1=n1, n2=n2, nshell=nshell, scalefactor=scalefactor,
@@ -433,7 +474,7 @@ def ncsd_single_calculation(
         force=force,
     )[:3]
     if cluster_submit:
-        return _ncsd_multiple_calculations_s(
+        completed_dpaths_list = _ncsd_multiple_calculations_s(
             a_aeff_set=set([(a, aeff)]),
             a_aeff_to_dpath_map=a_aeff_to_dpath,
             a_aeff_to_egvfile_map=a_aeff_to_egv,
@@ -441,13 +482,15 @@ def ncsd_single_calculation(
             force=force, progress=progress,
         )
     else:
-        return _ncsd_multiple_calculations(
+        completed_dpaths_list = _ncsd_multiple_calculations(
             a_aeff_set=set([(a, aeff)]),
             a_aeff_to_dpath_map=a_aeff_to_dpath,
             a_aeff_to_egvfile_map=a_aeff_to_egv,
             force=force, progress=progress,
             verbose=verbose,
         )
+    if remove_tmp_files:
+        remove_ncsd_tmp_files(completed_dpaths_list)
 
 
 def ncsd_exact_calculations(
@@ -455,7 +498,7 @@ def ncsd_exact_calculations(
         nmax=NMAX, n1=N1, n2=N2,
         nshell=N_SHELL, ncomponent=N_COMPONENT, int_scalefactor=None,
         force=False, verbose=False, progress=True,
-        cluster_submit=False, walltime=None,
+        cluster_submit=False, walltime=None, remove_tmp_files=True,
         str_prog_ncsd_ex=STR_PROG_NCSD_EX,
         dpath_templates=DPATH_TEMPLATES, dpath_results=DPATH_RESULTS,
 ):
@@ -479,6 +522,8 @@ def ncsd_exact_calculations(
     :param cluster_submit: if true, submit job to cluster
     :param walltime: if cluster_submit is true, this string hh:mm:ss specifies
     how much wall time is to be allotted each NCSD calculation
+    :param remove_tmp_files: if true, removes all of the remnant *.tmp files
+    following the NCSD calculation
     :param str_prog_ncsd_ex: string to show before progress bar
     :param dpath_templates: path to the templates directory
     :param dpath_results: path to the results directory
@@ -489,6 +534,7 @@ def ncsd_exact_calculations(
         a_0=_generating_a_values(n_shell=nshell, n_component=ncomponent)[0],
         cluster_submit=cluster_submit, walltime=walltime,
         force=force, verbose=verbose, progress=progress,
+        remove_tmp_files=remove_tmp_files,
         str_prog_ncsd=str_prog_ncsd_ex,
         dpath_templates=dpath_templates, dpath_results=dpath_results,
     )
@@ -744,7 +790,7 @@ def ncsd_vce_calculations(
         int_scalefactor=None,
         force_ncsd=False, force_trdens=False, force_vce=False, force_all=False,
         verbose=False, progress=True, threading=True,
-        cluster_submit=False, walltime=None,
+        cluster_submit=False, walltime=None, remove_tmp_files=True,
         dpath_templates=DPATH_TEMPLATES, dpath_results=DPATH_RESULTS,
 ):
     """Given a sequence or generator of A prescriptions, does the NCSD/VCE
@@ -776,6 +822,8 @@ def ncsd_vce_calculations(
     undone.
     :param walltime: if cluster_submit, this string hh:mm:ss specifies how
     much wall time is to be allotted each NCSD calculation
+    :param remove_tmp_files: if true, removes all of the *.tmp files following
+    the ncsd calculations
     :param dpath_templates: path to the templates directory
     :param dpath_results: path to the results directory
     """
@@ -789,6 +837,7 @@ def ncsd_vce_calculations(
         force=force_all or force_ncsd,
         verbose=verbose, progress=progress, threading=threading,
         cluster_submit=cluster_submit, walltime=walltime,
+        remove_tmp_files=remove_tmp_files,
         dpath_templates=dpath_templates, dpath_results=dpath_results,
     )
     a_aeff_to_dir, a_aeff_to_egv, a_aeff_to_job, a_aeff_to_out = a_aeff_maps

@@ -8,5 +8,6 @@
 /list_diag.py
 /diag.txt
 *~
+/scripts/remove_tmp_files.py
 tbme_tmp
 testy.py

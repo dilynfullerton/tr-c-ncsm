@@ -22,6 +22,7 @@ DNAME_VCE = 'vce'
 
 # Files
 RGX_FNAME_TBME = 'TBME'
+RGX_FNAME_TMP = '.*\.tmp'
 FNAME_FMT_TBME = 'TBMEA2srg-n3lo2.O_%d.24'  # n1
 FNAME_FMT_TBME_SF = FNAME_FMT_TBME + '_sf%.2f'  # n1 scalefactor
 FNAME_FMT_NCSD_OUT = '%s%d_%d_Nhw%d_%d_%d.out'  # name, A, Aeff, Nhw, n1, n2
@@ -426,12 +427,45 @@ def _get_a_aeff_to_jobsub_fpath_map(
     return a_aeff_jobsub_map
 
 
+def remove_ncsd_tmp_files(dpaths_list):
+    """Removes all *.tmp files from the given list of directories
+    :param dpaths_list: list of absolute directory paths
+    """
+    for dpath in dpaths_list:
+        for fname in listdir(dpath):
+            if re.match(RGX_FNAME_TMP, fname):
+                remove(path.join(dpath, fname))
+
+
 def prepare_directories(
         a_list, aeff_list, nhw_list, z, n1, n2, nshell, scalefactor,
         dpath_templates, dpath_results,
         cluster_submit=False, walltime=None, progress=False,
         force=False,
 ):
+    """Creates directories and files necessary to run NCSD calculations.
+    Returns maps to the important files and directories.
+    :param a_list: ordered list of A values for which to create directories
+    :param aeff_list: ordered list of Aeff values (corresponding to the
+    respective A values in a_list) for which to create directories
+    :param nhw_list: ordered list of Nhw values (corresponding to the
+    respective A and Aeff values in the a_list and aeff_list) for which to
+    create directories
+    :param z: proton number Z
+    :param n1: max allowed 1-particle state
+    :param n2: max allowed 2-particle state
+    :param nshell: shell (0: s, 1: p, 2: sd, ...)
+    :param scalefactor: factor by which to scale off-diagonal coupling terms of
+    the TBME interaction
+    :param dpath_templates: path to the templates directory
+    :param dpath_results: path to the results directory
+    :param progress: if true, shows a progress bar (verbose mode will be off)
+    :param cluster_submit: if true, submits the job to the OpenMP cluster
+    using qsub
+    :param walltime: walltime to be allotted to a cluster submission
+    :param force: if true, forces re-truncation of the TBME interaction file
+    :return (A,Aeff)->dir, (A,Aeff)->*.egv, (A,Aeff)->*.sh, (A,Aeff)->*.out
+    """
     # get maps
     a_aeff_to_dir_map = get_a_aeff_to_dpath_map(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
