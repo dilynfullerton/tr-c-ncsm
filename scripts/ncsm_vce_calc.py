@@ -345,6 +345,10 @@ def _ncsd_multiple_calculations(
     return completed_dpath_list
 
 
+class InvalidNmaxException(Exception):
+    pass
+
+
 def ncsd_multiple_calculations(
         a_presc_list, a_values, z, nmax, a_0,
         nshell=N_SHELL,  n1=N1, n2=N1, scalefactor=None,
@@ -383,6 +387,9 @@ def ncsd_multiple_calculations(
     :param dpath_templates: path to the templates directory
     :param dpath_results: path to the results directory
     """
+    if nmax % 2:
+        raise InvalidNmaxException(
+            '\nInvalid Nmax: %d. Nmax must be even.' % nmax)
     # make (A, Aeff, Nhw) set
     a_aeff_nhw_set = set()
     for ap in a_presc_list:
@@ -466,6 +473,13 @@ def ncsd_single_calculation(
     :param dpath_templates: path to the templates directory
     :param dpath_results: path to the results directory
     """
+    if nhw % 2 != a % 2:
+        if a % 2:
+            raise InvalidNmaxException(
+                'Invalid Nhw=%d for A=%d. For odd A, Nhw must be odd.')
+        else:
+            raise InvalidNmaxException(
+                'Invalid Nhw=%d for A=%d. For even A, Nhw must be even.')
     a_aeff_to_dpath, a_aeff_to_egv, a_aeff_to_job = prepare_directories(
         a_list=[a], aeff_list=[aeff], nhw_list=[nhw],
         z=z, n1=n1, n2=n2, nshell=nshell, scalefactor=scalefactor,
@@ -528,6 +542,9 @@ def ncsd_exact_calculations(
     :param dpath_templates: path to the templates directory
     :param dpath_results: path to the results directory
     """
+    if nmax % 2:
+        raise InvalidNmaxException(
+            '\nInvalid Nmax: %d. Nmax must be even.' % nmax)
     ncsd_multiple_calculations(
         z=z, a_values=a_range, a_presc_list=[a_range],
         nmax=nmax, n1=n1, n2=n2, nshell=nshell, scalefactor=int_scalefactor,
@@ -580,6 +597,9 @@ def vce_single_calculation(
     :param dpath_templates: path to the templates directory
     :param dpath_results: path to the results directory
     """
+    if nmax % 2:
+        raise InvalidNmaxException(
+            '\nInvalid Nmax: %d. Nmax must be even.' % nmax)
     # check that files exist
     for f in a_aeff_outfile_map.values():
         if not path.exists(f):
@@ -760,6 +780,9 @@ def vce_multiple_calculations(
     :param dpath_templates: path to the templates directory
     :param dpath_results: path to the results directory
     """
+    if nmax % 2:
+        raise InvalidNmaxException(
+            '\nInvalid Nmax: %d. Nmax must be even.' % nmax)
     if threading and len(a_presc_list) > 1:
         _vce_multiple_calculations_t(
             a_values=a_values, a_presc_list=a_presc_list, a_range=a_range,
@@ -827,6 +850,9 @@ def ncsd_vce_calculations(
     :param dpath_templates: path to the templates directory
     :param dpath_results: path to the results directory
     """
+    if nmax % 2:
+        raise InvalidNmaxException(
+            '\nInvalid Nmax: %d. Nmax must be even.' % nmax)
     a_values = _generating_a_values(n_shell=nshell, n_component=ncomponent)
     z = int(a_values[0] / ncomponent)
     a_presc_list = list(a_prescriptions)
