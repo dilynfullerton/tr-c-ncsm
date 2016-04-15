@@ -16,19 +16,25 @@ from sys import argv
 from InvalidNumberOfArgumentsException import InvalidNumberOfArgumentsException
 
 
+class GroundStateEnergyNotFoundException(Exception):
+    pass
+
+
 def get_e0(aeff, fname_he4):
     if fname_he4 is not None:
         fname = fname_he4
     else:
         fname = 'he4_%d/he4_A%d.out' % (aeff, aeff)
     f = open(fname)
-    line = f.readline()
-    while 'State # 1   Energy' not in line:
-        line = f.readline()
-    f.close()
-    ldat = line.split()
-    e0 = float(ldat[5])
-    return e0
+    for line in f:
+        if 'State #' in line:
+            ldat = line.split()
+            j = float(ldat[8])
+            if j == 0.0:
+                return float(ldat[5])
+    else:
+        raise GroundStateEnergyNotFoundException(
+            '\nA ground state could not be retrieved from %s' % fname_he4)
 
 
 def get_spe(aeff, e0, fname_he5):
