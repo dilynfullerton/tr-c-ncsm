@@ -265,7 +265,7 @@ def _ncsd_multiple_calculations_t(
             a, aeff = todo_list.pop()
             t = Thread(target=_r, args=(a, aeff, done_queue))
             active_list.append(t)
-            thread_dpath_map[t] = a_aeff_to_dpath_map(a, aeff)
+            thread_dpath_map[t] = a_aeff_to_dpath_map[(a, aeff)]
             t.start()
         # remove any threads that have finished
         if not done_queue.empty():
