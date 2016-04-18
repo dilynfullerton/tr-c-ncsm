@@ -11,3 +11,4 @@
 /scripts/remove_tmp_files.py
 tbme_tmp
 scripts/test_TBME.py
+.DS_Store
