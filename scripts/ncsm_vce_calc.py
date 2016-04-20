@@ -106,34 +106,48 @@ def _generating_a_values(n_shell, n_component):
     return a_0, a_0 + 1, a_0 + 2
 
 
+class NcsdRunException(Exception):
+    pass
+
+
 def _run_ncsd(
         dpath, fpath_egv, force, verbose,
         fname_stdout=FNAME_NCSD_STDOUT, fname_stderr=FNAME_NCSD_STDERR
 ):
     if force or not path.exists(path.join(fpath_egv)):
         args = ['NCSD']
-        if verbose:
-            p = Popen(args=args, cwd=dpath)
-            p.wait()
-        else:
-            p = Popen(args=args, cwd=dpath, stdout=PIPE, stderr=PIPE)
-            out, err = p.communicate()
-            if len(out) > 0:
-                fout = open(path.join(dpath, fname_stdout), 'w')
-                fout.write(out)
-                fout.close()
-            if len(err) > 0:
-                ferr = open(path.join(dpath, fname_stderr), 'w')
-                ferr.write(err)
-                ferr.close()
+        try:
+            if verbose:
+                p = Popen(args=args, cwd=dpath)
+                p.wait()
+            else:
+                p = Popen(args=args, cwd=dpath, stdout=PIPE, stderr=PIPE)
+                out, err = p.communicate()
+                if len(out) > 0:
+                    fout = open(path.join(dpath, fname_stdout), 'w')
+                    fout.write(out)
+                    fout.close()
+                if len(err) > 0:
+                    ferr = open(path.join(dpath, fname_stderr), 'w')
+                    ferr.write(err)
+                    ferr.close()
+        except OSError:
+            raise NcsdRunException(
+                '\nA problem occurred while running NCSD. Make sure the code'
+                ' is compiled.'
+            )
+
+
+class TrdensRunException(Exception):
+    pass
 
 
 def _run_trdens(
-        a6_dir, force, verbose,
+        dpath_a6, force, verbose,
         fname_stdout=FNAME_TRDENS_STDOUT, fname_stderr=FNAME_TRDENS_STDERR
 ):
     """Run the TRDENS calculation in a6_dir
-    :param a6_dir: Directory in which to run the calulation
+    :param dpath_a6: Directory in which to run the calulation
     :param force: If True, redoes the calculation even if output files
     already exist
     :param verbose: if true, prints regular output of TRDENS to stdout,
@@ -144,28 +158,31 @@ def _run_trdens(
     :param fname_stderr: filename to which to write standard error output
     of TRDENS if verbose is false
     """
-    outfile_path = path.join(a6_dir, FNAME_TRDENS_OUT)
-    if path.exists(outfile_path):
-        if not force:
-            return 0
-        else:
-            remove(outfile_path)
-    args = ['TRDENS']
-    if verbose:
-        p = Popen(args=args, cwd=a6_dir)
-        p.wait()
-    else:
-        p = Popen(args=args, cwd=a6_dir, stdout=PIPE, stderr=PIPE)
-        out, err = p.communicate()
-        if len(out) > 0:
-            fout = open(path.join(a6_dir, fname_stdout), 'w')
-            fout.write(out)
-            fout.close()
-        if len(err) > 0:
-            ferr = open(path.join(a6_dir, fname_stderr), 'w')
-            ferr.write(err)
-            ferr.close()
-    return 1
+    fpath_out = path.join(dpath_a6, FNAME_TRDENS_OUT)
+    if force or not path.exists(fpath_out):
+        if path.exists(fpath_out):
+            remove(fpath_out)
+        args = ['TRDENS']
+        try:
+            if verbose:
+                p = Popen(args=args, cwd=dpath_a6)
+                p.wait()
+            else:
+                p = Popen(args=args, cwd=dpath_a6, stdout=PIPE, stderr=PIPE)
+                out, err = p.communicate()
+                if len(out) > 0:
+                    fout = open(path.join(dpath_a6, fname_stdout), 'w')
+                    fout.write(out)
+                    fout.close()
+                if len(err) > 0:
+                    ferr = open(path.join(dpath_a6, fname_stderr), 'w')
+                    ferr.write(err)
+                    ferr.close()
+        except OSError:
+            raise TrdensRunException(
+                '\nA problem occurred while running TRDENS. Make sure the code'
+                ' is compiled.'
+            )
 
 
 def _run_vce(
@@ -561,6 +578,10 @@ class NcsdOutfileNotFoundException(Exception):
     pass
 
 
+class DirectoryNotFoundException(Exception):
+    pass
+
+
 def vce_single_calculation(
         a_values, a_prescription, a_range, z, nmax,
         a_aeff_dir_map, a_aeff_outfile_map,
@@ -604,18 +625,21 @@ def vce_single_calculation(
     for f in a_aeff_outfile_map.values():
         if not path.exists(f):
             raise NcsdOutfileNotFoundException(
-                'NCSD outfile not found: %s' % f)
+                '\nNCSD outfile not found: %s' % f)
     # for the 3rd a value, make trdens file and run TRDENS
     a_aeff6 = (a_values[2], a_prescription[2])
-    make_trdens_file(z=z, a=a_values[2], nuc_dir=a_aeff_dir_map[a_aeff6],
+    dpath_a6 = a_aeff_dir_map[a_aeff6]
+    make_trdens_file(z=z, a=a_values[2], nuc_dir=dpath_a6,
                      dpath_results=dpath_results, dpath_temp=dpath_templates)
-    a6_dirpath = a_aeff_dir_map[a_aeff6]
     try:
         rename_egv_file(
-            a6_dir=a6_dirpath, nhw=nmax+2, a6=a_values[2], force=force_trdens)
+            a6_dir=dpath_a6, nhw=nmax+2, a6=a_values[2], force=force_trdens)
     except EgvFileNotFoundException:
         raise
-    _run_trdens(a6_dir=a6_dirpath, force=force_trdens, verbose=verbose)
+    try:
+        _run_trdens(dpath_a6=dpath_a6, force=force_trdens, verbose=verbose)
+    except TrdensRunException:
+        raise
 
     # do valence cluster expansion
     vce_dirpath = make_vce_directories(
@@ -626,7 +650,7 @@ def vce_single_calculation(
     try:
         _run_vce(
             a_values=a_values, a_prescription=a_prescription, a_range=a_range,
-            dirpath_aeff6=a6_dirpath, dirpath_vce=vce_dirpath,
+            dirpath_aeff6=dpath_a6, dirpath_vce=vce_dirpath,
             a_aeff_to_outfile_fpath_map=a_aeff_outfile_map, force=force_vce
         )
     except NcsdOutfileNotFoundException:
@@ -660,6 +684,12 @@ def _vce_multiple_calculations_t(
             error_messages.put(str(e))
             q.put(currentThread())
         except NcsdOutfileNotFoundException, e:
+            error_messages.put(str(e))
+            q.put(currentThread())
+        except TrdensRunException, e:
+            error_messages.put(str(e))
+            q.put(currentThread())
+        except OSError, e:
             error_messages.put(str(e))
             q.put(currentThread())
 
@@ -732,6 +762,12 @@ def _vce_multiple_calculations(
         except EgvFileNotFoundException, e:
             error_messages.append(str(e))
             continue
+        except TrdensRunException, e:
+            error_messages.append(str(e))
+            break
+        except OSError, e:
+            error_messages.append(str(e))
+            break
     if progress:
         _print_progress(jobs_completed, jobs_total, end=True)
     for em in error_messages:
