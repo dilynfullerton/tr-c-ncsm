@@ -56,13 +56,13 @@ def ecf_isospin(t):
     return elt_cond_fn
 
 
-def get_scaleif_fn(elt_cond_fn, rest_cols_to_scale, scalefactor,
+def get_scaleif_fn(elt_cond_fn, cols_to_scale, scalefactor,
                    scale_method=lambda a, b: a * b):
     """Returns a scale function that does the scaling only if
     elt_cond_fn is satisfied
     :param elt_cond_fn: function from the tuple (a, b, c, d, j, t) to a
     boolean value
-    :param rest_cols_to_scale: list of indices of columns of float values
+    :param cols_to_scale: list of indices of columns of float values
     to be scaled. These can be relative to the first float column [0, 6) or
     relative to the first column [6, 12)
     :param scalefactor: float value by which to scale rest_cols
@@ -77,7 +77,7 @@ def get_scaleif_fn(elt_cond_fn, rest_cols_to_scale, scalefactor,
     """
     def scaleif(elt, rest):
         if elt_cond_fn(elt):
-            for col in rest_cols_to_scale:
+            for col in cols_to_scale:
                 col_idx = col % 6
                 rest[col_idx] = scale_method(rest[col_idx], scalefactor)
         return rest
@@ -118,8 +118,8 @@ def run(fpath_src, fpath_dst, scalefn0=lambda a, b: b, force=False,
         fout.write(first_line)
         for line in fin:
             ldat = line.split()
-            elt = [int(x) for x in ldat[:6]]  # a, b, c, d, j, t
-            rest = [float(x) for x in ldat[6:]]
+            elt = [int(x) for x in ldat[:6]]  # a b c d j t
+            rest = [float(x) for x in ldat[6:]]  # trel hrel clmb Vpn Vpp Vnn
             next_rest = scalefn0(elt, rest)
             next_line = _line_fmt % (tuple(elt) + tuple(next_rest))
             fout.write(next_line)
@@ -130,11 +130,11 @@ def run(fpath_src, fpath_dst, scalefn0=lambda a, b: b, force=False,
 def scale_off_diag_outside_valence(src, dst, nshell, scalefactor):
     scalefn = get_scaleif_fn(
         elt_cond_fn=ecf_off_diag_outside_valence(nshell),
-        rest_cols_to_scale=[0, 3, 4, 5], scalefactor=scalefactor,
+        cols_to_scale=[0, 3, 4, 5], scalefactor=scalefactor,
     )
     # scalefn2 = get_scaleif_fn(
     #     elt_cond_fn=ecf_outside_valence(nshell),
-    #     rest_cols_to_scale=[0, 3, 4, 5], scalefactor=20.0,
+    #     cols_to_scale=[0, 3, 4, 5], scalefactor=20.0,
     #     scale_method=lambda a, b: a + b,
     # )
     # scalefn = get_combined_scaleif_fn([scalefn, scalefn2])

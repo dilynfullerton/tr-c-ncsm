@@ -55,7 +55,6 @@ from os import path, remove, link
 from subprocess import Popen, PIPE
 from sys import argv, stdout
 from threading import Thread, currentThread
-
 from FdoVCE import run as vce_calculation
 from InvalidNumberOfArgumentsException import InvalidNumberOfArgumentsException
 
@@ -251,16 +250,12 @@ def _print_progress(
 
 def _threaded_calculation(fn, todo_list, max_open_threads, progress, str_prog):
     error_messages = Queue()
-
     active_thread_list = list()
     done_thread_queue = Queue()
-
     completed_job_list = list()
     thread_job_map = dict()
-
     num_jobs_completed = 0
     num_jobs_total = len(todo_list)
-
     if progress and num_jobs_total > 0:
         print str_prog
         _print_progress(num_jobs_completed, num_jobs_total)
@@ -655,7 +650,6 @@ def vce_single_calculation(
         _run_trdens(dpath_a6=dpath_a6, force=force_trdens, verbose=verbose)
     except TrdensRunException:
         raise
-
     # do valence cluster expansion
     vce_dirpath = make_vce_directories(
         a_prescription=a_prescription, nmax=nmax, n1=n1, n2=n2,

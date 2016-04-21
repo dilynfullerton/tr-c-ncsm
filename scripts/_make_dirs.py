@@ -1,6 +1,5 @@
 import re
 from os import path, mkdir, listdir, remove, link, symlink, getcwd, makedirs
-
 from FGetSmallerInteraction import run as truncate_interaction
 from F_scale_interaction import scale_off_diag_outside_valence as scale_int
 
@@ -489,7 +488,6 @@ def prepare_directories(
         )
     else:
         a_aeff_to_jobfile_map = dict()
-
     # make stuff
     if progress:
         print '  Making directories...'
