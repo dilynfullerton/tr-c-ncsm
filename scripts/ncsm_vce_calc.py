@@ -44,6 +44,30 @@ If 3 additional arguments given, they are Amax      n1 n2.
 If 4 additional arguments given, they are Amax nmax n1 n2.
 If 5 additional arguments given, they are Amax nmax n1 n2 nshell.
 If 6 additional arguments given, they are Amax nmax n1 n2 nshell ncomponent.
+
+Example:
+    $ ncsm_vce_calc.py -fv -s 0.0 -t 01:00:00 -e 4 10 4 10 6
+
+    The first argument, -fv (force VCE), prompts the script to force
+    recalculation of the VCE portion of the calculation. The NCSD and
+    TRDENS parts will not be redone if output files already exist.
+
+    The second argument, -s (scale) 0.0, prompts the script to scale the TBME
+    interaction file's off-diagonal coupling terms by 0.0.
+
+    The third argument, -t (time) 01:00:00, prompts the script to submit
+    the job to the cluster, with an allowed walltime of 1 hour.
+
+    The fourth argument, -e (exact), prompts the script to interpret the next
+    two items as Ap_min and Ap_max. This will perform NCSD and VCE
+    calculations for A=Aeff (exact) prescription
+    (4,4,4),(5,5,5),...(10,10,10), as indicated by the first 4 and 10.
+
+    The second 4 and 10 prompt the creation of NuShellX *.int files for A=4 to
+    A=10. These are all the same interaction, linked for each mass for
+    convenience when using shell_calc.py to run NuShellX.
+
+    The final 6 indicates that the calculations are performed in Nmax=6.
 """
 
 from __future__ import division
@@ -65,8 +89,8 @@ from _make_dirs import EgvFileNotFoundException
 
 
 # CONSTANTS
-N_SHELL = 1
-N_COMPONENT = 2
+N_SHELL = 1  # 0=s, 1=p, 2=sd, ...
+N_COMPONENT = 2  # 1=neutrons, 2=protons and neutrons
 NMAX = 6
 N1 = 15
 N2 = 15
@@ -113,28 +137,30 @@ def _run_ncsd(
         dpath, fpath_egv, force, verbose,
         fname_stdout=FNAME_NCSD_STDOUT, fname_stderr=FNAME_NCSD_STDERR
 ):
-    if force or not path.exists(path.join(fpath_egv)):
-        args = ['NCSD']
-        try:
-            if verbose:
-                p = Popen(args=args, cwd=dpath)
-                p.wait()
-            else:
-                p = Popen(args=args, cwd=dpath, stdout=PIPE, stderr=PIPE)
-                out, err = p.communicate()
-                if len(out) > 0:
-                    fout = open(path.join(dpath, fname_stdout), 'w')
-                    fout.write(out)
-                    fout.close()
-                if len(err) > 0:
-                    ferr = open(path.join(dpath, fname_stderr), 'w')
-                    ferr.write(err)
-                    ferr.close()
-        except OSError:
-            raise NcsdRunException(
-                '\nA problem occurred while running NCSD. Make sure the code'
-                ' is compiled.'
-            )
+    if not force and path.exists(path.join(fpath_egv)):
+        return None
+    args = ['NCSD']
+    try:
+        if verbose:
+            p = Popen(args=args, cwd=dpath)
+            return p.wait()
+        else:
+            p = Popen(args=args, cwd=dpath, stdout=PIPE, stderr=PIPE)
+            out, err = p.communicate()
+            if len(out) > 0:
+                fout = open(path.join(dpath, fname_stdout), 'w')
+                fout.write(out)
+                fout.close()
+            if len(err) > 0:
+                ferr = open(path.join(dpath, fname_stderr), 'w')
+                ferr.write(err)
+                ferr.close()
+            return p.poll(), out, err
+    except OSError:
+        raise NcsdRunException(
+            '\nA problem occurred while running NCSD. Make sure the code'
+            ' is compiled.'
+        )
 
 
 class TrdensRunException(Exception):
@@ -158,30 +184,32 @@ def _run_trdens(
     of TRDENS if verbose is false
     """
     fpath_out = path.join(dpath_a6, FNAME_TRDENS_OUT)
-    if force or not path.exists(fpath_out):
-        if path.exists(fpath_out):
-            remove(fpath_out)
-        args = ['TRDENS']
-        try:
-            if verbose:
-                p = Popen(args=args, cwd=dpath_a6)
-                p.wait()
-            else:
-                p = Popen(args=args, cwd=dpath_a6, stdout=PIPE, stderr=PIPE)
-                out, err = p.communicate()
-                if len(out) > 0:
-                    fout = open(path.join(dpath_a6, fname_stdout), 'w')
-                    fout.write(out)
-                    fout.close()
-                if len(err) > 0:
-                    ferr = open(path.join(dpath_a6, fname_stderr), 'w')
-                    ferr.write(err)
-                    ferr.close()
-        except OSError:
-            raise TrdensRunException(
-                '\nA problem occurred while running TRDENS. Make sure the code'
-                ' is compiled.'
-            )
+    if not force and path.exists(fpath_out):
+        return None
+    if path.exists(fpath_out):
+        remove(fpath_out)
+    args = ['TRDENS']
+    try:
+        if verbose:
+            p = Popen(args=args, cwd=dpath_a6)
+            return p.wait()
+        else:
+            p = Popen(args=args, cwd=dpath_a6, stdout=PIPE, stderr=PIPE)
+            out, err = p.communicate()
+            if len(out) > 0:
+                fout = open(path.join(dpath_a6, fname_stdout), 'w')
+                fout.write(out)
+                fout.close()
+            if len(err) > 0:
+                ferr = open(path.join(dpath_a6, fname_stderr), 'w')
+                ferr.write(err)
+                ferr.close()
+            return p.poll(), out, err
+    except OSError:
+        raise TrdensRunException(
+            '\nA problem occurred while running TRDENS. Make sure the code'
+            ' is compiled.'
+        )
 
 
 def _run_vce(
