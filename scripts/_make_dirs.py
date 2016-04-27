@@ -61,15 +61,11 @@ def _get_name(z, z_name_map=Z_NAME_MAP, alt_name=Z_NAME_FMT_ALT):
         return alt_name % z
 
 
-def _make_base_directories(
-        a_aeff_to_dpath_map, dpath_results=DPATH_RESULTS):
-    """Makes directories for first 3 a values if they do not exist yet
-    :param dpath_results: Path to the directory into which these base
+def _make_base_directories(a_aeff_to_dpath_map):
+    """Makes directories for (A, Aeff) pairs if they do not exist yet
     :param a_aeff_to_dpath_map: map from A value to directory path
     directories are put
     """
-    if not path.exists(dpath_results):
-        mkdir(dpath_results)
     for d in a_aeff_to_dpath_map.values():
         if not path.exists(d):
             makedirs(d)
@@ -105,10 +101,7 @@ def _get_mfdp_replace_map(
 ):
     n = a - z
     par = a % 2
-    if a % 2 == 0:
-        tot2 = 0
-    else:
-        tot2 = 1
+    tot2 = par
     rest_lines = _get_mfdp_restrictions_lines(nmax=max(n_1, n_2))
     return {
         '<<TBMEFILE>>': str(fname_tbme),
@@ -128,9 +121,9 @@ def _rewrite_file(src, dst, replace_map):
        on the replace map, writes the file into dst.
     """
     # read the src file
-    infile = open(src, 'r')
-    read_lines = infile.readlines()
-    infile.close()
+    fin = open(src, 'r')
+    read_lines = fin.readlines()
+    fin.close()
     # replace strings
     write_lines = list()
     for line in read_lines:
@@ -139,9 +132,9 @@ def _rewrite_file(src, dst, replace_map):
                 line = line.replace(k, str(v))
         write_lines.append(line)
     # write to the dst file
-    outfile = open(dst, 'w')
-    outfile.writelines(write_lines)
-    outfile.close()
+    fout = open(dst, 'w')
+    fout.writelines(write_lines)
+    fout.close()
 
 
 def _make_mfdp_file(
@@ -260,7 +253,7 @@ def _truncate_space(
     """
     filenames = listdir(dpath_templates)
     for f in filenames:
-        if re.match(RGX_FNAME_TBME, f) is not None:
+        if re.match(RGX_FNAME_TBME, f):
             tbme_filename = f
             break
     else:
@@ -306,12 +299,11 @@ def _make_job_submit_files(a_aeff_to_jobsub_fpath_map, walltime):
     job_files = list(a_aeff_to_jobsub_fpath_map.values())
     dst = job_files.pop()
     _make_job_submit_file(dst_fpath=dst, walltime=walltime)
-    if len(job_files) > 0:
-        src = dst
-        for dst in job_files:
-            if path.exists(dst):
-                remove(dst)
-            link(src, dst)
+    # link this file to rest of destination paths
+    for dst2 in job_files:
+        if path.exists(dst2):
+            remove(dst2)
+        link(dst, dst2)
 
 
 def _truncate_spaces(nshell, n1, n2, dirpaths, scalefactor, force=False):
@@ -320,25 +312,27 @@ def _truncate_spaces(nshell, n1, n2, dirpaths, scalefactor, force=False):
     :param n2: max allowed two-particle state
     :param dirpaths: Paths to the destination directories
     """
-    d0 = dirpaths[0]
+    dirpaths = list(dirpaths)
+    d0 = dirpaths.pop()
+    # truncate interaction once
     fpath0, lpath0 = _truncate_space(
         nshell=nshell, n1=n1, n2=n2, dpath_elt=d0, scalefactor=scalefactor,
         force=force
     )
     fname_tbme = path.split(fpath0)[1]
     lname_tbme = path.split(lpath0)[1]
-    if len(dirpaths) > 1:
-        for d in dirpaths[1:]:
-            dst_path = path.join(d, fname_tbme)
-            sl_path = path.join(d, lname_tbme)
-            if path.exists(sl_path):
-                remove(sl_path)
-            if not path.exists(dst_path):
-                link(fpath0, dst_path)
-            elif force:
-                remove(dst_path)
-                link(fpath0, dst_path)
-            symlink(dst_path, sl_path)
+    # link truncated interaction file to the rest of the directories
+    for d in dirpaths:
+        dst_path = path.join(d, fname_tbme)
+        sl_path = path.join(d, lname_tbme)
+        if path.exists(sl_path):  # symlink exists
+            remove(sl_path)
+        if not path.exists(dst_path):  # link to TBME does not exist
+            link(fpath0, dst_path)
+        elif force:
+            remove(dst_path)
+            link(fpath0, dst_path)
+        symlink(dst_path, sl_path)
     return fname_tbme, lname_tbme
 
 
@@ -502,8 +496,7 @@ def prepare_directories(
     # make stuff
     if progress:
         print '  Making directories...'
-    _make_base_directories(
-        a_aeff_to_dpath_map=a_aeff_to_dir_map, dpath_results=dpath_results)
+    _make_base_directories(a_aeff_to_dpath_map=a_aeff_to_dir_map)
     if progress:
         print '  Truncating interaction to N1=%d N2=%d...' % (n1, n2)
     fname_tbme, lname_tbme = _truncate_spaces(

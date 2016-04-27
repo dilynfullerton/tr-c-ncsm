@@ -3,7 +3,7 @@
 
 To run as a script:
 
-    $ ncsm_vce_calc.py [-f[ntv]] [-v] [-s scalefactor] [-t walltime]
+    $ ncsm_vce_calc.py [-f[nt]] [-v] [-s scalefactor] [-t walltime]
     [ Aeff4 Aeff5 Aeff6 | [-m|-M|-e] Ap_min Ap_max] Amin
     [Amax [nmax [n1 n2 [nshell [ncomponent]]] | n1 n2]]
 
@@ -13,14 +13,12 @@ given by (Aeff4, Aeff5, and Aeff6) or the range of A prescriptions
 specified by Ap_min and Ap_max if -m or -M precedes the arguments.
 
 -F or -f
-    force recalculation of all steps (NCSD, TRDENS, and VCE)
--f[ntv]*
+    force recalculation of all steps (NCSD, TRDENS)
+-f[nt]*
     n
-        force recalculation of NCSD; this also forces TRDENS and VCE
+        force recalculation of NCSD; this also forces TRDENS
     t
-        force recalculation of TRDENS; this also forces VCE
-    v
-        force recalculation of VCE
+        force recalculation of TRDENS
 -m or -M or -e
     The first two arguments are used to determine a range of A prescriptions
     -m
@@ -46,11 +44,11 @@ If 5 additional arguments given, they are Amax nmax n1 n2 nshell.
 If 6 additional arguments given, they are Amax nmax n1 n2 nshell ncomponent.
 
 Example:
-    $ ncsm_vce_calc.py -fv -s 0.0 -t 01:00:00 -e 4 10 4 10 6
+    $ ncsm_vce_calc.py -ft -s 0.0 -t 01:00:00 -e 4 10 4 10 6
 
-    The first argument, -fv (force VCE), prompts the script to force
-    recalculation of the VCE portion of the calculation. The NCSD and
-    TRDENS parts will not be redone if output files already exist.
+    The first argument, -ft (force TRDENS), prompts the script to force
+    recalculation of the TRDENS portion of the calculation. The NCSD part
+     will not be redone if output files already exist.
 
     The second argument, -s (scale) 0.0, prompts the script to scale the TBME
     interaction file's off-diagonal coupling terms by 0.0.
@@ -147,11 +145,11 @@ def _run_ncsd(
         else:
             p = Popen(args=args, cwd=dpath, stdout=PIPE, stderr=PIPE)
             out, err = p.communicate()
-            if len(out) > 0:
+            if out:
                 fout = open(path.join(dpath, fname_stdout), 'w')
                 fout.write(out)
                 fout.close()
-            if len(err) > 0:
+            if err:
                 ferr = open(path.join(dpath, fname_stderr), 'w')
                 ferr.write(err)
                 ferr.close()
@@ -196,11 +194,11 @@ def _run_trdens(
         else:
             p = Popen(args=args, cwd=dpath_a6, stdout=PIPE, stderr=PIPE)
             out, err = p.communicate()
-            if len(out) > 0:
+            if out:
                 fout = open(path.join(dpath_a6, fname_stdout), 'w')
                 fout.write(out)
                 fout.close()
-            if len(err) > 0:
+            if err:
                 ferr = open(path.join(dpath_a6, fname_stderr), 'w')
                 ferr.write(err)
                 ferr.close()
@@ -214,7 +212,7 @@ def _run_trdens(
 
 def _run_vce(
         a_values, a_prescription, a_range,
-        a_aeff_to_outfile_fpath_map, dirpath_aeff6, dirpath_vce, force,
+        a_aeff_to_outfile_fpath_map, dirpath_aeff6, dirpath_vce,
 ):
     """Do the VCE expansion calculation for each Aeff value in aeff_range
     :param a_values: A values used to form the effective Hamiltonian
@@ -229,8 +227,6 @@ def _run_vce(
     :param dirpath_aeff6: Directory for the 3rd A value
     :param dirpath_vce: Path to the directory in which to put generated
     interaction files
-    :param force: If True, force redoing the calculation even if
-    output files already exist
     """
     he4_fpath = a_aeff_to_outfile_fpath_map[(a_values[0], a_prescription[0])]
     he5_fpath = a_aeff_to_outfile_fpath_map[(a_values[1], a_prescription[1])]
@@ -241,19 +237,17 @@ def _run_vce(
             raise NcsdOutfileNotFoundException(
                 'NCSD outfile not found: %s' % f)
     # Do vce
-    a_0 = a_range[0]
+    a_range = list(a_range)
+    a_0 = a_range.pop()
     fpath_fmt = path.join(dirpath_vce, FNAME_FMT_VCE_INT)
     fpath = fpath_fmt % a_0
-    if force or not path.exists(fpath):
-        vce_calculation(a_prescription, fpath, he4_fpath, he5_fpath, he6_fpath)
+    vce_calculation(a_prescription, fpath, he4_fpath, he5_fpath, he6_fpath)
     # Same interaction is used for all masses
-    if len(a_range) > 1:
-        for a in a_range[1:]:
-            next_fpath = fpath_fmt % a
-            if force or not path.exists(next_fpath):
-                if path.exists(next_fpath):
-                    remove(next_fpath)
-                link(fpath, next_fpath)
+    for a in a_range:
+        next_fpath = fpath_fmt % a
+        if path.exists(next_fpath):
+            remove(next_fpath)
+        link(fpath, next_fpath)
 
 
 def _print_progress(
@@ -357,11 +351,11 @@ def _ncsd_multiple_calculations_s(
             args = ['qsub', '%s' % job]
             p = Popen(args=args, cwd=dpath, stdout=PIPE, stderr=PIPE)
             out, err = p.communicate()
-            if len(out) > 0:
+            if out:
                 fout = open(path.join(dpath, fname_stdout), 'w')
                 fout.write(out)
                 fout.close()
-            if len(err) > 0:
+            if err:
                 ferr = open(path.join(dpath, fname_stderr), 'w')
                 ferr.write(err)
                 ferr.close()
@@ -449,8 +443,7 @@ def ncsd_multiple_calculations(
     a_aeff_nhw_set = set()
     for ap in a_presc_list:
         a_aeff_nhw_set |= set(zip(
-            a_values, ap, [nmax + a - a_0 for a in a_values]
-        ))
+            a_values, ap, [nmax + a - a_0 for a in a_values]))
     # separate set into lists
     a_list, aeff_list, nhw_list = list(), list(), list(),
     for a, aeff, nhw in a_aeff_nhw_set:
@@ -624,7 +617,7 @@ def vce_single_calculation(
         a_values, a_prescription, a_range, z, nmax,
         a_aeff_dir_map, a_aeff_outfile_map,
         n1=N1, n2=N1, nshell=-1, ncomponent=-1, int_scalefactor=None,
-        force_trdens=False, force_vce=False, verbose=False,
+        force_trdens=False,  verbose=False,
         dpath_results=DPATH_RESULTS, dpath_templates=DPATH_TEMPLATES,
 ):
     """Valence cluster expansion
@@ -648,9 +641,6 @@ def vce_single_calculation(
     valence coupling terms of the TBME interaction
     :param force_trdens: if true, forces redoing of the TRDENS calculation,
     even if output file(s) are present
-    :param force_vce: if true, force redoing of the valence cluster expansion
-    and generation of interaction files, even if interaction files are already
-    present
     :param verbose: if true, prints the regular output of TRDENS to stdout,
     otherwise suppresses output
     :param dpath_templates: path to the templates directory
@@ -688,7 +678,7 @@ def vce_single_calculation(
         _run_vce(
             a_values=a_values, a_prescription=a_prescription, a_range=a_range,
             dirpath_aeff6=dpath_a6, dirpath_vce=vce_dirpath,
-            a_aeff_to_outfile_fpath_map=a_aeff_outfile_map, force=force_vce
+            a_aeff_to_outfile_fpath_map=a_aeff_outfile_map,
         )
     except NcsdOutfileNotFoundException:
         raise
@@ -698,7 +688,7 @@ def _vce_multiple_calculations_t(
         z, a_values, a_presc_list, a_range, nmax, n1, n2, nshell, ncomponent,
         a_aeff_to_dpath_map, a_aeff_to_out_fpath_map,
         dpath_templates, dpath_results,
-        force_trdens, force_vce, verbose, progress,
+        force_trdens, verbose, progress,
         int_scalefactor=None, max_open_threads=MAX_OPEN_THREADS,
         str_prog_vce=STR_PROG_VCE,
 ):
@@ -710,7 +700,7 @@ def _vce_multiple_calculations_t(
                 a_prescription=ap0, a_range=a_range,
                 nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
                 int_scalefactor=int_scalefactor,
-                force_trdens=force_trdens, force_vce=force_vce, verbose=verbose,
+                force_trdens=force_trdens, verbose=verbose,
                 dpath_templates=dpath_templates, dpath_results=dpath_results,
                 a_aeff_dir_map=a_aeff_to_dpath_map,
                 a_aeff_outfile_map=a_aeff_to_out_fpath_map,
@@ -737,7 +727,7 @@ def _vce_multiple_calculations(
         z, a_values, a_presc_list, a_range, nmax, n1, n2, nshell, ncomponent,
         a_aeff_to_out_fpath_map, a_aeff_to_dpath_map,
         dpath_templates, dpath_results,
-        force_trdens, force_vce, verbose, progress,
+        force_trdens, verbose, progress,
         int_scalefactor=None,
         str_prog_vce=STR_PROG_VCE,
 ):
@@ -756,7 +746,7 @@ def _vce_multiple_calculations(
                 a_prescription=ap, a_range=a_range,
                 nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
                 int_scalefactor=int_scalefactor,
-                force_trdens=force_trdens, force_vce=force_vce, verbose=verbose,
+                force_trdens=force_trdens, verbose=verbose,
                 dpath_results=dpath_results, dpath_templates=dpath_templates,
                 a_aeff_outfile_map=a_aeff_to_out_fpath_map,
                 a_aeff_dir_map=a_aeff_to_dpath_map,
@@ -784,7 +774,7 @@ def _vce_multiple_calculations(
 def vce_multiple_calculations(
         a_values, a_presc_list, a_range, z, nmax, n1, n2, nshell, ncomponent,
         a_aeff_to_out_fpath_map, a_aeff_to_dpath_map,
-        force_trdens, force_vce, verbose, progress, threading,
+        force_trdens, verbose, progress, threading,
         int_scalefactor=None,
         dpath_templates=DPATH_TEMPLATES, dpath_results=DPATH_RESULTS,
 ):
@@ -812,8 +802,6 @@ def vce_multiple_calculations(
     usual
     :param force_trdens: if true, force calculation of TRDENS even if output
     file is already present
-    :param force_vce: if true, force calculation of valence cluster expansion
-    even if interaction output file is already present
     :param verbose: if true, regular output of TRDENS is printed to stdout;
     otherwise output is suppressed and written to a file instead
     :param progress: if true, display a progress bar. Note: if verbose is
@@ -830,8 +818,7 @@ def vce_multiple_calculations(
             a_values=a_values, a_presc_list=a_presc_list, a_range=a_range,
             z=z, nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
             int_scalefactor=int_scalefactor,
-            force_trdens=force_trdens, force_vce=force_vce,
-            verbose=verbose, progress=progress,
+            force_trdens=force_trdens, verbose=verbose, progress=progress,
             dpath_results=dpath_results, dpath_templates=dpath_templates,
             a_aeff_to_out_fpath_map=a_aeff_to_out_fpath_map,
             a_aeff_to_dpath_map=a_aeff_to_dpath_map,
@@ -841,8 +828,7 @@ def vce_multiple_calculations(
             a_values=a_values, a_presc_list=a_presc_list, a_range=a_range,
             z=z, nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
             int_scalefactor=int_scalefactor,
-            force_trdens=force_trdens, force_vce=force_vce,
-            verbose=verbose, progress=progress,
+            force_trdens=force_trdens, verbose=verbose, progress=progress,
             dpath_results=dpath_results, dpath_templates=dpath_templates,
             a_aeff_to_out_fpath_map=a_aeff_to_out_fpath_map,
             a_aeff_to_dpath_map=a_aeff_to_dpath_map,
@@ -853,7 +839,7 @@ def ncsd_vce_calculations(
         a_prescriptions, a_range,
         nmax=NMAX, n1=N1, n2=N2, nshell=N_SHELL, ncomponent=N_COMPONENT,
         int_scalefactor=None,
-        force_ncsd=False, force_trdens=False, force_vce=False, force_all=False,
+        force_ncsd=False, force_trdens=False, force_all=False,
         verbose=False, progress=True, threading=True,
         cluster_submit=False, walltime=None, remove_tmp_files=True,
         dpath_templates=DPATH_TEMPLATES, dpath_results=DPATH_RESULTS,
@@ -874,8 +860,6 @@ def ncsd_vce_calculations(
     files already exist
     :param force_trdens: if true, forces recalculation of TRDENS, even if
     output file already exists
-    :param force_vce: if true, forces recalculation of valence cluster
-    expansion, even if interaction file already exists
     :param force_all: if true, forces recalculation of everything
     :param verbose: if true, prints standard output for subprocesses to
     stdout; otherwise this is suppressed and saved in a text file
@@ -917,7 +901,6 @@ def ncsd_vce_calculations(
         nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
         int_scalefactor=int_scalefactor,
         force_trdens=force_trdens or force_all,
-        force_vce=force_vce or force_all,
         verbose=verbose, progress=progress, threading=threading,
         dpath_results=dpath_results, dpath_templates=dpath_templates,
         a_aeff_to_out_fpath_map=a_aeff_to_out,
@@ -966,24 +949,20 @@ def _multicombinations(sequence, r):
 
 # SCRIPT
 def _force_from_argv0(argv0):
-    force_ncsd, force_trdens, force_vce, force_all = (False,) * 4
+    force_ncsd, force_trdens, force_all = (False,) * 3
     if 'n' in argv0:
         force_ncsd = True
         force_trdens = True
-        force_vce = True
     if 't' in argv0:
         force_trdens = True
-        force_vce = True
-    if 'v' in argv0:
-        force_vce = True
-    force_all = not (force_ncsd or force_trdens or force_vce)
-    return force_ncsd, force_trdens, force_vce, force_all
+    force_all = not (force_ncsd or force_trdens)
+    return force_ncsd, force_trdens, force_all
 
 
 # todo make this script handling better
 if __name__ == "__main__":
     user_args = argv[1:]
-    f_ncsd, f_trdens, f_vce, f_all = (False,) * 4
+    f_ncsd, f_trdens, f_all = (False,) * 3
     multicom, com, exact = (False,) * 3
     verbose0, progress0 = False, True
     cluster_submit0 = False
@@ -992,7 +971,7 @@ if __name__ == "__main__":
     while True:
         a0 = user_args[0]
         if re.match('^-f[ntv]{0,3}$', a0.lower()):
-            f_ncsd, f_trdens, f_vce, f_all = _force_from_argv0(a0)
+            f_ncsd, f_trdens, f_all = _force_from_argv0(a0)
         elif a0 == '-m' or a0 == '--combinations':
             com = True
         elif a0 == '-M' or a0 == '--multicombinations':
@@ -1029,7 +1008,7 @@ if __name__ == "__main__":
         ncsd_vce_calculations(
             a_prescriptions=a_prescriptions0, a_range=a_range0,
             int_scalefactor=scalefactor0,
-            force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
+            force_ncsd=f_ncsd, force_trdens=f_trdens,
             force_all=f_all, verbose=verbose0, progress=progress0,
             cluster_submit=cluster_submit0, walltime=walltime0,
         )
@@ -1038,7 +1017,7 @@ if __name__ == "__main__":
         ncsd_vce_calculations(
             a_prescriptions=a_prescriptions0, a_range=a_range0,
             int_scalefactor=scalefactor0,
-            force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
+            force_ncsd=f_ncsd, force_trdens=f_trdens,
             force_all=f_all, verbose=verbose0, progress=progress0,
             cluster_submit=cluster_submit0, walltime=walltime0,
         )
@@ -1048,7 +1027,7 @@ if __name__ == "__main__":
         ncsd_vce_calculations(
             a_prescriptions=a_prescriptions0, a_range=a_range0, nmax=nmax_0,
             int_scalefactor=scalefactor0,
-            force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
+            force_ncsd=f_ncsd, force_trdens=f_trdens,
             force_all=f_all, verbose=verbose0, progress=progress0,
             cluster_submit=cluster_submit0, walltime=walltime0,
         )
@@ -1058,7 +1037,7 @@ if __name__ == "__main__":
         ncsd_vce_calculations(
             a_prescriptions=a_prescriptions0, a_range=a_range0,
             n1=n1_0, n2=n2_0, int_scalefactor=scalefactor0,
-            force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
+            force_ncsd=f_ncsd, force_trdens=f_trdens,
             force_all=f_all, verbose=verbose0, progress=progress0,
             cluster_submit=cluster_submit0, walltime=walltime0,
         )
@@ -1068,7 +1047,7 @@ if __name__ == "__main__":
         ncsd_vce_calculations(
             a_prescriptions=a_prescriptions0, a_range=a_range0,
             nmax=nmax_0, n1=n1_0, n2=n2_0, int_scalefactor=scalefactor0,
-            force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
+            force_ncsd=f_ncsd, force_trdens=f_trdens,
             force_all=f_all, verbose=verbose0, progress=progress0,
             cluster_submit=cluster_submit0, walltime=walltime0,
         )
@@ -1079,7 +1058,7 @@ if __name__ == "__main__":
             a_prescriptions=a_prescriptions0, a_range=a_range0,
             nmax=nmax_0, n1=n1_0, n2=n2_0, nshell=nshell_0,
             int_scalefactor=scalefactor0,
-            force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
+            force_ncsd=f_ncsd, force_trdens=f_trdens,
             force_all=f_all, verbose=verbose0, progress=progress0,
             cluster_submit=cluster_submit0, walltime=walltime0,
         )
@@ -1092,7 +1071,7 @@ if __name__ == "__main__":
             nmax=nmax_0, n1=n1_0, n2=n2_0,
             nshell=nshell_0, ncomponent=ncomponent_0,
             int_scalefactor=scalefactor0,
-            force_ncsd=f_ncsd, force_trdens=f_trdens, force_vce=f_vce,
+            force_ncsd=f_ncsd, force_trdens=f_trdens,
             force_all=f_all, verbose=verbose0, progress=progress0,
             cluster_submit=cluster_submit0, walltime=walltime0,
         )
