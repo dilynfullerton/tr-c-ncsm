@@ -667,7 +667,7 @@ def vce_single_calculation(
     # for the 3rd a value, make trdens file and run TRDENS
     a_aeff6 = (a_values[2], a_prescription[2])
     dpath_a6 = a_aeff_dir_map[a_aeff6]
-    make_trdens_file(z=z, a=a_values[2], nuc_dir=dpath_a6,
+    make_trdens_file(z=z, a=a_values[2], a0=a_values[0], nuc_dir=dpath_a6,
                      dpath_results=dpath_results, dpath_temp=dpath_templates)
     try:
         rename_egv_file(
@@ -909,6 +909,9 @@ def ncsd_vce_calculations(
         dpath_templates=dpath_templates, dpath_results=dpath_results,
     )
     a_aeff_to_dir, a_aeff_to_egv, a_aeff_to_job, a_aeff_to_out = a_aeff_maps
+    print 'A prescriptions:'
+    for ap in a_presc_list:
+        print '  ' + str(ap)
     vce_multiple_calculations(
         z=z, a_values=a_values, a_presc_list=a_presc_list, a_range=a_range,
         nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
