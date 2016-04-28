@@ -172,6 +172,10 @@ def _run_ncsd(
                 ferr = open(path.join(dpath, fname_stderr), 'w')
                 ferr.write(err)
                 ferr.close()
+                raise NcsdRunException(
+                    '\nA problem occurred while running NCSD. '
+                    'See %s' % path.join(dpath, fname_stderr)
+                )
             return p.poll(), out, err
     except OSError:
         raise NcsdRunException(
@@ -221,6 +225,10 @@ def _run_trdens(
                 ferr = open(path.join(dpath_a6, fname_stderr), 'w')
                 ferr.write(err)
                 ferr.close()
+                raise TrdensRunException(
+                    '\nA problem occurred while running NCSD. '
+                    'See %s' % path.join(dpath_a6, fname_stderr)
+                )
             return p.poll(), out, err
     except OSError:
         raise TrdensRunException(
@@ -402,10 +410,14 @@ def _ncsd_multiple_calculations(
         dpath = a_aeff_to_dpath_map[(a, aeff)]
         if progress:
             _print_progress(jobs_completed, jobs_total)
-        _run_ncsd(
-            dpath=dpath, fpath_egv=a_aeff_to_egvfile_map[(a, aeff)],
-            force=force, verbose=verbose
-        )
+        try:
+            _run_ncsd(
+                dpath=dpath, fpath_egv=a_aeff_to_egvfile_map[(a, aeff)],
+                force=force, verbose=verbose
+            )
+        except NcsdRunException, e:
+            print e
+            continue
         completed_dpath_list.append(dpath)
         jobs_completed += 1
     if progress:
@@ -867,6 +879,7 @@ def ncsd_vce_calculations(
     :param a_prescriptions: sequence or generator of A prescription tuples
     :param a_range: sequence of A values for which to generate interaction
     files
+    :param z: proton number
     :param nmax: model space max oscillator shell
     :param n1: max allowed one-particle state
     :param n2: max allowed two-particle state
