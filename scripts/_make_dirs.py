@@ -95,13 +95,29 @@ def _get_mfdp_restrictions_lines(nmax, max_allowed_nmax=MAX_NMAX):
     return '\n'.join(lines)
 
 
+class UnknownParityException(Exception):
+    pass
+
+
+def _get_parity(a, nshell):
+    if nshell == 1:
+        return a % 2
+    elif nshell == 2:
+        return 0
+    else:
+        raise UnknownParityException(
+            '\nMethod of determining parity is not known for '
+            'Nshell = %d' % nshell
+        )
+
+
 def _get_mfdp_replace_map(
-        fname_tbme, outfile_name, z, a, n_hw, n_1, n_2, aeff,
+        fname_tbme, outfile_name, z, a, n_hw, n_1, n_2, aeff, nshell,
         num_states=NCSD_NUM_STATES, num_iter=NCSD_NUM_ITER
 ):
     n = a - z
-    par = a % 2
-    tot2 = par
+    par = _get_parity(a, nshell)
+    tot2 = a % 2
     rest_lines = _get_mfdp_restrictions_lines(nmax=max(n_1, n_2))
     return {
         '<<TBMEFILE>>': str(fname_tbme),
@@ -138,7 +154,7 @@ def _rewrite_file(src, dst, replace_map):
 
 
 def _make_mfdp_file(
-        z, a, aeff, nhw, n1, n2, dpath_elt, fname_outfile, fname_tbme,
+        z, a, aeff, nhw, nshell, n1, n2, dpath_elt, fname_outfile, fname_tbme,
         dpath_temp=DPATH_TEMPLATES,
         fname_tmp_mfdp=FNAME_TMP_MFDP,
 ):
@@ -149,6 +165,7 @@ def _make_mfdp_file(
     :param a: Mass number
     :param aeff: Effective mass number for interaction
     :param nhw: Something something something dark side
+    :param nshell: major oscillator shell (0=s, 1=p, 2=sd, ...)
     :param n1: Number of allowed states for single particles
     :param n2: Number of allowed states for two particles
     :param dpath_elt: path to the directory into which the mfdp file is
@@ -161,20 +178,20 @@ def _make_mfdp_file(
     mfdp_path = path.join(dpath_elt, fname_tmp_mfdp)
     replace_map = _get_mfdp_replace_map(
         fname_tbme=fname_tbme, outfile_name=fname_outfile,
-        z=z, a=a, n_hw=nhw, n_1=n1, n_2=n2, aeff=aeff
+        z=z, a=a, n_hw=nhw, nshell=nshell, n_1=n1, n_2=n2, aeff=aeff
     )
     _rewrite_file(src=temp_mfdp_path, dst=mfdp_path, replace_map=replace_map)
 
 
 def _make_mfdp_files(
-        a_list, aeff_list, nhw_list, z, n_1, n_2, fname_tbme,
+        a_list, aeff_list, nhw_list, z, nshell, n_1, n_2, fname_tbme,
         a_aeff_to_dpath_map, a_aeff_to_outfile_fpath_map,
         dpath_temp=DPATH_TEMPLATES, fname_tmp_mfdp=FNAME_TMP_MFDP,
 ):
     for a, aeff, nhw in zip(a_list, aeff_list, nhw_list):
         outfile_name = path.split(a_aeff_to_outfile_fpath_map[(a, aeff)])[1]
         _make_mfdp_file(
-            z=z, a=a, aeff=aeff, nhw=nhw, n1=n_1, n2=n_2,
+            z=z, a=a, aeff=aeff, nhw=nhw, nshell=nshell, n1=n_1, n2=n_2,
             dpath_elt=a_aeff_to_dpath_map[(a, aeff)], dpath_temp=dpath_temp,
             fname_outfile=outfile_name, fname_tmp_mfdp=fname_tmp_mfdp,
             fname_tbme=fname_tbme,
@@ -504,7 +521,7 @@ def prepare_directories(
         a_aeff_to_dpath_map=a_aeff_to_dir_map,
         a_aeff_to_outfile_fpath_map=a_aeff_to_outfile_map,
         fname_tbme=lname_tbme, dpath_temp=dpath_templates,
-        z=z, n_1=n1, n_2=n2,
+        z=z, nshell=nshell, n_1=n1, n_2=n2,
     )
     if cluster_submit:
         if progress:
