@@ -1,5 +1,5 @@
 import re
-from os import path, mkdir, listdir, remove, link, symlink, getcwd, makedirs
+from os import path, listdir, remove, link, symlink, getcwd, makedirs
 from FGetSmallerInteraction import run as truncate_interaction
 from F_scale_interaction import scale_off_diag_outside_valence as scale_int
 
@@ -195,15 +195,12 @@ class UnknownNumStatesException(Exception):
 # This REALLY needs fixing.
 def _get_num_states(z, a, a0):
     nhw_mod = a - a0
-    if z == 2:
-        if a == 4:
-            dim_nhw_mod = 1  # todo this is a guess, is it correct?
-        elif a == 5:
-            dim_nhw_mod = 2
-        elif a == 6:
-            dim_nhw_mod = 5
-        else:
-            raise UnknownNumStatesException()
+    if nhw_mod == 0:
+        dim_nhw_mod = 1
+    elif nhw_mod == 1:
+        dim_nhw_mod = 2
+    elif nhw_mod == 2:
+        dim_nhw_mod = 5
     else:
         raise UnknownNumStatesException()
     return nhw_mod, dim_nhw_mod
@@ -340,17 +337,14 @@ class EgvFileNotFoundException(Exception):
     pass
 
 
-def rename_egv_file(a6_dir, nhw, a6, force):
+def rename_egv_file(a6_dir, nhw, force):
     """Renames the egv file from its default output name to the name needed
     for running TRDENS
     :param a6_dir: Directory in which the file resides
     :param nhw: major oscillator model space truncation
-    :param a6: third A value, for which Heff is generated
     :param force: If True, replaces any existing files by the name of
     next_egv_name
     """
-    if nhw % 2 != a6 % 2:
-        nhw += 1
     next_egv_path = path.join(a6_dir, LNAME_EGV)
     if path.lexists(next_egv_path):
         if not force:
