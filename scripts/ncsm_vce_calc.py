@@ -650,7 +650,7 @@ class DirectoryNotFoundException(Exception):
 
 
 def vce_single_calculation(
-        a_values, a_prescription, a_range, z, nmax,
+        a_values, a_prescription, a_range, z, nmax, remove_protons,
         a_aeff_dir_map, a_aeff_outfile_map,
         n1=N1, n2=N1, nshell=-1, ncomponent=-1, int_scalefactor=None,
         force_trdens=False,  verbose=False,
@@ -675,6 +675,8 @@ def vce_single_calculation(
     :param ncomponent: dimension (1 = neutrons, 2 = protons and neutrons)
     :param int_scalefactor: factor by which to scale the off-diagonal
     valence coupling terms of the TBME interaction
+    :param remove_protons: if true, an additional piece is added to
+    directory name of vce calculation
     :param force_trdens: if true, forces redoing of the TRDENS calculation,
     even if output file(s) are present
     :param verbose: if true, prints the regular output of TRDENS to stdout,
@@ -708,7 +710,7 @@ def vce_single_calculation(
     vce_dirpath = make_vce_directories(
         a_prescription=a_prescription, nmax=nmax, n1=n1, n2=n2,
         nshell=nshell, ncomponent=ncomponent, scalefactor=int_scalefactor,
-        dpath_results=dpath_results,
+        remove_protons=remove_protons, dpath_results=dpath_results,
     )
     try:
         _run_vce(
@@ -724,7 +726,7 @@ def _vce_multiple_calculations_t(
         z, a_values, a_presc_list, a_range, nmax, n1, n2, nshell, ncomponent,
         a_aeff_to_dpath_map, a_aeff_to_out_fpath_map,
         dpath_templates, dpath_results,
-        force_trdens, verbose, progress,
+        force_trdens, verbose, progress, remove_protons,
         int_scalefactor=None, max_open_threads=MAX_OPEN_THREADS,
         str_prog_vce=STR_PROG_VCE,
 ):
@@ -735,7 +737,7 @@ def _vce_multiple_calculations_t(
                 z=z, a_values=a_values,
                 a_prescription=ap0, a_range=a_range,
                 nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
-                int_scalefactor=int_scalefactor,
+                int_scalefactor=int_scalefactor, remove_protons=remove_protons,
                 force_trdens=force_trdens, verbose=verbose,
                 dpath_templates=dpath_templates, dpath_results=dpath_results,
                 a_aeff_dir_map=a_aeff_to_dpath_map,
@@ -763,7 +765,7 @@ def _vce_multiple_calculations(
         z, a_values, a_presc_list, a_range, nmax, n1, n2, nshell, ncomponent,
         a_aeff_to_out_fpath_map, a_aeff_to_dpath_map,
         dpath_templates, dpath_results,
-        force_trdens, verbose, progress,
+        force_trdens, verbose, progress, remove_protons,
         int_scalefactor=None,
         str_prog_vce=STR_PROG_VCE,
 ):
@@ -781,7 +783,7 @@ def _vce_multiple_calculations(
                 z=z, a_values=a_values,
                 a_prescription=ap, a_range=a_range,
                 nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
-                int_scalefactor=int_scalefactor,
+                int_scalefactor=int_scalefactor, remove_protons=remove_protons,
                 force_trdens=force_trdens, verbose=verbose,
                 dpath_results=dpath_results, dpath_templates=dpath_templates,
                 a_aeff_outfile_map=a_aeff_to_out_fpath_map,
@@ -811,7 +813,7 @@ def vce_multiple_calculations(
         a_values, a_presc_list, a_range, z, nmax, n1, n2, nshell, ncomponent,
         a_aeff_to_out_fpath_map, a_aeff_to_dpath_map,
         force_trdens, verbose, progress, threading,
-        int_scalefactor=None,
+        remove_protons, int_scalefactor=None,
         dpath_templates=DPATH_TEMPLATES, dpath_results=DPATH_RESULTS,
 ):
     """For every A prescription in a_presc_list, performs the valence
@@ -836,6 +838,8 @@ def vce_multiple_calculations(
     :param int_scalefactor: factor by which TBME interaction file was scaled
     (for directory naming purposes); if None, directory will be named as
     usual
+    :param remove_protons: if true, an additional piece is added to the
+    directory name
     :param force_trdens: if true, force calculation of TRDENS even if output
     file is already present
     :param verbose: if true, regular output of TRDENS is printed to stdout;
@@ -853,7 +857,7 @@ def vce_multiple_calculations(
         _vce_multiple_calculations_t(
             a_values=a_values, a_presc_list=a_presc_list, a_range=a_range,
             z=z, nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
-            int_scalefactor=int_scalefactor,
+            int_scalefactor=int_scalefactor, remove_protons=remove_protons,
             force_trdens=force_trdens, verbose=verbose, progress=progress,
             dpath_results=dpath_results, dpath_templates=dpath_templates,
             a_aeff_to_out_fpath_map=a_aeff_to_out_fpath_map,
@@ -863,7 +867,7 @@ def vce_multiple_calculations(
         return _vce_multiple_calculations(
             a_values=a_values, a_presc_list=a_presc_list, a_range=a_range,
             z=z, nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
-            int_scalefactor=int_scalefactor,
+            int_scalefactor=int_scalefactor, remove_protons=remove_protons,
             force_trdens=force_trdens, verbose=verbose, progress=progress,
             dpath_results=dpath_results, dpath_templates=dpath_templates,
             a_aeff_to_out_fpath_map=a_aeff_to_out_fpath_map,
@@ -937,7 +941,7 @@ def ncsd_vce_calculations(
     vce_multiple_calculations(
         z=z, a_values=a_values, a_presc_list=a_presc_list, a_range=a_range,
         nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
-        int_scalefactor=int_scalefactor,
+        int_scalefactor=int_scalefactor, remove_protons=remove_protons,
         force_trdens=force_trdens or force_all,
         verbose=verbose, progress=progress, threading=threading,
         dpath_results=dpath_results, dpath_templates=dpath_templates,

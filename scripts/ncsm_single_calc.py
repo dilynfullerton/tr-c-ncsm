@@ -109,20 +109,20 @@ if __name__ == "__main__":
             )
         elif len(user_args) == 6:
             args = [int(x) for x in user_args]
-            z0, a0, aeff0, nhw0, nshell0, ncomponent0 = args
+            z0, a0, aeff0, nhw0, nshell0, rm_prot0 = args
             ncsd_single_calculation(
                 z=z0, a=a0, aeff=aeff0, nhw=nhw0,
-                nshell=nshell0, ncomponent=ncomponent0,
+                nshell=nshell0,
                 scalefactor=scalefactor0, force=force0, verbose=verbose0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
                 remove_protons=rm_prot0,
             )
         elif len(user_args) == 8:
             args = [int(x) for x in user_args]
-            z0, a0, aeff0, nhw0, nshell0, ncomponent0, n1_, n2_ = args
+            z0, a0, aeff0, nhw0, nshell0, rm_prot0, n1_, n2_ = args
             ncsd_single_calculation(
                 z=z0, a=a0, aeff=aeff0, nhw=nhw0, n1=n1_, n2=n2_,
-                nshell=nshell0, ncomponent=ncomponent0,
+                nshell=nshell0,
                 scalefactor=scalefactor0, force=force0, verbose=verbose0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
                 remove_protons=rm_prot0,

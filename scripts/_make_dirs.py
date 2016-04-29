@@ -17,7 +17,8 @@ DNAME_ADD_NUC_IPROT = '_ip0'
 DNAME_ADD_NUC_SF = '_scale%.2f'  # scale factor
 DNAME_FMT_VCE = 'vce_presc%d,%d,%d_Nmax%d_%d_%d_shell%d_dim%d'
 #     A presc, Nmax, n1, n2, nshell, ncomponent
-DNAME_FMT_VCE_SF = DNAME_FMT_VCE + '_scale%.2f'  # scale factor
+DNAME_ADD_VCE_IPROT = '_ip0'
+DNAME_ADD_VCE_SF = '_scale%.2f'  # scale factor
 DNAME_NCSD = 'ncsd'
 DNAME_VCE = 'vce'
 
@@ -80,15 +81,16 @@ def _make_base_directories(a_aeff_to_dpath_map):
 
 
 def make_vce_directories(
-        a_prescription, nmax, n1, n2, nshell, ncomponent,
-        dpath_results=DPATH_RESULTS, dname_vce=DNAME_VCE, scalefactor=None
+        a_prescription, nmax, n1, n2, nshell, ncomponent, remove_protons,
+        dpath_results=DPATH_RESULTS, dname_vce=DNAME_VCE, scalefactor=None,
 ):
     fmt = tuple(tuple(a_prescription) + (nmax, n1, n2, nshell, ncomponent))
+    dname_fmt_vce = DNAME_FMT_VCE
+    if remove_protons:
+        dname_fmt_vce += DNAME_ADD_VCE_IPROT
     if scalefactor is not None:
+        dname_fmt_vce += DNAME_ADD_VCE_SF
         fmt += (scalefactor,)
-        dname_fmt_vce = DNAME_FMT_VCE_SF
-    else:
-        dname_fmt_vce = DNAME_FMT_VCE
     vce_dirpath = path.join(dpath_results, dname_vce, dname_fmt_vce % fmt)
     if not path.exists(vce_dirpath):
         makedirs(vce_dirpath)
@@ -286,25 +288,30 @@ def _truncate_space(
     src_path = path.join(dpath_templates, tbme_filename)
     tmp_path = path.join(dpath_elt, FNAME_FMT_TBME % n1)
     link_path = path.join(dpath_elt, LNAME_TBME)
+    # Determine the final destination path
     dst_path = tmp_path
     if remove_protons:
         dst_path += FNAME_ADD_TBME_IPROT
     if scalefactor is not None:
         dst_path += FNAME_ADD_TBME_SF % scalefactor
-    else:
-        scalefactor = 1.0
+    # Remove symlink if already exists
+    if path.lexists(link_path) or path.exists(link_path):
+        remove(link_path)
+    if path.split(link_path)[1] in listdir(dpath_elt):
+        remove(link_path)
+    # Do truncation [and scaling]
     if force or not path.exists(dst_path):
         if path.exists(dst_path):
             remove(dst_path)
         truncate_interaction(src_path, n1, n2, tmp_path)
-        if scalefactor is not None or remove_protons:
+        if (scalefactor is not None) or remove_protons:
+            if scalefactor is None:
+                scalefactor = 1.0
             scale_int(
                 src=tmp_path, dst=dst_path, nshell=nshell,
                 scalefactor=scalefactor, rm_proton_interaction=remove_protons
             )
             remove(tmp_path)
-    if path.exists(link_path):
-        remove(link_path)
     symlink(dst_path, link_path)
     return dst_path, link_path
 
@@ -354,13 +361,17 @@ def _truncate_spaces(nshell, n1, n2,
     for d in dirpaths:
         dst_path = path.join(d, fname_tbme)
         sl_path = path.join(d, lname_tbme)
-        if path.exists(sl_path):  # symlink exists
-            remove(sl_path)
-        if not path.exists(dst_path):  # link to TBME does not exist
-            link(fpath0, dst_path)
-        elif force:
-            remove(dst_path)
-            link(fpath0, dst_path)
+        try:
+            if path.exists(sl_path) or path.lexists(sl_path):  # symlink exists
+                remove(sl_path)
+            if not (path.exists(dst_path) or path.lexists(dst_path)):
+                link(fpath0, dst_path)
+            elif force:
+                remove(dst_path)
+                link(fpath0, dst_path)
+        except OSError:
+            print 'Could not link %s to %s.' % (fpath0, dst_path)
+            raise
         symlink(dst_path, sl_path)
     return fname_tbme, lname_tbme
 
@@ -457,13 +468,8 @@ def _get_a_aeff_to_jobsub_fpath_map(
         args = (_get_name(z), a, aeff, nhw, n1, n2)
         if scalefactor is not None:
             args += (scalefactor,)
-        try:
-            a_aeff_jobsub_map[(a, aeff)] = path.join(
-                a_aeff_to_dirpath_map[(a, aeff)], fname_fmt % args)
-        except TypeError:
-            print 'fname_fmt = %s' % repr(fname_fmt)
-            print 'args = %s' % str(args)
-            raise
+        a_aeff_jobsub_map[(a, aeff)] = path.join(
+            a_aeff_to_dirpath_map[(a, aeff)], fname_fmt % args)
     return a_aeff_jobsub_map
 
 
