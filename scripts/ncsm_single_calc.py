@@ -164,7 +164,8 @@ if __name__ == "__main__":
         elif len(user_args) == 5:
             z0, amin, amax, nmax0, nshell0 = [int(x) for x in user_args]
             ncsd_exact_calculations(
-                z=z0, a_range=range(amin, amax+1), nshell=nshell0,
+                z=z0, a_range=range(amin, amax+1), nmax=nmax0,
+                nshell=nshell0,
                 int_scalefactor=scalefactor0,
                 force=force0, verbose=verbose0, progress=progress0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
