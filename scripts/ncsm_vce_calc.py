@@ -5,7 +5,7 @@ To run as a script:
 
     $ ncsm_vce_calc.py [-f[nt]] [-v] [-s scalefactor] [-t walltime]
     [ Aeff4 Aeff5 Aeff6 | [-m|-M|-e] Ap_min Ap_max] Amin
-    [Amax [nmax [n1 n2 [nshell [ncomponent [Z]]]] | n1 n2]]
+    [Amax [nmax [nshell [ncomponent [Z [n1 n2]]]]]]
 
 In the current directory, creates a RESULTS directory in which the
 Valence Cluster Expansion is performed according to the A-prescription(s)
@@ -38,11 +38,10 @@ specified by Ap_min and Ap_max if -m or -M precedes the arguments.
 
 If 1 additional argument given,   this is Amax.
 If 2 additional arguments given, they are Amax nmax.
-If 3 additional arguments given, they are Amax      n1 n2.
-If 4 additional arguments given, they are Amax nmax n1 n2.
-If 5 additional arguments given, they are Amax nmax n1 n2 nshell.
-If 6 additional arguments given, they are Amax nmax n1 n2 nshell ncomponent.
-If 7 additional arguments given, they are Amax nmax n1 n2 nshell ncomponent Z.
+If 3 additional arguments given, they are Amax nmax nshell
+If 4 additional arguments given, they are Amax nmax nshell ncomponent
+If 5 additional arguments given, they are Amax nmax nshell ncomponent Z
+If 7 additional arguments given, they are Amax nmax nshell ncomponent Z n1 n2
 
 Example:
     $ ncsm_vce_calc.py -ft -s 0.0 -t 01:00:00 -e 4 10 4 10 6
@@ -431,7 +430,7 @@ class InvalidNmaxException(Exception):
 
 def ncsd_multiple_calculations(
         a_presc_list, a_values, z, nmax,
-        nshell=N_SHELL,  n1=N1, n2=N1, scalefactor=None,
+        nshell=N_SHELL, ncomponent=N_COMPONENT, n1=N1, n2=N1, scalefactor=None,
         force=False, verbose=False, progress=True, threading=True,
         cluster_submit=False, walltime=None, remove_tmp_files=True,
         str_prog_ncsd=STR_PROG_NCSD,
@@ -444,6 +443,7 @@ def ncsd_multiple_calculations(
     :param z: proton number
     :param nmax: major oscillator shell model space truncation
     :param nshell: shell (0: s, 1: p, 2: sd, ...)
+    :param ncomponent: 1 -> neutrons, 2 -> protons and neutrons
     :param n1: max allowed 1-particle state
     :param n2: max allowed 2-particle state
     :param scalefactor: float value by which the off-diagonal valence
@@ -486,7 +486,8 @@ def ncsd_multiple_calculations(
     # prepare directories and get maps
     a_aeff_maps = prepare_directories(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
-        z=z, n1=n1, n2=n2, nshell=nshell, scalefactor=scalefactor,
+        z=z, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
+        scalefactor=scalefactor,
         cluster_submit=cluster_submit, walltime=walltime, progress=progress,
         dpath_results=dpath_results, dpath_templates=dpath_templates,
         force=force,
@@ -525,7 +526,7 @@ def ncsd_multiple_calculations(
 
 def ncsd_single_calculation(
         a, aeff, z, scalefactor,
-        nhw=NMAX, n1=N1, n2=N1, nshell=N_SHELL,
+        nhw=NMAX, n1=N1, n2=N1, nshell=N_SHELL, ncomponent=N_COMPONENT,
         force=False, verbose=False, progress=True,
         cluster_submit=False, walltime=None, remove_tmp_files=True,
         dpath_templates=DPATH_TEMPLATES, dpath_results=DPATH_RESULTS,
@@ -537,9 +538,10 @@ def ncsd_single_calculation(
     :param scalefactor: factor by which to scale off-diagonal coupling terms of
     the TBME interaction
     :param nhw: model space truncation
+    :param nshell: shell (0: s, 1: p, 2: sd, ...)
+    :param ncomponent: 1 -> neutrons, 2 -> protons and neutrons
     :param n1: max allowed 1-particle state
     :param n2: max allowed 2-particle state
-    :param nshell: shell (0: s, 1: p, 2: sd, ...)
     :param force: if true, does the calculation even if output files already
     exist
     :param verbose: if true, prints the regular output of NCSD to stdout, else
@@ -563,7 +565,8 @@ def ncsd_single_calculation(
                 'Invalid Nhw=%d for A=%d. For even A, Nhw must be even.')
     a_aeff_to_dpath, a_aeff_to_egv, a_aeff_to_job = prepare_directories(
         a_list=[a], aeff_list=[aeff], nhw_list=[nhw],
-        z=z, n1=n1, n2=n2, nshell=nshell, scalefactor=scalefactor,
+        z=z, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
+        scalefactor=scalefactor,
         cluster_submit=cluster_submit, walltime=walltime, progress=progress,
         dpath_templates=dpath_templates, dpath_results=dpath_results,
         force=force,
@@ -590,8 +593,8 @@ def ncsd_single_calculation(
 
 def ncsd_exact_calculations(
         z, a_range,
-        nmax=NMAX, n1=N1, n2=N2, nshell=N_SHELL, int_scalefactor=None,
-        force=False, verbose=False, progress=True,
+        nmax=NMAX, n1=N1, n2=N2, nshell=N_SHELL, ncomponent=N_COMPONENT,
+        int_scalefactor=None, force=False, verbose=False, progress=True,
         cluster_submit=False, walltime=None, remove_tmp_files=True,
         str_prog_ncsd_ex=STR_PROG_NCSD_EX,
         dpath_templates=DPATH_TEMPLATES, dpath_results=DPATH_RESULTS,
@@ -601,9 +604,10 @@ def ncsd_exact_calculations(
     :param a_range: range of A values for which to do NCSD with Aeff=A
     :param nmax: major oscillator model space truncation. Note: Increased by 1
     for each successive A value
+    :param nshell: nuclear shell (e.g. 0=s, 1=p, 2=sd, ...)
+    :param ncomponent: 1 -> neutrons, 2 -> protons and neutrons
     :param n1: max allowed 1-particle state
     :param n2: max allowed 2-particle state
-    :param nshell: nuclear shell (e.g. 0=s, 1=p, 2=sd, ...)
     :param int_scalefactor: float factor by which the off-diagonal valence
     coupling terms in the TBME interaction are scaled
     :param force: if true, force calculation of NCSD even if output files are
@@ -626,7 +630,8 @@ def ncsd_exact_calculations(
             '\nInvalid Nmax: %d. Nmax must be even.' % nmax)
     ncsd_multiple_calculations(
         z=z, a_values=a_range, a_presc_list=[a_range],
-        nmax=nmax, n1=n1, n2=n2, nshell=nshell, scalefactor=int_scalefactor,
+        nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
+        scalefactor=int_scalefactor,
         cluster_submit=cluster_submit, walltime=walltime,
         force=force, verbose=verbose, progress=progress,
         remove_tmp_files=remove_tmp_files,
@@ -885,6 +890,8 @@ def ncsd_vce_calculations(
     :param n2: max allowed two-particle state
     :param nshell: major oscillator shell (0 = s, 1 = p, 2 = sd, ...)
     :param ncomponent: num components (1=neutrons, 2=protons and neutrons)
+    Note the effect of making this parameter is to scale the proton terms in
+    the interaction to 0.
     :param int_scalefactor: float factor by which the off-diagonal valence
     coupling terms in the interaction are scaled
     :param force_ncsd: if true, forces recalculation of NCSD, even if output
@@ -912,14 +919,11 @@ def ncsd_vce_calculations(
             '\nInvalid Nmax: %d. Nmax must be even.' % nmax)
     a_values = _generating_a_values(n_shell=nshell, n_component=ncomponent)
     if z is None:
-        if ncomponent == 1:  # neutrons only
-            z = 0
-        else:
-            z = int(a_values[0] / ncomponent)
+        z = int(a_values[0] / ncomponent)
     a_presc_list = list(a_prescriptions)
     a_aeff_maps = ncsd_multiple_calculations(
         z=z, a_values=a_values, a_presc_list=a_presc_list,
-        nmax=nmax, n1=n1, n2=n2, nshell=nshell,
+        nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
         scalefactor=int_scalefactor,
         force=force_all or force_ncsd,
         verbose=verbose, progress=progress, threading=threading,
@@ -1066,43 +1070,32 @@ if __name__ == "__main__":
         )
     elif len(other_args) == 4:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
-        n1_0, n2_0 = [int(x) for x in other_args[2:]]
+        nmax_0, nshell_0 = [int(x) for x in other_args[2:]]
         ncsd_vce_calculations(
             a_prescriptions=a_prescriptions0, a_range=a_range0, z=z_0,
-            n1=n1_0, n2=n2_0, int_scalefactor=scalefactor0,
+            nmax=nmax_0, nshell=nshell_0, int_scalefactor=scalefactor0,
             force_ncsd=f_ncsd, force_trdens=f_trdens,
             force_all=f_all, verbose=verbose0, progress=progress0,
             cluster_submit=cluster_submit0, walltime=walltime0,
         )
     elif len(other_args) == 5:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
-        nmax_0, n1_0, n2_0 = [int(x) for x in other_args[2:]]
+        nmax_0, nshell_0, ncomponent_0 = [int(x) for x in other_args[2:]]
         ncsd_vce_calculations(
             a_prescriptions=a_prescriptions0, a_range=a_range0, z=z_0,
-            nmax=nmax_0, n1=n1_0, n2=n2_0, int_scalefactor=scalefactor0,
+            nmax=nmax_0, nshell=nshell_0, ncomponent=ncomponent_0,
+            int_scalefactor=scalefactor0,
             force_ncsd=f_ncsd, force_trdens=f_trdens,
             force_all=f_all, verbose=verbose0, progress=progress0,
             cluster_submit=cluster_submit0, walltime=walltime0,
         )
     elif len(other_args) == 6:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
-        nmax_0, n1_0, n2_0, nshell_0 = [int(x) for x in other_args[2:]]
+        rest_args = [int(x) for x in other_args[2:]]
+        nmax_0, nshell_0, ncomponent_0, z_0 = rest_args
         ncsd_vce_calculations(
             a_prescriptions=a_prescriptions0, a_range=a_range0, z=z_0,
-            nmax=nmax_0, n1=n1_0, n2=n2_0, nshell=nshell_0,
-            int_scalefactor=scalefactor0,
-            force_ncsd=f_ncsd, force_trdens=f_trdens,
-            force_all=f_all, verbose=verbose0, progress=progress0,
-            cluster_submit=cluster_submit0, walltime=walltime0,
-        )
-    elif len(other_args) == 7:
-        a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
-        nmax_0, n1_0, n2_0, nshell_0, ncomponent_0 = [int(x)
-                                                      for x in other_args[2:]]
-        ncsd_vce_calculations(
-            a_prescriptions=a_prescriptions0, a_range=a_range0, z=z_0,
-            nmax=nmax_0, n1=n1_0, n2=n2_0,
-            nshell=nshell_0, ncomponent=ncomponent_0,
+            nmax=nmax_0, nshell=nshell_0, ncomponent=ncomponent_0,
             int_scalefactor=scalefactor0,
             force_ncsd=f_ncsd, force_trdens=f_trdens,
             force_all=f_all, verbose=verbose0, progress=progress0,
@@ -1111,7 +1104,7 @@ if __name__ == "__main__":
     elif len(other_args) == 8:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
         rest_args = [int(x) for x in other_args[2:]]
-        nmax_0, n1_0, n2_0, nshell_0, ncomponent_0, z_0 = rest_args
+        nmax_0, nshell_0, ncomponent_0, z_0, n1_0, n2_0 = rest_args
         ncsd_vce_calculations(
             a_prescriptions=a_prescriptions0, a_range=a_range0, z=z_0,
             nmax=nmax_0, n1=n1_0, n2=n2_0,

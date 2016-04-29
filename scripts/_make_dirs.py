@@ -255,11 +255,13 @@ class TbmeFileNotFoundException(Exception):
 
 
 def _truncate_space(
-        nshell, n1, n2, dpath_elt, scalefactor,
+        nshell, ncomponent, n1, n2, dpath_elt, scalefactor,
         dpath_templates=DPATH_TEMPLATES, force=False,
 ):
     """Run the script that truncates the space by removing extraneous
     interactions from the TBME file
+    :param nshell: major oscillator shell (0=s, 1=p, 2=sd, 3=fp, ...)
+    :param ncomponent: 1 -> neutrons, 2 -> protons and neutrons
     :param n1: Maximum state for single particle
     :param n2: Maximum state for two particles
     :param dpath_elt: Path to the directory in which the resultant TBME file
@@ -290,7 +292,8 @@ def _truncate_space(
         truncate_interaction(src_path, n1, n2, tmp_path)
         if scalefactor is not None:
             scale_int(src=tmp_path, dst=dst_path, nshell=nshell,
-                      scalefactor=scalefactor)
+                      scalefactor=scalefactor,
+                      remove_proton_interaction=ncomponent == 1)
             remove(tmp_path)
     symlink(dst_path, link_path)
     return dst_path, link_path
@@ -320,8 +323,11 @@ def _make_job_submit_files(a_aeff_to_jobsub_fpath_map, walltime):
         link(dst, dst2)
 
 
-def _truncate_spaces(nshell, n1, n2, dirpaths, scalefactor, force=False):
+def _truncate_spaces(nshell, ncomponent, n1, n2,
+                     dirpaths, scalefactor, force=False):
     """For multiple directories, perform the operation of truncate_space
+    :param nshell: major oscillator shell (0=s, 1=p, ...)
+    :param ncomponent: 1 -> neutrons, 2 -> protons and neutrons
     :param n1: max allowed one-particle state
     :param n2: max allowed two-particle state
     :param dirpaths: Paths to the destination directories
@@ -330,8 +336,8 @@ def _truncate_spaces(nshell, n1, n2, dirpaths, scalefactor, force=False):
     d0 = dirpaths.pop()
     # truncate interaction once
     fpath0, lpath0 = _truncate_space(
-        nshell=nshell, n1=n1, n2=n2, dpath_elt=d0, scalefactor=scalefactor,
-        force=force
+        nshell=nshell, ncomponent=ncomponent, n1=n1, n2=n2,
+        dpath_elt=d0, scalefactor=scalefactor, force=force
     )
     fname_tbme = path.split(fpath0)[1]
     lname_tbme = path.split(lpath0)[1]
@@ -453,8 +459,8 @@ def remove_ncsd_tmp_files(dpaths_list):
 
 
 def prepare_directories(
-        a_list, aeff_list, nhw_list, z, n1, n2, nshell, scalefactor,
-        dpath_templates, dpath_results,
+        a_list, aeff_list, nhw_list, z, n1, n2, nshell, ncomponent,
+        scalefactor, dpath_templates, dpath_results,
         cluster_submit=False, walltime=None, progress=False,
         force=False,
 ):
@@ -467,9 +473,10 @@ def prepare_directories(
     respective A and Aeff values in the a_list and aeff_list) for which to
     create directories
     :param z: proton number Z
+    :param nshell: shell (0: s, 1: p, 2: sd, ...)
+    :param ncomponent: 1 -> neutrons, 2 -> protons and neutrons
     :param n1: max allowed 1-particle state
     :param n2: max allowed 2-particle state
-    :param nshell: shell (0: s, 1: p, 2: sd, ...)
     :param scalefactor: factor by which to scale off-diagonal coupling terms of
     the TBME interaction
     :param dpath_templates: path to the templates directory
@@ -511,7 +518,8 @@ def prepare_directories(
     if progress:
         print '  Truncating interaction to N1=%d N2=%d...' % (n1, n2)
     fname_tbme, lname_tbme = _truncate_spaces(
-        nshell=nshell, n1=n1, n2=n2, dirpaths=a_aeff_to_dir_map.values(),
+        nshell=nshell, ncomponent=ncomponent, n1=n1, n2=n2,
+        dirpaths=a_aeff_to_dir_map.values(),
         scalefactor=scalefactor, force=force
     )
     if progress:

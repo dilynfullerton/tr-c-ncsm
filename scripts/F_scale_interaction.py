@@ -127,11 +127,19 @@ def run(fpath_src, fpath_dst, scalefn0=lambda a, b: b, force=False,
         fin.close()
 
 
-def scale_off_diag_outside_valence(src, dst, nshell, scalefactor):
+def scale_off_diag_outside_valence(src, dst, nshell, scalefactor,
+                                   remove_proton_interaction=False):
     scalefn = get_scaleif_fn(
         elt_cond_fn=ecf_off_diag_outside_valence(nshell),
         cols_to_scale=[0, 3, 4, 5], scalefactor=scalefactor,
     )
+    if remove_proton_interaction:
+        scalefn2 = get_scaleif_fn(
+            elt_cond_fn=lambda elt: True,
+            cols_to_scale=[3, 4],  # Vpp, Vpn
+            scalefactor=0.0,
+        )
+        scalefn = get_combined_scaleif_fn([scalefn, scalefn2])
     # scalefn2 = get_scaleif_fn(
     #     elt_cond_fn=ecf_outside_valence(nshell),
     #     cols_to_scale=[0, 3, 4, 5], scalefactor=20.0,
