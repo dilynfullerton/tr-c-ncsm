@@ -4,7 +4,7 @@
 To run as a script:
 
     $ ncsm_single_calc.py [-f] [-e] [-v] [-s scalefactor] [-t walltime]
-    Z A [Aeff [nhw [nshell [ncomponent [n1 n2]]]]]
+    Z A [Aeff [nhw [nshell [rm_prot [n1 n2]]]]]
 
 In the current directory run NCSD for a single element with a single A
 value and Aeff value, or (if -e) run NCSD for a range of A values with
@@ -30,8 +30,8 @@ If 2 arguments are given, these are Z A. (Aeff is taken to be equal to A).
 If 3 arguments are given, these are Z A Aeff.
 If 4 arguments are given, these are Z A Aeff nhw.
 If 5 arguments are given, these are Z A Aeff nhw nshell
-If 6 arguments are given, these are Z A Aeff nhw nshell ncomponent
-If 8 arguments are given, these are Z A Aeff nhw nshell ncomponent n1 n2
+If 6 arguments are given, these are Z A Aeff nhw nshell rm_prot
+If 8 arguments are given, these are Z A Aeff nhw nshell rm_prot n1 n2
 
 If -e, nhw is interpreted as nmax
 """
@@ -52,6 +52,7 @@ if __name__ == "__main__":
     cluster_submit0 = False
     walltime0 = NCSD_CLUSTER_WALLTIME
     scalefactor0 = None
+    rm_prot0 = False
     while True:
         a0 = user_args[0]
         if '-f' == a0.lower():
@@ -78,6 +79,7 @@ if __name__ == "__main__":
                 scalefactor=scalefactor0,
                 force=force0, verbose=verbose0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
+                remove_protons=rm_prot0,
             )
         elif len(user_args) == 3:
             z0, a0, aeff0 = [int(x) for x in user_args]
@@ -86,6 +88,7 @@ if __name__ == "__main__":
                 scalefactor=scalefactor0,
                 force=force0, verbose=verbose0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
+                remove_protons=rm_prot0,
             )
         elif len(user_args) == 4:
             z0, a0, aeff0, nhw0 = [int(x) for x in user_args]
@@ -94,6 +97,7 @@ if __name__ == "__main__":
                 scalefactor=scalefactor0,
                 force=force0, verbose=verbose0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
+                remove_protons=rm_prot0,
             )
         elif len(user_args) == 5:
             z0, a0, aeff0, nhw0, nshell0 = [int(x) for x in user_args]
@@ -101,6 +105,7 @@ if __name__ == "__main__":
                 z=z0, a=a0, aeff=aeff0, nhw=nhw0, nshell=nshell0,
                 scalefactor=scalefactor0, force=force0, verbose=verbose0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
+                remove_protons=rm_prot0,
             )
         elif len(user_args) == 6:
             args = [int(x) for x in user_args]
@@ -110,6 +115,7 @@ if __name__ == "__main__":
                 nshell=nshell0, ncomponent=ncomponent0,
                 scalefactor=scalefactor0, force=force0, verbose=verbose0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
+                remove_protons=rm_prot0,
             )
         elif len(user_args) == 8:
             args = [int(x) for x in user_args]
@@ -119,6 +125,7 @@ if __name__ == "__main__":
                 nshell=nshell0, ncomponent=ncomponent0,
                 scalefactor=scalefactor0, force=force0, verbose=verbose0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
+                remove_protons=rm_prot0,
             )
         else:
             raise InvalidNumberOfArgumentsException(
@@ -134,6 +141,7 @@ if __name__ == "__main__":
                 int_scalefactor=scalefactor0,
                 force=force0, verbose=verbose0, progress=progress0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
+                remove_protons=rm_prot0,
             )
         elif len(user_args) == 3:
             z0, amin, amax = [int(x) for x in user_args]
@@ -142,6 +150,7 @@ if __name__ == "__main__":
                 int_scalefactor=scalefactor0,
                 force=force0, verbose=verbose0, progress=progress0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
+                remove_protons=rm_prot0,
             )
         elif len(user_args) == 4:
             z0, amin, amax, nmax0 = [int(x) for x in user_args]
@@ -150,6 +159,7 @@ if __name__ == "__main__":
                 int_scalefactor=scalefactor0,
                 force=force0, verbose=verbose0, progress=progress0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
+                remove_protons=rm_prot0,
             )
         elif len(user_args) == 5:
             z0, amin, amax, nmax0, nshell0 = [int(x) for x in user_args]
@@ -158,26 +168,29 @@ if __name__ == "__main__":
                 int_scalefactor=scalefactor0,
                 force=force0, verbose=verbose0, progress=progress0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
+                remove_protons=rm_prot0,
             )
         elif len(user_args) == 6:
-            z0, amin, amax, nmax0, nshell0, ncomponent0 = [int(x)
-                                                           for x in user_args]
+            z0, amin, amax, nmax0, nshell0, rm_prot0 = [int(x)
+                                                        for x in user_args]
             ncsd_exact_calculations(
                 z=z0, a_range=range(amin, amax+1), nmax=nmax0,
-                nshell=nshell0, ncomponent=ncomponent0,
+                nshell=nshell0,
                 int_scalefactor=scalefactor0,
                 force=force0, verbose=verbose0, progress=progress0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
+                remove_protons=rm_prot0,
             )
         elif len(user_args) == 8:
             args = [int(x) for x in user_args]
-            z0, amin, amax, nmax0, nshell0, ncomponent0, n1_, n2_ = args
+            z0, amin, amax, nmax0, nshell0, rm_prot0, n1_, n2_ = args
             ncsd_exact_calculations(
                 z=z0, a_range=range(amin, amax+1), nmax=nmax0,
-                nshell=nshell0, ncomponent=ncomponent0, n1=n1_, n2=n2_,
+                nshell=nshell0, n1=n1_, n2=n2_,
                 int_scalefactor=scalefactor0,
                 force=force0, verbose=verbose0, progress=progress0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
+                remove_protons=rm_prot0,
             )
         else:
             raise InvalidNumberOfArgumentsException(

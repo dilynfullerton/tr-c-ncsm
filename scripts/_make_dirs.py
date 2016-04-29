@@ -11,8 +11,10 @@ MAX_NMAX = 15
 DPATH_MAIN = getcwd()
 DPATH_TEMPLATES = path.join(DPATH_MAIN, 'templates')
 DPATH_RESULTS = path.join(DPATH_MAIN, 'results')
-DNAME_FMT_NUC = '%s%d_%d_Nhw%d_%d_%d'  # name, A, Aeff, nhw, n1, n2
-DNAME_FMT_NUC_SF = DNAME_FMT_NUC + '_scale%.2f'  # scale factor
+DNAME_FMT_NUC = '%s%d_%d_Nhw%d_%d_%d'
+# name, A, Aeff, nhw, n1, n2,
+DNAME_ADD_NUC_IPROT = '_ip0'
+DNAME_ADD_NUC_SF = '_scale%.2f'  # scale factor
 DNAME_FMT_VCE = 'vce_presc%d,%d,%d_Nmax%d_%d_%d_shell%d_dim%d'
 #     A presc, Nmax, n1, n2, nshell, ncomponent
 DNAME_FMT_VCE_SF = DNAME_FMT_VCE + '_scale%.2f'  # scale factor
@@ -23,11 +25,17 @@ DNAME_VCE = 'vce'
 RGX_FNAME_TBME = 'TBME'
 RGX_FNAME_TMP = '.*\.tmp'
 FNAME_FMT_TBME = 'TBMEA2srg-n3lo2.O_%d.24'  # n1
-FNAME_FMT_TBME_SF = FNAME_FMT_TBME + '_sf%.2f'  # n1 scalefactor
-FNAME_FMT_NCSD_OUT = '%s%d_%d_Nhw%d_%d_%d.out'  # name, A, Aeff, Nhw, n1, n2
-FNAME_FMT_NCSD_OUT_SF = FNAME_FMT_NCSD_OUT[:-4] + '_scale%.2f' + '.out'
-FNAME_FMT_JOBSUB = FNAME_FMT_NCSD_OUT[:-4] + '.sh'
-FNAME_FMT_JOBSUB_SF = FNAME_FMT_NCSD_OUT_SF[:-4] + '.sh'
+FNAME_ADD_TBME_IPROT = '_ip0'
+FNAME_ADD_TBME_SF = '_sf%.2f'  # scalefactor
+FNAME_FMT_NCSD_OUT = DNAME_FMT_NUC
+# name, A, Aeff, Nhw, n1, n2,
+FNAME_ADD_NCSD_OUT_IPROT = DNAME_ADD_NUC_IPROT
+FNAME_ADD_NCSD_OUT_SF = DNAME_ADD_NUC_SF
+FNAME_EXT_NCSD_OUT = '.out'
+FNAME_FMT_JOBSUB = FNAME_FMT_NCSD_OUT
+FNAME_ADD_JOBSUB_IPROT = FNAME_ADD_NCSD_OUT_IPROT
+FNAME_ADD_JOBSUB_SF = FNAME_ADD_NCSD_OUT_SF
+FNAME_EXT_JOBSUB = '.sh'
 FNAME_FMT_EGV = 'mfdp_%d.egv'  # Nhw
 FNAME_TMP_MFDP = 'mfdp.dat'
 FNAME_TMP_TRDENS_IN = 'trdens.in'
@@ -210,7 +218,7 @@ class UnknownNumStatesException(Exception):
 # not know what to do. Also, it could potentially be incorrect and not
 # throw an exception if more variables are needed to determine the result.
 # This REALLY needs fixing.
-def _get_num_states(z, a, a0):
+def _get_num_states(a, a0):
     nhw_mod = a - a0
     if nhw_mod == 0:
         dim_nhw_mod = 1
@@ -223,19 +231,18 @@ def _get_num_states(z, a, a0):
     return nhw_mod, dim_nhw_mod
 
 
-def _get_trdens_replace_map(z, a, a0):
-    nnn, num_states = _get_num_states(z, a, a0)
+def _get_trdens_replace_map(a, a0):
+    nnn, num_states = _get_num_states(a, a0)
     return {'<<NNN>>': str(nnn), '<<NUMSTATES>>': str(num_states)}
 
 
 def make_trdens_file(
-        z, a, a0, nuc_dir,
+        a, a0, nuc_dir,
         dpath_results=DPATH_RESULTS, dpath_temp=DPATH_TEMPLATES,
         fname_tmp_trdens_in=FNAME_TMP_TRDENS_IN
 ):
     """Reads the trdens.in file from path_temp and rewrites it
     into path_elt in accordance with the given z, a
-    :param z: proton number
     :param a: mass number
     :param a0: lowest mass number in the shell
     :param nuc_dir: directory name
@@ -246,7 +253,7 @@ def make_trdens_file(
     src = path.join(dpath_temp, fname_tmp_trdens_in)
     path_elt = path.join(dpath_results, nuc_dir)
     dst = path.join(path_elt, FNAME_TRDENS_IN)
-    rep_map = _get_trdens_replace_map(z=z, a=a, a0=a0)
+    rep_map = _get_trdens_replace_map(a=a, a0=a0)
     _rewrite_file(src=src, dst=dst, replace_map=rep_map)
 
 
@@ -255,13 +262,12 @@ class TbmeFileNotFoundException(Exception):
 
 
 def _truncate_space(
-        nshell, ncomponent, n1, n2, dpath_elt, scalefactor,
+        nshell, n1, n2, dpath_elt, scalefactor, remove_protons,
         dpath_templates=DPATH_TEMPLATES, force=False,
 ):
     """Run the script that truncates the space by removing extraneous
     interactions from the TBME file
     :param nshell: major oscillator shell (0=s, 1=p, 2=sd, 3=fp, ...)
-    :param ncomponent: 1 -> neutrons, 2 -> protons and neutrons
     :param n1: Maximum state for single particle
     :param n2: Maximum state for two particles
     :param dpath_elt: Path to the directory in which the resultant TBME file
@@ -280,21 +286,25 @@ def _truncate_space(
     src_path = path.join(dpath_templates, tbme_filename)
     tmp_path = path.join(dpath_elt, FNAME_FMT_TBME % n1)
     link_path = path.join(dpath_elt, LNAME_TBME)
-    if path.exists(link_path):
-        remove(link_path)
-    if scalefactor is None:
-        dst_path = tmp_path
+    dst_path = tmp_path
+    if remove_protons:
+        dst_path += FNAME_ADD_TBME_IPROT
+    if scalefactor is not None:
+        dst_path += FNAME_ADD_TBME_SF % scalefactor
     else:
-        dst_path = path.join(dpath_elt, FNAME_FMT_TBME_SF % (n1, scalefactor))
+        scalefactor = 1.0
     if force or not path.exists(dst_path):
         if path.exists(dst_path):
             remove(dst_path)
         truncate_interaction(src_path, n1, n2, tmp_path)
-        if scalefactor is not None:
-            scale_int(src=tmp_path, dst=dst_path, nshell=nshell,
-                      scalefactor=scalefactor,
-                      remove_proton_interaction=ncomponent == 1)
+        if scalefactor is not None or remove_protons:
+            scale_int(
+                src=tmp_path, dst=dst_path, nshell=nshell,
+                scalefactor=scalefactor, rm_proton_interaction=remove_protons
+            )
             remove(tmp_path)
+    if path.exists(link_path):
+        remove(link_path)
     symlink(dst_path, link_path)
     return dst_path, link_path
 
@@ -323,11 +333,10 @@ def _make_job_submit_files(a_aeff_to_jobsub_fpath_map, walltime):
         link(dst, dst2)
 
 
-def _truncate_spaces(nshell, ncomponent, n1, n2,
-                     dirpaths, scalefactor, force=False):
+def _truncate_spaces(nshell, n1, n2,
+                     dirpaths, scalefactor, remove_protons, force=False):
     """For multiple directories, perform the operation of truncate_space
     :param nshell: major oscillator shell (0=s, 1=p, ...)
-    :param ncomponent: 1 -> neutrons, 2 -> protons and neutrons
     :param n1: max allowed one-particle state
     :param n2: max allowed two-particle state
     :param dirpaths: Paths to the destination directories
@@ -336,8 +345,8 @@ def _truncate_spaces(nshell, ncomponent, n1, n2,
     d0 = dirpaths.pop()
     # truncate interaction once
     fpath0, lpath0 = _truncate_space(
-        nshell=nshell, ncomponent=ncomponent, n1=n1, n2=n2,
-        dpath_elt=d0, scalefactor=scalefactor, force=force
+        nshell=nshell, n1=n1, n2=n2, dpath_elt=d0,
+        scalefactor=scalefactor, remove_protons=remove_protons, force=force,
     )
     fname_tbme = path.split(fpath0)[1]
     lname_tbme = path.split(lpath0)[1]
@@ -386,14 +395,15 @@ def rename_egv_file(a6_dir, nhw, force):
 
 
 def get_a_aeff_to_dpath_map(
-        a_list, aeff_list, nhw_list, z, n1, n2,
+        a_list, aeff_list, nhw_list, z, n1, n2, remove_protons,
         dpath_results=DPATH_RESULTS, dname_ncsd=DNAME_NCSD, scalefactor=None,
 ):
     a_paths_map = dict()
+    dname_fmt_nuc = DNAME_FMT_NUC
+    if remove_protons:
+        dname_fmt_nuc += DNAME_ADD_NUC_IPROT
     if scalefactor is not None:
-        dname_fmt_nuc = DNAME_FMT_NUC_SF
-    else:
-        dname_fmt_nuc = DNAME_FMT_NUC
+        dname_fmt_nuc += DNAME_ADD_NUC_SF
     path_fmt = path.join(dpath_results, dname_ncsd, dname_fmt_nuc)
     for a, aeff, nhw in zip(a_list, aeff_list, nhw_list):
         args = (_get_name(z), a, aeff, nhw, n1, n2)
@@ -404,14 +414,16 @@ def get_a_aeff_to_dpath_map(
 
 
 def get_a_aeff_to_outfile_fpath_map(
-        a_list, aeff_list, nhw_list, z, n1, n2, a_aeff_to_dirpath_map,
-        scalefactor=None
+        a_list, aeff_list, nhw_list, z, n1, n2, remove_protons,
+        a_aeff_to_dirpath_map, scalefactor=None
 ):
     a_aeff_outfile_map = dict()
+    fname_fmt = FNAME_FMT_NCSD_OUT
+    if remove_protons:
+        fname_fmt += FNAME_ADD_NCSD_OUT_IPROT
     if scalefactor is not None:
-        fname_fmt = FNAME_FMT_NCSD_OUT_SF
-    else:
-        fname_fmt = FNAME_FMT_NCSD_OUT
+        fname_fmt += FNAME_ADD_NCSD_OUT_SF
+    fname_fmt += FNAME_EXT_NCSD_OUT
     for a, aeff, nhw in zip(a_list, aeff_list, nhw_list):
         args = (_get_name(z), a, aeff, nhw, n1, n2)
         if scalefactor is not None:
@@ -431,20 +443,27 @@ def _get_a_aeff_to_egv_fpath_map(
 
 
 def _get_a_aeff_to_jobsub_fpath_map(
-        a_list, aeff_list, nhw_list, z, n1, n2, a_aeff_to_dirpath_map,
-        scalefactor=None,
+        a_list, aeff_list, nhw_list, z, n1, n2, remove_protons,
+        a_aeff_to_dirpath_map, scalefactor=None,
 ):
     a_aeff_jobsub_map = dict()
+    fname_fmt = FNAME_FMT_JOBSUB
+    if remove_protons:
+        fname_fmt += FNAME_ADD_JOBSUB_IPROT
     if scalefactor is not None:
-        fname_fmt = FNAME_FMT_JOBSUB_SF
-    else:
-        fname_fmt = FNAME_FMT_JOBSUB
+        fname_fmt += FNAME_ADD_JOBSUB_SF
+    fname_fmt += FNAME_EXT_JOBSUB
     for a, aeff, nhw in zip(a_list, aeff_list, nhw_list):
         args = (_get_name(z), a, aeff, nhw, n1, n2)
         if scalefactor is not None:
             args += (scalefactor,)
-        a_aeff_jobsub_map[(a, aeff)] = path.join(
-            a_aeff_to_dirpath_map[(a, aeff)], fname_fmt % args)
+        try:
+            a_aeff_jobsub_map[(a, aeff)] = path.join(
+                a_aeff_to_dirpath_map[(a, aeff)], fname_fmt % args)
+        except TypeError:
+            print 'fname_fmt = %s' % repr(fname_fmt)
+            print 'args = %s' % str(args)
+            raise
     return a_aeff_jobsub_map
 
 
@@ -459,8 +478,8 @@ def remove_ncsd_tmp_files(dpaths_list):
 
 
 def prepare_directories(
-        a_list, aeff_list, nhw_list, z, n1, n2, nshell, ncomponent,
-        scalefactor, dpath_templates, dpath_results,
+        a_list, aeff_list, nhw_list, z, n1, n2, nshell,
+        scalefactor, remove_protons, dpath_templates, dpath_results,
         cluster_submit=False, walltime=None, progress=False,
         force=False,
 ):
@@ -474,11 +493,12 @@ def prepare_directories(
     create directories
     :param z: proton number Z
     :param nshell: shell (0: s, 1: p, 2: sd, ...)
-    :param ncomponent: 1 -> neutrons, 2 -> protons and neutrons
     :param n1: max allowed 1-particle state
     :param n2: max allowed 2-particle state
     :param scalefactor: factor by which to scale off-diagonal coupling terms of
     the TBME interaction
+    :param remove_protons: if true, scales the proton-proton and
+    proton-neutron parts of the interaction to 0
     :param dpath_templates: path to the templates directory
     :param dpath_results: path to the results directory
     :param progress: if true, shows a progress bar (verbose mode will be off)
@@ -492,12 +512,12 @@ def prepare_directories(
     a_aeff_to_dir_map = get_a_aeff_to_dpath_map(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
         z=z, n1=n1, n2=n2, scalefactor=scalefactor,
-        dpath_results=dpath_results,
+        remove_protons=remove_protons, dpath_results=dpath_results,
     )
     a_aeff_to_outfile_map = get_a_aeff_to_outfile_fpath_map(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
         z=z, n1=n1, n2=n2, a_aeff_to_dirpath_map=a_aeff_to_dir_map,
-        scalefactor=scalefactor,
+        scalefactor=scalefactor, remove_protons=remove_protons,
     )
     a_aeff_to_egvfile_map = _get_a_aeff_to_egv_fpath_map(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
@@ -507,7 +527,7 @@ def prepare_directories(
         a_aeff_to_jobfile_map = _get_a_aeff_to_jobsub_fpath_map(
             a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
             z=z, n1=n1, n2=n2, a_aeff_to_dirpath_map=a_aeff_to_dir_map,
-            scalefactor=scalefactor,
+            scalefactor=scalefactor, remove_protons=remove_protons,
         )
     else:
         a_aeff_to_jobfile_map = dict()
@@ -518,9 +538,9 @@ def prepare_directories(
     if progress:
         print '  Truncating interaction to N1=%d N2=%d...' % (n1, n2)
     fname_tbme, lname_tbme = _truncate_spaces(
-        nshell=nshell, ncomponent=ncomponent, n1=n1, n2=n2,
+        nshell=nshell, n1=n1, n2=n2,
         dirpaths=a_aeff_to_dir_map.values(),
-        scalefactor=scalefactor, force=force
+        scalefactor=scalefactor, remove_protons=remove_protons, force=force
     )
     if progress:
         print '  Writing mfdp files...'
