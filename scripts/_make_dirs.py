@@ -215,31 +215,26 @@ class UnknownNumStatesException(Exception):
 # todo IMPORTANT write this method to be general
 # This should determine 'nhw_mod' and 'dim_nhw_mod'. These are the names
 # of the variables in trdens-kernels.f, which are retrieved from trdens.in.
-# I do not know what they mean, and the means of determining them
-# is a hard-coded case-by-case system that throws an exception if it does
-# not know what to do. Also, it could potentially be incorrect and not
-# throw an exception if more variables are needed to determine the result.
-# This REALLY needs fixing.
-def _get_num_states(a, a0):
-    nhw_mod = a - a0
-    if nhw_mod == 0:
-        dim_nhw_mod = 1
-    elif nhw_mod == 1:
-        dim_nhw_mod = 2
-    elif nhw_mod == 2:
-        dim_nhw_mod = 5
-    else:
-        raise UnknownNumStatesException()
+# I am only somewhat confident that this works when A - A0 = 0
+# (he6 in p shell, o18 in sd shell, etc). For anything else, I would not trust
+# it.
+def _get_num_states(a, a0, nshell):
+    nhw_mod = (a - a0) * nshell  # todo is this correct generally
+    dim_nhw_mod = 0
+    for j1_2 in range(1, (a-a0)*(nshell+1), 2):
+        dim_nhw_mod += (j1_2 + 1)/2
+        for j2_2 in range(j1_2+1, (a-a0)*(nshell+1), 2):
+            dim_nhw_mod += j1_2 + 1
     return nhw_mod, dim_nhw_mod
 
 
-def _get_trdens_replace_map(a, a0):
-    nnn, num_states = _get_num_states(a, a0)
+def _get_trdens_replace_map(a, a0, nshell):
+    nnn, num_states = _get_num_states(a, a0, nshell)
     return {'<<NNN>>': str(nnn), '<<NUMSTATES>>': str(num_states)}
 
 
 def make_trdens_file(
-        a, a0, nuc_dir,
+        a, a0, nuc_dir, nshell,
         dpath_results=DPATH_RESULTS, dpath_temp=DPATH_TEMPLATES,
         fname_tmp_trdens_in=FNAME_TMP_TRDENS_IN
 ):
@@ -255,7 +250,7 @@ def make_trdens_file(
     src = path.join(dpath_temp, fname_tmp_trdens_in)
     path_elt = path.join(dpath_results, nuc_dir)
     dst = path.join(path_elt, FNAME_TRDENS_IN)
-    rep_map = _get_trdens_replace_map(a=a, a0=a0)
+    rep_map = _get_trdens_replace_map(a=a, a0=a0, nshell=nshell)
     _rewrite_file(src=src, dst=dst, replace_map=rep_map)
 
 
