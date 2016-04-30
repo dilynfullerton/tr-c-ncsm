@@ -90,7 +90,7 @@ from _make_dirs import EgvFileNotFoundException
 # CONSTANTS
 N_SHELL = 1  # 0=s, 1=p, 2=sd, ...
 N_COMPONENT = 2  # 1=neutrons, 2=protons and neutrons
-NMAX = 6
+NMAX = 2
 N1 = 15
 N2 = 15
 
@@ -238,7 +238,7 @@ def _run_trdens(
 
 
 def _run_vce(
-        a_values, a_prescription, a_range,
+        a_values, a_prescription, a_range, nshell,
         a_aeff_to_outfile_fpath_map, dirpath_aeff6, dirpath_vce,
 ):
     """Do the VCE expansion calculation for each Aeff value in aeff_range
@@ -268,7 +268,8 @@ def _run_vce(
     a_0 = a_range.pop()
     fpath_fmt = path.join(dirpath_vce, FNAME_FMT_VCE_INT)
     fpath = fpath_fmt % a_0
-    vce_calculation(a_prescription, fpath, he4_fpath, he5_fpath, he6_fpath)
+    vce_calculation(a_prescription, fpath, he4_fpath, he5_fpath, he6_fpath,
+                    nshell=nshell)
     # Same interaction is used for all masses
     for a in a_range:
         next_fpath = fpath_fmt % a
@@ -527,7 +528,7 @@ def ncsd_multiple_calculations(
 
 def ncsd_single_calculation(
         a, aeff, z, scalefactor, remove_protons,
-        nhw=NMAX, n1=N1, n2=N1, nshell=N_SHELL,
+        nmax=NMAX, n1=N1, n2=N1, nshell=N_SHELL,
         force=False, verbose=False, progress=True,
         cluster_submit=False, walltime=None, remove_tmp_files=True,
         dpath_templates=DPATH_TEMPLATES, dpath_results=DPATH_RESULTS,
@@ -536,7 +537,7 @@ def ncsd_single_calculation(
     :param a: actual mass number A
     :param aeff: effective mass number Aeff
     :param z: proton number Z
-    :param nhw: model space truncation
+    :param nmax: model space truncation
     :param nshell: shell (0: s, 1: p, 2: sd, ...)
     :param n1: max allowed 1-particle state
     :param n2: max allowed 2-particle state
@@ -557,13 +558,10 @@ def ncsd_single_calculation(
     :param dpath_templates: path to the templates directory
     :param dpath_results: path to the results directory
     """
-    if nhw % 2 != a % 2:
-        if a % 2:
-            raise InvalidNmaxException(
-                'Invalid Nhw=%d for A=%d. For odd A, Nhw must be odd.')
-        else:
-            raise InvalidNmaxException(
-                'Invalid Nhw=%d for A=%d. For even A, Nhw must be even.')
+    if nmax % 2 != 0:
+        raise InvalidNmaxException(
+            'Invalid Nmax=%d. Nmax must be even.' % nmax)
+    nhw = nmax + _min_orbitals(z) + _min_orbitals(a - z)
     a_aeff_to_dpath, a_aeff_to_egv, a_aeff_to_job = prepare_directories(
         a_list=[a], aeff_list=[aeff], nhw_list=[nhw],
         z=z, n1=n1, n2=n2, nshell=nshell,
@@ -695,8 +693,10 @@ def vce_single_calculation(
     # for the 3rd a value, make trdens file and run TRDENS
     a_aeff6 = (a_values[2], a_prescription[2])
     dpath_a6 = a_aeff_dir_map[a_aeff6]
-    make_trdens_file(a=a_values[2], a0=a_values[0], nuc_dir=dpath_a6,
-                     dpath_results=dpath_results, dpath_temp=dpath_templates)
+    make_trdens_file(
+        a=a_values[2], a0=a_values[0], nuc_dir=dpath_a6, nshell=nshell,
+        dpath_results=dpath_results, dpath_temp=dpath_templates
+    )
     nhw = nmax + _min_orbitals(z) + _min_orbitals(a_values[2] - z)
     try:
         rename_egv_file(a6_dir=dpath_a6, nhw=nhw, force=force_trdens)
@@ -715,7 +715,7 @@ def vce_single_calculation(
     try:
         _run_vce(
             a_values=a_values, a_prescription=a_prescription, a_range=a_range,
-            dirpath_aeff6=dpath_a6, dirpath_vce=vce_dirpath,
+            nshell=nshell, dirpath_aeff6=dpath_a6, dirpath_vce=vce_dirpath,
             a_aeff_to_outfile_fpath_map=a_aeff_outfile_map,
         )
     except NcsdOutfileNotFoundException:
