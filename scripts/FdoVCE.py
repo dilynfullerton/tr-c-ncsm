@@ -2,7 +2,8 @@
 """
 To run as a script:
 
-    $ FdoVCE.py Aeff4 [Aeff5 Aeff6] outfile [he4fname he5fname he6fname]
+    $ FdoVCE.py Aeff4 [Aeff5 Aeff6] outfile
+    [he4fname he5fname he6fname [nshell]]
 
 Generates an interaction file based on He4, He5, and He6 output files.
 
@@ -37,8 +38,9 @@ def get_e0(aeff, fname_he4):
             '\nA ground state could not be retrieved from %s' % fname_he4)
 
 
-def get_spe(aeff, e0, fname_he5):
-    np1, np3 = 999., 999.
+def get_spe(aeff, e0, fname_he5, nshell):
+    spe_list = [999.] * (nshell + 1)
+    j2_range = [1 + 2*xx for xx in range(nshell + 1)]
     if fname_he5 is not None:
         fname = fname_he5
     else:
@@ -50,14 +52,14 @@ def get_spe(aeff, e0, fname_he5):
         ldat = line.split()
         e = float(ldat[5])
         j = int(2 * float(ldat[8]))
-        if j == 1 and np1 == 999.:
-            np1 = e - e0
-        if j == 3 and np3 == 999.:
-            np3 = e - e0
-        if np1 != 999. and np3 != 999.:
+        if j in j2_range:
+            ii = j2_range.index(j)
+            if spe_list[ii] == 999.:
+                spe_list[ii] = e - e0
+        if 999. not in spe_list:
             break
     f.close()
-    return np1, np3
+    return spe_list
 
 
 def print_header(aeff, e0, spe, st='%d'):
@@ -67,8 +69,8 @@ def print_header(aeff, e0, spe, st='%d'):
         st % (aeff,))
     header_lines.append('!  Zero body term: %10.6f' % (e0,))
     header_lines.append('!  Index  n  l  j tz')
-    header_lines.append('!  1     0  1  1  1')
-    header_lines.append('!  2     0  1  3  1')
+    for j, idx in zip([1 + 2*xx for xx in range(len(spe))], range(len(spe))):
+        header_lines.append('!  %d     %d  %d  %d  %d' % (idx+1, 0, 1, j, 1))
     header_lines.append('! ')
     header_lines.append(
         '-999 ' + '  '.join(['%10.6f' % e for e in spe]) + '  4  6  0.000000')
@@ -113,9 +115,9 @@ def get_tbme(aeff, e0, spe, fname_out, fname_he6, presc=None):
     outfile.close()
 
 
-def run(presc, fname_out, fname_he4, fname_he5, fname_he6):
+def run(presc, fname_out, fname_he4, fname_he5, fname_he6, nshell):
     e0 = get_e0(presc[0], fname_he4)
-    spe = get_spe(presc[1], e0, fname_he5)
+    spe = get_spe(presc[1], e0, fname_he5, nshell=nshell)
     get_tbme(presc[2], e0, spe, fname_out, fname_he6, presc)
 
     # Do the inconsistent/universal way
@@ -126,6 +128,7 @@ def run(presc, fname_out, fname_he4, fname_he5, fname_he6):
 
 
 if __name__ == "__main__":
+    nshell0 = 1
     if len(argv) == 3:
         a_prescription = (int(argv[1]),)*3
         out_fname = argv[2]
@@ -139,10 +142,18 @@ if __name__ == "__main__":
         he4_fname = argv[5]
         he5_fname = argv[6]
         he6_fname = argv[7]
+    elif len(argv) == 9:
+        a_prescription = tuple([int(x) for x in argv[1:4]])
+        out_fname = argv[4]
+        he4_fname = argv[5]
+        he5_fname = argv[6]
+        he6_fname = argv[7]
+        nshell0 = argv[8]
     else:
         raise InvalidNumberOfArgumentsException(
             '\nFdoVCE.py called with %d arguments. ' % (len(argv)-1,) +
             'Please call with 2, 5, or 7 arguments.\n'
         )
     run(presc=a_prescription, fname_out=out_fname,
-        fname_he4=he4_fname, fname_he5=he5_fname, fname_he6=he6_fname)
+        fname_he4=he4_fname, fname_he5=he5_fname, fname_he6=he6_fname,
+        nshell=nshell0)
