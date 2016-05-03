@@ -22,7 +22,7 @@ or `.profile`, replacing the ellipses as necessary.
    PATH=$PATH:~/.../NCSM/src/
    ```
 3. If you want to run ncsm\_vce\_calc.py and ncsm\_single\_calc.py as
-scripts, add the following to your `.bash_profile` or `.profile`, replaces
+scripts, add the following to your `.bash_profile` or `.profile`, replacing
 the ellipses as necessary.  
 
    ```bash
