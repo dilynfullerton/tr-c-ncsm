@@ -1,5 +1,5 @@
 # tr-c-ncsm
-Coming soon: MORE information about this stuff. Oooh weee! I can't wait
+_Coming soon_: MORE information about this stuff. Oooh weee! I can't wait
 
 ### Overview
 _Coming soon._
