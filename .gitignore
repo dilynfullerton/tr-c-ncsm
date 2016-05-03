@@ -3,14 +3,9 @@
 /.idea
 *.pyc
 /results*
-/templates/TBMEA2srg-n3lo2.0_15.24
-/list_diag.py
-/diag.txt
 *~
 /scripts/remove_tmp_files.py
-tbme_tmp
-scripts/test_TBME.py
 .DS_Store
-try.py
-/test
 beta.xlsx
+*/TBMEA2srg-n3lo2.0_15.24*
+test/list_tbme_terms/TBMEA2srg-n3lo2.0_15.24
