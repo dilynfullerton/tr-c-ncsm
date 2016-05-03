@@ -1,16 +1,40 @@
 #!/usr/bin/python
 """ncsm_vce_calc.py
 
-To run as a script:
+Prerequisites:
+  * python 2 (2.4 or later)
+  * NCSD and TRDENS functions are sourced
+  * The user should edit the job.sh file in the templates directory to use
+  their email address, as opposed to mine
+
+It will be helpful for the reader of this file to note that I have used the
+convention of writing all helper functions above the functions that use them.
+
+It is recommended that the user write their own python script to use the
+primary user functions:
+  * ncsd_vce_calculations
+  * ncsd_single_calculation
+  * ncsd_exact_calculations
+  * ncsd_multiple_calculations
+  * vce_single_calculation
+  * vce_multiple_calculations
+
+However, this python file is also configured to run as a UNIX-style command.
+
+To run as a script (assuming this file has been added to PATH):
 
     $ ncsm_vce_calc.py [-f[nt]] [-v] [-s scalefactor] [-t walltime]
-    [ Aeff4 Aeff5 Aeff6 | [-m|-M|-e] Ap_min Ap_max] Amin
+    ( Aeff4 Aeff5 Aeff6 | [-m|-M|-e] Ap_min Ap_max) Amin
     [Amax [nmax [nshell [ncomponent [Z [n1 n2 [rm_prot]]]]]]]
 
 In the current directory, creates a RESULTS directory in which the
 Valence Cluster Expansion is performed according to the A-prescription(s)
 given by (Aeff4, Aeff5, and Aeff6) or the range of A prescriptions
 specified by Ap_min and Ap_max if -m or -M precedes the arguments.
+
+Note that unlike typical UNIX commands, string arguments cannot be strung
+together following a single '-'. Each argument must be provided separately.
+(TODO: Fix this)
 
 -F or -f
     force recalculation of all steps (NCSD, TRDENS)
@@ -36,15 +60,10 @@ specified by Ap_min and Ap_max if -m or -M precedes the arguments.
     NCSD jobs (submitted to cluster) are allotted the given amount of walltime,
       a string in the format hh:mm:ss
 
-If 1 additional argument,  this is  Amax.
-If 2 additional arguments, they are Amax nmax.
-If 3 additional arguments, they are Amax nmax nshell
-If 4 additional arguments, they are Amax nmax nshell ncomponent
-If 5 additional arguments, they are Amax nmax nshell ncomponent Z
-If 7 additional arguments, they are Amax nmax nshell ncomponent Z n1 n2
-If 8 additional arguments, they are Amax nmax nshell ncomponent Z n1 n2 rm_prot
+If additional arguments are provided, in order they are taken to be
+    Amax Nmax Nshell Ncomponent Z n1 n2 rm_prot
 
-Example:
+Example: Sample calculation in the p-shell.
     $ ncsm_vce_calc.py -ft -s 0.0 -t 01:00:00 -e 4 10 4 10 6
 
     The first argument, -ft (force TRDENS), prompts the script to force
@@ -55,7 +74,9 @@ Example:
     interaction file's off-diagonal coupling terms by 0.0.
 
     The third argument, -t (time) 01:00:00, prompts the script to submit
-    the job to the cluster, with an allowed walltime of 1 hour.
+    the job to the cluster, with an allowed walltime of 1 hour. If this
+    arbument were not provided, calculations would be multithreaded on the
+    head node.
 
     The fourth argument, -e (exact), prompts the script to interpret the next
     two items as Ap_min and Ap_max. This will perform NCSD and VCE
@@ -67,6 +88,47 @@ Example:
     convenience when using shell_calc.py to run NuShellX.
 
     The final 6 indicates that the calculations are performed in Nmax=6.
+
+Example: Sample calculation in the sd-shell.
+    $ ncsm_vce_calc.py -t 03:00:00 18 18 18 16 24 0 2 2 8 15 15 1
+
+    The first argument, -t (time) 03:00:00, prompts the script to submit the
+    job to the cluster with an allowed time of 3 hours.
+
+    Because -e was not provided, the next 3 arguments are interpreted as the
+    A-prescription.
+    NCSD calculations will be done for oxygen with
+      (A, Aeff) = (16, 18), (17, 18), and (18, 18).
+    VCE will be done for the prescription Aeff = (18, 18, 18).
+
+    The next two arguments, 16 and 24, prompt the creation of NuShellX *.int
+    files for A=16 to A=24.
+
+    The next argument, 0, is Nmax. Calculations are done for Nmax=0.
+
+    The next argument, 2, specifies the oscillator shell, that is the sd-shell.
+    This argument MUST be specified for a calculation in the sd-shell, as the
+    default is 1 (p-shell).
+
+    The next argument, 2, specifies that the calculations are done for
+    protons and neutrons. Generally, this should always be the case, but the
+    argument must be supplied here, as some arguments that follow differ from
+    the defaults.
+
+    The next argument, 8, specifies the proton number. Generally this argument
+    is not necessary, as the proton number can be determined from the nshell
+    and ncomponent parameters, but it can be specified if the user wishes that
+    it differ from the regular value. Here it is needed only because
+    a following parameter differs from the default.
+
+    The next two arguments, 15 15, specify the N1 and N2 truncation for the
+    TBME interaction file. These are the default values, with which no
+    truncation is done.
+
+    The final argument, 1, prompts the script to remove the proton part of the
+    interaction file. That is, Vpp and Vpn are scaled to 0.
+
+
 """
 
 from __future__ import division
@@ -82,7 +144,7 @@ from FdoVCE import run as vce_calculation
 from InvalidNumberOfArgumentsException import InvalidNumberOfArgumentsException
 
 from _make_dirs import DPATH_TEMPLATES, DPATH_RESULTS
-from _make_dirs import make_vce_directories, make_trdens_file, rename_egv_file
+from _make_dirs import make_vce_directory, make_trdens_file, rename_egv_file
 from _make_dirs import prepare_directories, remove_ncsd_tmp_files
 from _make_dirs import EgvFileNotFoundException
 
@@ -121,7 +183,17 @@ NCSD_CLUSTER_WALLTIME = '01:00:00'
 # FUNCTIONS
 def _generating_a_values(n_shell, n_component):
     """Based on the given major harmonic oscillator shell, gets the 3
-    A values that are used to generate the effective Hamiltonian
+    A values that are used to generate the effective Hamiltonian.
+    Examples:
+    For the p-shell (n_shell=1) for neutrons only (n_component=1),
+    >> _generating_a_values(1, 1)
+    (2, 3, 4)
+    For the p-shell (n_shell=1) for protons and neutrons (n_component=2),
+    >> _generating_a_values(1, 2)
+    (4, 5, 6)
+    For the sd-shell (n_shell=2) for protons and neutrons (n_component=2),
+    >> _generating_a_values(2, 2)
+    (16, 17, 18)
     :param n_shell: major oscillator shell
     """
     a_0 = int((n_shell + 2) * (n_shell + 1) * n_shell / 3 * n_component)
@@ -131,12 +203,12 @@ def _generating_a_values(n_shell, n_component):
 def _min_orbitals(z):
     """Get the minimum number of harmonic oscillator orbitals for a given Z.
     This is a port from the function Nmin_HO in it-code-111815.f.
+    This is used in converting between Nmax and Nhw.
+      Nmax + _min_orbitals(Z) + _min_orbitals(N) = Nhw
     :param z: proton or neutron number
     :return: minimum number of harmonic oscillator orbitals
     """
-    z_rem = z
-    n_min = 0
-    n = 0
+    z_rem, n_min, n = z, 0, 0
     while True:
         n_min += n * min((n+1)*(n+2), z_rem)
         z_rem -= (n+1)*(n+2)
@@ -154,6 +226,21 @@ def _run_ncsd(
         dpath, fpath_egv, force, verbose,
         fname_stdout=FNAME_NCSD_STDOUT, fname_stderr=FNAME_NCSD_STDERR
 ):
+    """Run NCSD in the given directory (dpath)
+    :param dpath: path to the directory in which to run NCSD
+    :param fpath_egv: path to the *.egv file, whose existence signifies that
+    the calculation has already been done
+    :param force: if true, does the calculation even if fpath_egv already
+    exists
+    :param verbose: if true, print regular NCSD output to stdout. Note: This
+    is NOT compatible with multithreading.
+    :param fname_stdout: if verbose is False, specifies the name of the file
+    to which to print the output of NCSD
+    :param fname_stderr: if verbose is False, specifies the name of the file
+    to which to print error output of NCSD.
+    :raises NcsdRunException: if there is error output of NCSD or if NCSD has
+    not been compiled and sourced, NcsdRunException is raised
+    """
     if not force and path.exists(path.join(fpath_egv)):
         return None
     args = ['NCSD']
@@ -180,7 +267,7 @@ def _run_ncsd(
     except OSError:
         raise NcsdRunException(
             '\nA problem occurred while running NCSD. Make sure the code'
-            ' is compiled.'
+            ' is compiled and sourced.'
         )
 
 
@@ -192,8 +279,9 @@ def _run_trdens(
         dpath_a6, force, verbose,
         fname_stdout=FNAME_TRDENS_STDOUT, fname_stderr=FNAME_TRDENS_STDERR
 ):
-    """Run the TRDENS calculation in a6_dir
-    :param dpath_a6: Directory in which to run the calulation
+    """Run the TRDENS calculation in dpath_a6. It is assumed that input files
+    have already been prepared.
+    :param dpath_a6: Directory in which to run the TRDENS calulation
     :param force: If True, redoes the calculation even if output files
     already exist
     :param verbose: if true, prints regular output of TRDENS to stdout,
@@ -203,6 +291,8 @@ def _run_trdens(
     TRDENS if verbose is false
     :param fname_stderr: filename to which to write standard error output
     of TRDENS if verbose is false
+    :raises TrdensRunException: if there is error output from TRDENS or the
+    command fails to run, TrdensRunException is raised.
     """
     fpath_out = path.join(dpath_a6, FNAME_TRDENS_OUT)
     if not force and path.exists(fpath_out):
@@ -233,7 +323,7 @@ def _run_trdens(
     except OSError:
         raise TrdensRunException(
             '\nA problem occurred while running TRDENS. Make sure the code'
-            ' is compiled.'
+            ' is compiled and sourced.'
         )
 
 
@@ -254,12 +344,14 @@ def _run_vce(
     :param dirpath_aeff6: Directory for the 3rd A value
     :param dirpath_vce: Path to the directory in which to put generated
     interaction files
+    :raises NcsdOutfileNotFoundException: if any of the NCSD *.out files
+    or Heff_OLS are not found, this exception is raise
     """
-    he4_fpath = a_aeff_to_outfile_fpath_map[(a_values[0], a_prescription[0])]
-    he5_fpath = a_aeff_to_outfile_fpath_map[(a_values[1], a_prescription[1])]
-    he6_fpath = path.join(dirpath_aeff6, FNAME_HEFF)
+    a4_fpath = a_aeff_to_outfile_fpath_map[(a_values[0], a_prescription[0])]
+    a5_fpath = a_aeff_to_outfile_fpath_map[(a_values[1], a_prescription[1])]
+    heff_fpath = path.join(dirpath_aeff6, FNAME_HEFF)
     # Check that files exist
-    for f in [he4_fpath, he5_fpath, he6_fpath]:
+    for f in [a4_fpath, a5_fpath, heff_fpath]:
         if not path.exists(f):
             raise NcsdOutfileNotFoundException(
                 'NCSD outfile not found: %s' % f)
@@ -268,7 +360,7 @@ def _run_vce(
     a_0 = a_range.pop()
     fpath_fmt = path.join(dirpath_vce, FNAME_FMT_VCE_INT)
     fpath = fpath_fmt % a_0
-    vce_calculation(a_prescription, fpath, he4_fpath, he5_fpath, he6_fpath,
+    vce_calculation(a_prescription, fpath, a4_fpath, a5_fpath, heff_fpath,
                     nshell=nshell)
     # Same interaction is used for all masses
     for a in a_range:
@@ -283,22 +375,50 @@ def _print_progress(
         bar_len=WIDTH_PROGRESS_BAR, total_width=WIDTH_TERM,
         text_fmt=STR_PROGRESS_BAR
 ):
-    if total > 0:
-        text = text_fmt % (floor(completed), total)
-        p = completed / total
-        bar_fill = int(floor(p * bar_len))
-        progress_bar = '[' + '#'*bar_fill + ' '*(bar_len - bar_fill) + ']'
-        sp_fill_len = total_width - len(text) - len(progress_bar)
-        if sp_fill_len < 0:
-            sp_fill_len = 0
-        line = '\r' + text + ' '*sp_fill_len + progress_bar
-        if end:
-            line += '\n'
-        stdout.write(line)
-        stdout.flush()
+    """Prints a progress bar based on completed and total.
+    :param completed: number of jobs completed
+    :param total: total number of jobs
+    :param end: if true, ends the print with a newline '\n' character, so that
+    standard printing can continue
+    :param bar_len: width in characters of the progress bar
+    :param total_width: total available width
+    :param text_fmt: text to format with completed and total
+    """
+    if not total > 0:
+        return
+    text = text_fmt % (floor(completed), total)
+    p = completed / total
+    bar_fill = int(floor(p * bar_len))
+    progress_bar = '[' + '#'*bar_fill + ' '*(bar_len - bar_fill) + ']'
+    sp_fill_len = total_width - len(text) - len(progress_bar)
+    if sp_fill_len < 0:
+        sp_fill_len = 0
+    line = '\r' + text + ' '*sp_fill_len + progress_bar
+    if end:
+        line += '\n'
+    stdout.write(line)
+    stdout.flush()
 
 
 def _threaded_calculation(fn, todo_list, max_open_threads, progress, str_prog):
+    """Abstract algorithm for performing a threaded calculation.
+    :param fn: target function, which accepts 3 arguments: args, q, em.
+        args: arguments for doing whatever is to be done by the function. These
+          are what is listed in todo_list
+        q: queue to which the function's thread is pushed to once the function
+          is finished running.
+        em: queue to which the function may push error messages to be returned
+    Note the function MUST end with q.put(currentThread()). If other things
+    must be returned by the function, the user should include as one of the
+    args a queue to push results to.
+    :param todo_list: list of tuples which are given as the args argument to fn
+    :param max_open_threads: maximum number of threads to have open at one time
+    :param progress: if true, prints a progress bar, showing how many threads
+    have closed
+    :param str_prog: string to display above the progress bar, if it is shown
+    :return: list of completed jobs, list of error messages, either true or
+    false, indicating whether all jobs were done
+    """
     error_messages = Queue()
     active_thread_list = list()
     done_thread_queue = Queue()
@@ -339,6 +459,22 @@ def _ncsd_multiple_calculations_t(
         force, progress=True, str_prog_ncsd=STR_PROG_NCSD,
         max_open_threads=MAX_OPEN_THREADS
 ):
+    """Runs given NCSD calculations on the head node using multi-threading
+    :param a_aeff_set: set of (A, Aeff) for which to run NCSD calculations
+    :param a_aeff_to_dpath_map: map from (A, Aeff) to the directory in which
+    calculations are to be run
+    :param a_aeff_to_egvfile_map: map from (A, Aeff) to the *.egv file path,
+    which, if it exists, signifies that the calculation has already been done
+    :param force: if true, redoes the NCSD calculation even if the
+    associated *.egv file already exists
+    :param progress: if true, prints a progress bar, showing how many threads
+    have closed
+    :param str_prog_ncsd: string to display above progress bar if progress is
+    True
+    :param max_open_threads: maximum number of threads to be allowed to open
+    for the calculations
+    :return: list of directories for which the calculation was completed
+    """
     def _r(args, q, em):
         try:
             a_, aeff_ = args
@@ -365,6 +501,27 @@ def _ncsd_multiple_calculations_s(
         force, progress,
         fname_stdout=FNAME_QSUB_STDOUT, fname_stderr=FNAME_QSUB_STDERR,
 ):
+    """Does specified NCSD calculations by submitting them to the cluster
+    using qsub.
+    :param a_aeff_set: set of (A, Aeff) for which to run NCSD calculations
+    :param a_aeff_to_dpath_map: map from (A, Aeff) to the directory in which
+    calculations are to be run
+    :param a_aeff_to_egvfile_map: map from (A, Aeff) to the *.egv file path,
+    which, if it exists, signifies that the calculation has already been done
+    :param a_aeff_to_jobfile_map: map from (A, Aeff) to the *.sh file path,
+    which is the job file that is submitted to the cluster
+    :param force: if true, submits the job even if the *.egv file exists
+    :param progress: if true, shows a progress bar, signifying the number
+    of jobs that have been SUBMITTED (not these are not necessarily COMPLETED)
+    :param fname_stdout: file name in which standard output of the qsub
+    command is saved
+    :param fname_stderr: file name in which standard error of the qsub
+    command is saved
+    :return: list of directories in which the calculation is ALREADY complete.
+    Note: This is NOT the list of jobs that have been submitted; it is the
+    list of jobs already COMPLETED, so that the VCE portion of the calculation
+    knows what calculations it can begin.
+    """
     submitted_jobs = 0
     if progress and len(a_aeff_set) > 0:
         print '  Submitting jobs...'
@@ -400,6 +557,20 @@ def _ncsd_multiple_calculations(
         a_aeff_set, a_aeff_to_dpath_map, a_aeff_to_egvfile_map,
         force, verbose, progress, str_prog_ncsd=STR_PROG_NCSD
 ):
+    """Does the specified NCSD calculations on the head node without threading.
+    :param a_aeff_set: set of (A, Aeff) for which to run NCSD calculations
+    :param a_aeff_to_dpath_map: map from (A, Aeff) to the directory in which
+    calculations are to be run
+    :param a_aeff_to_egvfile_map: map from (A, Aeff) to the *.egv file path,
+    which, if it exists, signifies that the calculation has already been done
+    :param force: if true, submits the job even if the *.egv file exists
+    :param verbose: if true, prints the output of each NCSD calculation to
+    stdout
+    :param progress: if true, shows a progress bar, indicated the number of
+    jobs completed. Verbose output is suppressed.
+    :param str_prog_ncsd: string to display above progress bar, if showing
+    :return: list of directories in which the calculation was completed
+    """
     # do ncsd
     jobs_total = len(a_aeff_set)
     jobs_completed = 0
@@ -431,8 +602,8 @@ class InvalidNmaxException(Exception):
 
 
 def ncsd_multiple_calculations(
-        a_presc_list, a_values, z, nmax, remove_protons,
-        nshell=N_SHELL, n1=N1, n2=N1, scalefactor=None,
+        a_presc_list, a_values, z, nmax,
+        nshell=N_SHELL, n1=N1, n2=N1, scalefactor=None, remove_protons=False,
         force=False, verbose=False, progress=True, threading=True,
         cluster_submit=False, walltime=None, remove_tmp_files=True,
         str_prog_ncsd=STR_PROG_NCSD,
@@ -440,13 +611,15 @@ def ncsd_multiple_calculations(
 ):
     """For a given list of A prescriptions, do the NCSD calculations
     necessary for doing a valence cluster expansion
-    :param a_presc_list: sequence of A prescriptions
-    :param a_values: three base a values (e.g. 4, 5, 6 for p shell)
+    :param a_presc_list: sequence of A prescriptions. An A-prescription is a
+    3-tuple of Aeff values to be used in place of the first 3 mass numbers in
+    the shell when generating the effective interaction.
+    :param a_values: three base A values (e.g. 4, 5, 6 for p shell)
     :param z: proton number
     :param nmax: major oscillator shell model space truncation
     :param nshell: shell (0: s, 1: p, 2: sd, ...)
-    :param n1: max allowed 1-particle state
-    :param n2: max allowed 2-particle state
+    :param n1: max allowed 1-particle state (for TBME truncation)
+    :param n2: max allowed 2-particle state (for TBME truncation)
     :param scalefactor: float value by which the off-diagonal valence
     coupling terms in the interaction are scaled; if None, no scaling is done
     :param remove_protons: if true, scales Vpp and Vpn to 0
@@ -457,7 +630,7 @@ def ncsd_multiple_calculations(
     :param progress: if true, show a progress bar. Note: will not show
     progress bar if verbose is true
     :param threading: if true, starts the various calculations in separate
-    threads
+    threads on the head node
     :param cluster_submit: if true, submits the NCSD job to cluster
     :param walltime: if cluster submit is true, this string in the format
     hh:mm:ss specifies how much time is to be allotted each NCSD
@@ -539,8 +712,8 @@ def ncsd_single_calculation(
     :param z: proton number Z
     :param nmax: model space truncation
     :param nshell: shell (0: s, 1: p, 2: sd, ...)
-    :param n1: max allowed 1-particle state
-    :param n2: max allowed 2-particle state
+    :param n1: max allowed 1-particle state (for TBME truncation)
+    :param n2: max allowed 2-particle state (for TBME truncation)
     :param scalefactor: factor by which to scale off-diagonal coupling terms of
     the TBME interaction
     :param remove_protons: if true, scale Vpp and Vpn to 0
@@ -591,21 +764,22 @@ def ncsd_single_calculation(
 
 
 def ncsd_exact_calculations(
-        z, a_range, remove_protons,
+        z, a_range,
         nmax=NMAX, n1=N1, n2=N2, nshell=N_SHELL,
-        int_scalefactor=None, force=False, verbose=False, progress=True,
+        int_scalefactor=None, remove_protons=False,
+        force=False, verbose=False, progress=True,
         cluster_submit=False, walltime=None, remove_tmp_files=True,
         str_prog_ncsd_ex=STR_PROG_NCSD_EX,
         dpath_templates=DPATH_TEMPLATES, dpath_results=DPATH_RESULTS,
 ):
-    """For each A in a_range, does the NCSD calculation for A=Aeff
-    :param z: proton number
+    """For each A in a_range, does the NCSD calculation for A=Aeff.
+    For example he4_4, he5_5, he6_6, etc.
+    :param z: proton number (Z)
     :param a_range: range of A values for which to do NCSD with Aeff=A
-    :param nmax: major oscillator model space truncation. Note: Increased by 1
-    for each successive A value
+    :param nmax: major oscillator model space truncation.
     :param nshell: nuclear shell (e.g. 0=s, 1=p, 2=sd, ...)
-    :param n1: max allowed 1-particle state
-    :param n2: max allowed 2-particle state
+    :param n1: max allowed 1-particle state (for TBME truncation)
+    :param n2: max allowed 2-particle state (for TBME truncation)
     :param int_scalefactor: float factor by which the off-diagonal valence
     coupling terms in the TBME interaction are scaled
     :param remove_protons: if true, scales Vpp and Vpn to 0
@@ -648,29 +822,30 @@ class DirectoryNotFoundException(Exception):
 
 
 def vce_single_calculation(
-        a_values, a_prescription, a_range, z, nmax, remove_protons,
+        a_values, a_prescription, a_range, z, nmax,
         a_aeff_dir_map, a_aeff_outfile_map,
-        n1=N1, n2=N1, nshell=-1, ncomponent=-1, int_scalefactor=None,
+        n1=N1, n2=N1, nshell=-1, ncomponent=-1,
+        int_scalefactor=None, remove_protons=False,
         force_trdens=False,  verbose=False,
         dpath_results=DPATH_RESULTS, dpath_templates=DPATH_TEMPLATES,
 ):
-    """Valence cluster expansion
+    """Valence cluster expansion for a single A-prescription
     :param a_values: 3-tuple of A values that form the base for constructing
-    Heff
+    Heff. Example: for p-shell these are (4, 5, 6).
     :param a_prescription: 3-tuple of Aeff values used in place of the actual
     A values in constructing Heff
-    :param a_range: sequence of A values for which effective interaction files
-    are to be generated
-    :param z: protonn number
+    :param a_range: sequence of A values for which effective NushellX
+    interaction files are to be generated
+    :param z: proton number
     :param nmax: major oscillator model space truncation
+    :param nshell: shell number (0 = s, 1 = p, 2 = sd, ...)
+    :param ncomponent: dimension (1 = neutrons, 2 = protons and neutrons)
+    :param n1: max allowed single particle state (for TBME truncation)
+    :param n2: max allowed two-particle state (for TBME truncation)
     :param a_aeff_dir_map: map from (A, Aeff) tuple to the directory in which
     this calculation is being done
     :param a_aeff_outfile_map: map from (A, Aeff) tuple to the *.out file
     produced by NCSD for this pair
-    :param n1: max allowed single particle state
-    :param n2: max allowed two-particle state
-    :param nshell: shell number (0 = s, 1 = p, 2 = sd, ...)
-    :param ncomponent: dimension (1 = neutrons, 2 = protons and neutrons)
     :param int_scalefactor: factor by which to scale the off-diagonal
     valence coupling terms of the TBME interaction
     :param remove_protons: if true, an additional piece is added to
@@ -707,7 +882,7 @@ def vce_single_calculation(
     except TrdensRunException:
         raise
     # do valence cluster expansion
-    vce_dirpath = make_vce_directories(
+    vce_dirpath = make_vce_directory(
         a_prescription=a_prescription, nmax=nmax, n1=n1, n2=n2,
         nshell=nshell, ncomponent=ncomponent, scalefactor=int_scalefactor,
         remove_protons=remove_protons, dpath_results=dpath_results,
@@ -725,11 +900,48 @@ def vce_single_calculation(
 def _vce_multiple_calculations_t(
         z, a_values, a_presc_list, a_range, nmax, n1, n2, nshell, ncomponent,
         a_aeff_to_dpath_map, a_aeff_to_out_fpath_map,
-        dpath_templates, dpath_results,
-        force_trdens, verbose, progress, remove_protons,
-        int_scalefactor=None, max_open_threads=MAX_OPEN_THREADS,
-        str_prog_vce=STR_PROG_VCE,
+        dpath_templates, dpath_results, force_trdens, verbose, progress,
+        int_scalefactor=None, remove_protons=False,
+        max_open_threads=MAX_OPEN_THREADS, str_prog_vce=STR_PROG_VCE,
 ):
+    """Performs the specified TRDENS/VCE calculations in multiple threads on
+    the head node.
+    :param z: proton number (Z)
+    :param a_values: 3-tuple of A values that form the base for constructing
+    Heff. Example: for p-shell these are (4, 5, 6).
+    :param a_presc_list: list of A-prescriptions for which to do TRDENS and
+    VCE. An A-prescription is a 3-tuple of effective A values that are used
+    in generating the effective interaction in place of the first 3 mass
+    numbers in the shell
+    :param a_range: range of mass numbers for which to generated NuShellX
+    *.int files. Note that these will all be the same interaction for a given
+    prescription. They simply have different file names for the NuShellX
+    calculation.
+    :param nmax: major oscillator model space truncation
+    :param nshell: shell number (0 = s, 1 = p, 2 = sd, ...)
+    :param ncomponent: dimension (1 = neutrons, 2 = protons and neutrons)
+    :param n1: max allowed single particle state (for TBME truncation)
+    :param n2: max allowed two-particle state (for TBME truncation)
+    :param a_aeff_to_dpath_map: map from (A, Aeff) tuple to the directory in
+    which this calculation is being done
+    :param a_aeff_to_out_fpath_map: map from (A, Aeff) tuple to the *.out file
+    produced by NCSD for this pair
+    :param dpath_templates: path to the templates directory
+    :param dpath_results: path to the results directory
+    :param int_scalefactor: factor by which to scale the off-diagonal
+    valence coupling terms of the TBME interaction
+    :param remove_protons: if true, an additional piece is added to
+    directory name of vce calculation
+    :param force_trdens: if true, forces redoing of the TRDENS calculation,
+    even if output file(s) are present
+    :param verbose: if true, prints the regular output of TRDENS to stdout,
+    otherwise suppresses output
+    :param progress: if true, show a progress bar, indicating the number of
+    closed threads
+    :param max_open_threads: maximum number of threads to be opened
+    :param str_prog_vce: string to be shown above progress bar
+    :return: list of completed jobs (A-prescriptions)
+    """
     def _r(args, q, em):
         try:
             ap0 = args
@@ -764,11 +976,46 @@ def _vce_multiple_calculations_t(
 def _vce_multiple_calculations(
         z, a_values, a_presc_list, a_range, nmax, n1, n2, nshell, ncomponent,
         a_aeff_to_out_fpath_map, a_aeff_to_dpath_map,
-        dpath_templates, dpath_results,
-        force_trdens, verbose, progress, remove_protons,
-        int_scalefactor=None,
-        str_prog_vce=STR_PROG_VCE,
+        dpath_templates, dpath_results, force_trdens, verbose, progress,
+        int_scalefactor=None, remove_protons=False, str_prog_vce=STR_PROG_VCE,
 ):
+    """Perform the specified TRDENS/VCE calculations on the head node without
+    threading.
+    :param z: proton number (Z)
+    :param a_values: 3-tuple of A values that form the base for constructing
+    Heff. Example: for p-shell these are (4, 5, 6).
+    :param a_presc_list: list of A-prescriptions for which to do TRDENS and
+    VCE. An A-prescription is a 3-tuple of effective A values that are used
+    in generating the effective interaction in place of the first 3 mass
+    numbers in the shell
+    :param a_range: range of mass numbers for which to generated NuShellX
+    *.int files. Note that these will all be the same interaction for a given
+    prescription. They simply have different file names for the NuShellX
+    calculation.
+    :param nmax: major oscillator model space truncation
+    :param nshell: shell number (0 = s, 1 = p, 2 = sd, ...)
+    :param ncomponent: dimension (1 = neutrons, 2 = protons and neutrons)
+    :param n1: max allowed single particle state (for TBME truncation)
+    :param n2: max allowed two-particle state (for TBME truncation)
+    :param a_aeff_to_dpath_map: map from (A, Aeff) tuple to the directory in
+    which this calculation is being done
+    :param a_aeff_to_out_fpath_map: map from (A, Aeff) tuple to the *.out file
+    produced by NCSD for this pair
+    :param dpath_templates: path to the templates directory
+    :param dpath_results: path to the results directory
+    :param int_scalefactor: factor by which to scale the off-diagonal
+    valence coupling terms of the TBME interaction
+    :param remove_protons: if true, an additional piece is added to
+    directory name of vce calculation
+    :param force_trdens: if true, forces redoing of the TRDENS calculation,
+    even if output file(s) are present
+    :param verbose: if true, prints the regular output of TRDENS to stdout,
+    otherwise suppresses output
+    :param progress: if true, show a progress bar, indicating the number of
+    closed threads
+    :param str_prog_vce: string to be shown above progress bar
+    :return: True, if all jobs were completed; False otherwise
+    """
     jobs_total = len(a_presc_list)
     jobs_completed = 0
     progress = progress and not verbose
@@ -813,24 +1060,24 @@ def vce_multiple_calculations(
         a_values, a_presc_list, a_range, z, nmax, n1, n2, nshell, ncomponent,
         a_aeff_to_out_fpath_map, a_aeff_to_dpath_map,
         force_trdens, verbose, progress, threading,
-        remove_protons, int_scalefactor=None,
+        int_scalefactor=None, remove_protons=False,
         dpath_templates=DPATH_TEMPLATES, dpath_results=DPATH_RESULTS,
 ):
     """For every A prescription in a_presc_list, performs the valence
     cluster expansion to generate an interaction file. Assumes NCSD
     calculations have already been done sufficiently.
-    :param z: proton number
+    :param z: proton number (Z)
     :param a_values: three base A values (e.g. if in p shell these are 4, 5, 6)
     :param a_presc_list: sequence of 3-tuples representing A prescriptions
     with which to do the valence cluster expansion
-    :param a_range: sequence of values for which to generate interaction
-    files
+    :param a_range: sequence of values for which to generate NuShellX
+    interaction files
     :param nmax: major oscillator model space truncation
-    :param n1: max allowed one-particle state
-    :param n2: max allowed two-particle state
+    :param n1: max allowed one-particle state (for TBME truncation)
+    :param n2: max allowed two-particle state (for TBME truncation)
     :param nshell: shell number (0=s, 1=p, 2=sd, ...)
     :param ncomponent: number of components
-    (1=neutrons, 2=protons and neutrons)
+    (1 -> neutrons, 2 -> protons and neutrons)
     :param a_aeff_to_dpath_map: map from (A, Aeff) to the directory in which
     this calculation is being done
     :param a_aeff_to_out_fpath_map: map from (A, Aeff) to the *.out file
@@ -839,7 +1086,7 @@ def vce_multiple_calculations(
     (for directory naming purposes); if None, directory will be named as
     usual
     :param remove_protons: if true, an additional piece is added to the
-    directory name
+    directory name, signifying that proton part of the interaction was removed
     :param force_trdens: if true, force calculation of TRDENS even if output
     file is already present
     :param verbose: if true, regular output of TRDENS is printed to stdout;
@@ -876,9 +1123,9 @@ def vce_multiple_calculations(
 
 
 def ncsd_vce_calculations(
-        a_prescriptions, a_range, remove_protons, z=None,
+        a_prescriptions, a_range, z=None,
         nmax=NMAX, n1=N1, n2=N2, nshell=N_SHELL, ncomponent=N_COMPONENT,
-        int_scalefactor=None,
+        int_scalefactor=None, remove_protons=False,
         force_ncsd=False, force_trdens=False, force_all=False,
         verbose=False, progress=True, threading=True,
         cluster_submit=False, walltime=None, remove_tmp_files=True,
@@ -889,14 +1136,14 @@ def ncsd_vce_calculations(
     :param a_prescriptions: sequence or generator of A prescription tuples
     :param a_range: sequence of A values for which to generate interaction
     files
-    :param z: proton number
+    :param z: proton number (Z)
     :param nmax: model space max oscillator shell
-    :param n1: max allowed one-particle state
-    :param n2: max allowed two-particle state
     :param nshell: major oscillator shell (0 = s, 1 = p, 2 = sd, ...)
     :param ncomponent: num components (1=neutrons, 2=protons and neutrons)
     Note the effect of making this parameter is to scale the proton terms in
     the interaction to 0.
+    :param n1: max allowed one-particle state (for TBME truncation)
+    :param n2: max allowed two-particle state (for TBME truncation)
     :param int_scalefactor: float factor by which the off-diagonal valence
     coupling terms in the interaction are scaled
     :param remove_protons: if true, scale Vpn and Vpp to 0

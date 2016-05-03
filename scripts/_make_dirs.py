@@ -70,6 +70,7 @@ def _get_name(z, z_name_map=Z_NAME_MAP, alt_name=Z_NAME_FMT_ALT):
         return alt_name % z
 
 
+# todo does this really need its own function?
 def _make_base_directories(a_aeff_to_dpath_map):
     """Makes directories for (A, Aeff) pairs if they do not exist yet
     :param a_aeff_to_dpath_map: map from A value to directory path
@@ -80,10 +81,29 @@ def _make_base_directories(a_aeff_to_dpath_map):
             makedirs(d)
 
 
-def make_vce_directories(
-        a_prescription, nmax, n1, n2, nshell, ncomponent, remove_protons,
-        dpath_results=DPATH_RESULTS, dname_vce=DNAME_VCE, scalefactor=None,
+def make_vce_directory(
+        a_prescription, nmax, n1, n2, nshell, ncomponent,
+        dpath_results=DPATH_RESULTS, dname_vce=DNAME_VCE,
+        scalefactor=None, remove_protons=False,
 ):
+    """Makes the VCE directory for the given A-prescription
+    :param a_prescription: 3-tuples of effective mass numbers, which are used
+    in place of the first 3 mass numbers in the shell to generate the
+    effective interaction
+    :param nmax: oscillator model space truncation
+    :param nshell: shell number (0 = s, 1 = p, 2 = sd, ...)
+    :param ncomponent: dimension (1 = neutrons, 2 = protons and neutrons)
+    :param n1: max allowed 1-particle state (for TBME truncation)
+    :param n2: max allowed 2-particle state (for TBME truncation)
+    :param dpath_results: path to the results directory
+    :param dname_vce: name of the vce subdirectory
+    :param scalefactor: factor by which off-diagonal coupling terms in the
+    TBME interaction were scaled
+    :param remove_protons: boolean indicating whether or not the proton part
+    of the TBME interaction file was scaled to 0
+    :return: path to the particular VCE directory in which interaction
+    files for this prescription are to be saved
+    """
     fmt = tuple(tuple(a_prescription) + (nmax, n1, n2, nshell, ncomponent))
     dname_fmt_vce = DNAME_FMT_VCE
     if remove_protons:
@@ -98,6 +118,12 @@ def make_vce_directories(
 
 
 def _get_mfdp_restrictions_lines(nmax, max_allowed_nmax=MAX_NMAX):
+    """Returns the mfdp lines, which specify occupation restriction.
+    :param nmax: major oscillator model space truncation
+    :param max_allowed_nmax: max number of ines to be generated
+    """
+    # todo Is this correct to produce restrictions up to Nmax, or should they
+    # todo be produces up to Nhw?
     lines = list()
     for n in range(min(nmax, max_allowed_nmax) + 1):
         i = (n + 1) * (n + 2)
@@ -109,7 +135,12 @@ class UnknownParityException(Exception):
     pass
 
 
+# todo make this function general
 def _get_parity(a, nshell):
+    """Returns the parity for a particular mass number and shell
+    :param a: mass number (A)
+    :param nshell: major oscillator shell (0=s, 1=p, 2=sd, ...)
+    """
     if nshell == 1:
         return a % 2
     elif nshell == 2:
@@ -125,6 +156,20 @@ def _get_mfdp_replace_map(
         fname_tbme, outfile_name, z, a, n_hw, n_1, n_2, aeff, nshell,
         num_states=NCSD_NUM_STATES, num_iter=NCSD_NUM_ITER
 ):
+    """Returns a map from the placeholder string in mfdp.dat template file to
+    the value or string that should replace it.
+    :param fname_tbme: name of the TBME interaction file
+    :param outfile_name: name of the NCSD *.out file
+    :param z: proton number (Z)
+    :param a: mass number (A)
+    :param n_hw: major oscillator truncation Nhw
+    :param n_1: max allowed 1-particle state (for TBME truncation)
+    :param n_2: max allowed 2-particle state (for TBME truncation)
+    :param aeff: effective mass number
+    :param nshell: major oscillator shell (0=s, 1=p, 2=sd, ...)
+    :param num_states: max number of states to calculate
+    :param num_iter: max number of iteractions for lanczos
+    """
     n = a - z
     par = _get_parity(a, nshell)
     tot2 = a % 2
@@ -171,10 +216,10 @@ def _make_mfdp_file(
     """Reads the mfdp file from path_temp
     and rewrites it into path_elt in accordance
     ith the given z, a, aeff, nhw, n1, n2, and outfile name
-    :param z: Proton number
-    :param a: Mass number
+    :param z: Proton number (Z)
+    :param a: Mass number (A)
     :param aeff: Effective mass number for interaction
-    :param nhw: Something something something dark side
+    :param nhw: major oscillator truncation
     :param nshell: major oscillator shell (0=s, 1=p, 2=sd, ...)
     :param n1: Number of allowed states for single particles
     :param n2: Number of allowed states for two particles
@@ -198,6 +243,23 @@ def _make_mfdp_files(
         a_aeff_to_dpath_map, a_aeff_to_outfile_fpath_map,
         dpath_temp=DPATH_TEMPLATES, fname_tmp_mfdp=FNAME_TMP_MFDP,
 ):
+    """Writes mfdp files for the specified NCSD calculations
+    :param a_list: ordered list of A values
+    :param aeff_list: ordered list of Aeff values, which match to the a_list
+    :param nhw_list: ordered list of Nhw values, which match to the a_list
+    :param z: proton number (Z)
+    :param nshell: major oscillator shell (0=s, 1=p, 2=sd,...)
+    :param n_1: max allowed 1-particle state (for TBME truncation)
+    :param n_2: max allowed 2-particle state (for TBME truncation)
+    :param fname_tbme: name of the TBME interaction file
+    :param a_aeff_to_dpath_map: map from (A,Aeff) to the directory in which
+    the NCSD calculation was done
+    :param a_aeff_to_outfile_fpath_map: map from (A,Aeff) to the *.out file
+    to be generated by NCSD
+    :param dpath_temp: path to the templates directory in which the mfdp.dat
+    template file is stored
+    :param fname_tmp_mfdp: name of the template mfdp.dat file
+    """
     for a, aeff, nhw in zip(a_list, aeff_list, nhw_list):
         outfile_name = path.split(a_aeff_to_outfile_fpath_map[(a, aeff)])[1]
         _make_mfdp_file(
@@ -219,6 +281,13 @@ class UnknownNumStatesException(Exception):
 # (he6 in p shell, o18 in sd shell, etc). For anything else, I would not trust
 # it.
 def _get_num_states(a, a0, nshell):
+    """Given a mass number, the first mass number in the shell, and the shell,
+    returns the model space Nhw and model space dimension for use in the
+    trdens.in input file
+    :param a: mass number (A)
+    :param a0: first mass in the shell
+    :param nshell: major oscillator shell (0=s, 1=p, 2=sd,...)
+    """
     nhw_mod = (a - a0) * nshell  # todo is this correct generally
     dim_nhw_mod = 0
     for j1_2 in range(1, (a-a0)*(nshell+1), 2):
@@ -229,6 +298,13 @@ def _get_num_states(a, a0, nshell):
 
 
 def _get_trdens_replace_map(a, a0, nshell):
+    """Given a mass number, the first mass number in the shell, and the shell,
+    returns a map from placeholder string in the trdens.in template file to
+    the value or string that replaces it.
+    :param a: mass number (A)
+    :param a0: first mass in the shell
+    :param nshell: major oscillator shell (0=s, 1=p, 2=sd,...)
+    """
     nnn, num_states = _get_num_states(a, a0, nshell)
     return {'<<NNN>>': str(nnn), '<<NUMSTATES>>': str(num_states)}
 
@@ -242,6 +318,7 @@ def make_trdens_file(
     into path_elt in accordance with the given z, a
     :param a: mass number
     :param a0: lowest mass number in the shell
+    :param nshell: major oscillator shell (0=s, 1=p, 2=sd, ...)
     :param nuc_dir: directory name
     :param dpath_results: path to the results directory
     :param dpath_temp: path to the templates directory
@@ -269,6 +346,8 @@ def _truncate_space(
     :param n2: Maximum state for two particles
     :param dpath_elt: Path to the directory in which the resultant TBME file
     is to be put
+    :raises TbmeFileNotFoundException: when the TBME file is not found in
+    the templates directory
     """
     filenames = listdir(dpath_templates)
     for f in filenames:
@@ -312,6 +391,11 @@ def _truncate_space(
 
 
 def _get_job_replace_map(walltime):
+    """Returns a map from placeholder string in the job.sh template file to
+    the string that is to replace it
+    :param walltime: string in format hh:mm:ss that represents the amount of
+    walltime a job is to be given when submitted to the cluster
+    """
     return {'<<WALLTIME>>': str(walltime)}
 
 
@@ -319,12 +403,27 @@ def _make_job_submit_file(
         dst_fpath, walltime,
         dpath_temp=DPATH_TEMPLATES, fname_tmp_jobsub=FNAME_TMP_JOBSUB
 ):
+    """For the given walltime, writes the job.sh submit file to the given
+    destination (dst_fpath)
+    :param dst_fpath: destination file path
+    :param walltime: string representation of the allotted time on the cluster
+    :param dpath_temp: directory in which the job.sh template file is stored
+    :param fname_tmp_jobsub: name of the job.sh template file
+    """
     src_fpath = path.join(dpath_temp, fname_tmp_jobsub)
     rep_map = _get_job_replace_map(walltime=walltime)
     _rewrite_file(src=src_fpath, dst=dst_fpath, replace_map=rep_map)
 
 
 def _make_job_submit_files(a_aeff_to_jobsub_fpath_map, walltime):
+    """For each jobsub_fpath in a_aeff_to_jobsub_fpath_map, makes the job.sh
+    file for submission to the cluster. As these are all the same for a given
+    walltime, one file is written and the rest are linked.
+    :param a_aeff_to_jobsub_fpath_map: map from (A,Aeff) to the job submission
+    file
+    :param walltime: string representation of the allowed walltime in the
+    format hh:mm:ss
+    """
     job_files = list(a_aeff_to_jobsub_fpath_map.values())
     dst = job_files.pop()
     _make_job_submit_file(dst_fpath=dst, walltime=walltime)
@@ -401,9 +500,27 @@ def rename_egv_file(a6_dir, nhw, force):
 
 
 def get_a_aeff_to_dpath_map(
-        a_list, aeff_list, nhw_list, z, n1, n2, remove_protons,
-        dpath_results=DPATH_RESULTS, dname_ncsd=DNAME_NCSD, scalefactor=None,
+        a_list, aeff_list, nhw_list, z, n1, n2,
+        scalefactor=None, remove_protons=False,
+        dpath_results=DPATH_RESULTS, dname_ncsd=DNAME_NCSD,
 ):
+    """Given ordered lists a_list, aeff_list, nhw_list, constructs a map from
+    (A,Aeff) to the directory in which the NCSD calculation is to be done
+    :param a_list: ordered list of mass numbers (A)
+    :param aeff_list: ordered list of effective mass numbers (Aeff),
+    corresponding to the mass numbers in a_list
+    :param nhw_list: ordered list of Nhw corresponding to the mass numbers in
+    a_list
+    :param z: proton number (Z)
+    :param n1: max allowed one-particle state (for TBME truncation)
+    :param n2: max allowed two-particle state (for TBME truncation)
+    :param dpath_results: path to the results directory
+    :param dname_ncsd: name of the NCSD subdirectory
+    :param scalefactor: value by which off-diagonal coupling terms in the
+    TBME interaction were scaled.
+    :param remove_protons: either true or false, indicating whether the
+    proton parts of the interaction (Vpp and Vpn) are being scaled to 0
+    """
     a_paths_map = dict()
     dname_fmt_nuc = DNAME_FMT_NUC
     if remove_protons:
@@ -423,6 +540,23 @@ def get_a_aeff_to_outfile_fpath_map(
         a_list, aeff_list, nhw_list, z, n1, n2, remove_protons,
         a_aeff_to_dirpath_map, scalefactor=None
 ):
+    """Given ordered lists a_list, aeff_list, nhw_list, constructs a map from
+    (A,Aeff) to the NCSD *.out file that will be created
+    :param a_list: ordered list of mass numbers (A)
+    :param aeff_list: ordered list of effective mass numbers (Aeff),
+    corresponding to the mass numbers in a_list
+    :param nhw_list: ordered list of Nhw corresponding to the mass numbers in
+    a_list
+    :param z: proton number (Z)
+    :param n1: max allowed one-particle state (for TBME truncation)
+    :param n2: max allowed two-particle state (for TBME truncation)
+    :param a_aeff_to_dirpath_map: map from (A,Aeff) to the directory in which
+    an NCSD calculation will be done
+    :param scalefactor: value by which off-diagonal coupling terms in the
+    TBME interaction were scaled.
+    :param remove_protons: either true or false, indicating whether the
+    proton parts of the interaction (Vpp and Vpn) are being scaled to 0
+    """
     a_aeff_outfile_map = dict()
     fname_fmt = FNAME_FMT_NCSD_OUT
     if remove_protons:
@@ -441,6 +575,17 @@ def get_a_aeff_to_outfile_fpath_map(
 
 def _get_a_aeff_to_egv_fpath_map(
         a_list, aeff_list, nhw_list, a_aeff_to_dirpath_map):
+    """Given ordered lists a_list, aeff_list, nhw_list, constructs a map from
+    (A,Aeff) to the *.egv file, created by NCSD, which is used to signify that
+    the calculation has been completed
+    :param a_list: ordered list of mass numbers (A)
+    :param aeff_list: ordered list of effective mass numbers (Aeff),
+    corresponding to the mass numbers in a_list
+    :param nhw_list: ordered list of Nhw corresponding to the mass numbers in
+    a_list
+    :param a_aeff_to_dirpath_map: map from (A,Aeff) to the directory in which
+    an NCSD calculation will be done
+    """
     a_aeff_to_egv_map = dict()
     for a, aeff, nhw in zip(a_list, aeff_list, nhw_list):
         a_aeff_to_egv_map[(a, aeff)] = path.join(
@@ -452,6 +597,23 @@ def _get_a_aeff_to_jobsub_fpath_map(
         a_list, aeff_list, nhw_list, z, n1, n2, remove_protons,
         a_aeff_to_dirpath_map, scalefactor=None,
 ):
+    """Given ordered lists a_list, aeff_list, nhw_list, constructs a map from
+    (A,Aeff) to the *.sh file that will be submitted to the cluster
+    :param a_list: ordered list of mass numbers (A)
+    :param aeff_list: ordered list of effective mass numbers (Aeff),
+    corresponding to the mass numbers in a_list
+    :param nhw_list: ordered list of Nhw corresponding to the mass numbers in
+    a_list
+    :param z: proton number (Z)
+    :param n1: max allowed one-particle state (for TBME truncation)
+    :param n2: max allowed two-particle state (for TBME truncation)
+    :param a_aeff_to_dirpath_map: map from (A,Aeff) to the directory in which
+    an NCSD calculation will be done
+    :param scalefactor: value by which off-diagonal coupling terms in the
+    TBME interaction were scaled.
+    :param remove_protons: either true or false, indicating whether the
+    proton parts of the interaction (Vpp and Vpn) are being scaled to 0
+    """
     a_aeff_jobsub_map = dict()
     fname_fmt = FNAME_FMT_JOBSUB
     if remove_protons:

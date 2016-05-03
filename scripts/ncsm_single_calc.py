@@ -1,7 +1,13 @@
 #!/usr/bin/python
 """ncsm_single_calc.py
 
-To run as a script:
+This file exists just to provide script functionality of functions in
+ncsm_vce_calc.py. It is recommended that the user write their own python
+script to import and use the functions in ncsm_vce_calc.py, as this would
+provide greater control and clarity. However, one can use most of the
+available functionality in the form of a UNIX-style command.
+
+To run as a script (assuming this file has been added to PATH):
 
     $ ncsm_single_calc.py [-f] [-e] [-v] [-s scalefactor] [-t walltime]
     Z A [Aeff [nmax [nshell [rm_prot [n1 n2]]]]]
