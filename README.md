@@ -17,7 +17,7 @@ The following should be done to prepare for usage:
    ```
 2. Replace the `it-code-111815.f` file that is already present in the
 `~/.../NCSM/src` directory with the one included here in
-`./nuclear_codes` with my modifications. Recompile and source this.
+`./nuclear_codes` with my modifications. Recompile.
 
 3. Add the `NCSD` and `TRDENS` files to `PATH` in your `.bash_profile`
 or `.profile`, replacing the ellipses as necessary.
