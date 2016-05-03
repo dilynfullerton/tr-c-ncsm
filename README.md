@@ -35,5 +35,20 @@ the cluster, add the following to `~/.../templates/job.sh`.
    ```
 
 ### Usage
+#### Importing python functions
+It is recommended that the user create their own python script to
+import and use the primary user functions:
+* `ncsd_vce_calculations`
+* `ncsd_single_calculation`
+* `ncsd_exact_calculations`
+* `ncsd_multiple_calculations`
+* `vce_single_calculation`
+* `vce_multiple_calculations`
+
+#### Running as a script
+The user may opt to run these via a UNIX-style command. Two commands
+are provided:
+* `ncsm_vce_calc.py`
+* `ncsm_single_calc.py`
 
 ### Future developments
