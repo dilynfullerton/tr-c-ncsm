@@ -40,12 +40,12 @@ the cluster, add the following to `~/.../templates/job.sh`.
 It is recommended that the user create their own python script to
 import and use the primary user functions:
 
-* `ncsd_vce_calculations`
-* `ncsd_single_calculation`
-* `ncsd_exact_calculations`
-* `ncsd_multiple_calculations`
-* `vce_single_calculation`
-* `vce_multiple_calculations`
+* `ncsd_vce_calculations()`
+* `ncsd_single_calculation()`
+* `ncsd_exact_calculations()`
+* `ncsd_multiple_calculations()`
+* `vce_single_calculation()`
+* `vce_multiple_calculations()`
 
 _Coming soon_: Documentation and examples of usage here. For now, see
 the documentation in the respective files.
