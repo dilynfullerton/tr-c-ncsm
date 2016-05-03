@@ -21,14 +21,18 @@ or `.profile`, replacing the ellipses as necessary.
    ```bash
    PATH=$PATH:~/.../NCSM/src/
    ```
-3. If you want to run ncsm\_vce\_calc.py and ncsm\_single\_calc.py as
+3. Replace the `it-code-111815.f` file that is already present in the
+   `~/../src/` directory with the one included here with my
+   modifications. Recompile and source this.
+   
+4. If you want to run ncsm\_vce\_calc.py and ncsm\_single\_calc.py as
 scripts, add the following to your `.bash_profile` or `.profile`, replacing
 the ellipses as necessary.  
 
    ```bash
    PATH=$PATH:~/.../scripts/
    ```
-4. If you want to receive emails upon completion of jobs submitted to
+5. If you want to receive emails upon completion of jobs submitted to
 the cluster, add the following to `~/.../templates/job.sh`.  
 
    ```bash
