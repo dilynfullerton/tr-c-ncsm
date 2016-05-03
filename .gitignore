@@ -1,10 +1,8 @@
 /old
-/scripts/rename_dirs.py
 /.idea
 *.pyc
 /results*
 *~
-/scripts/remove_tmp_files.py
 .DS_Store
 beta.xlsx
 */TBMEA2srg-n3lo2.0_15.24*
