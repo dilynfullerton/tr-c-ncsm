@@ -25,7 +25,7 @@ scripts, add the following to your `.bash_profile` or `.profile`, replaces
 the ellipses as necessary.  
 
    ```bash
-   PATH=$PATH:/.../scripts/
+   PATH=$PATH:~/.../scripts/
    ```
 4. If you want to receive emails upon completion of jobs submitted to
 the cluster, add the following to `~/.../templates/job.sh`.  
