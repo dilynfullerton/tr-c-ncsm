@@ -17,16 +17,17 @@ The following should be done to prepare for usage:
    ```
 2. Replace the `it-code-111815.f` file that is already present in the
 `~/.../NCSM/src` directory with the one included here in
-`./nuclear_codes` with my modifications. Recompile.
+`./nuclear_codes` with my modifications. Recompile.  
 
-3. Add the `NCSD` and `TRDENS` files to `PATH` in your `.bash_profile`
-or `.profile`, replacing the ellipses as necessary.
+3. Add the directory containing the `NCSD` and `TRDENS` files to
+`PATH` in your `.bash_profile` or `.profile`, replacing the ellipses
+as necessary.  
 
    ```bash
    PATH=$PATH:~/.../NCSM/src/
    ```
    
-4. If you want to run ncsm\_vce\_calc.py and ncsm\_single\_calc.py as
+4. If you want to run `ncsm_vce_calc.py` and `ncsm_single_calc.py` as
 scripts, add the following to your `.bash_profile` or `.profile`, replacing
 the ellipses as necessary.  
 
@@ -64,6 +65,14 @@ are provided:
 
 _Coming soon_: Documentation and examples of usage here. For now, see
 the documentation in the respective files.
+
+#### Other useful scripts
+* `get_results.sh` pulls only relevant results from a remote `$from`
+location to the current directory.
+* `sync_scripts.sh` puts python scripts in the `scripts` directory to
+a remove location, specified by `$to`.
+* `vce_to_shell_sources.sh` puts VCE results (`./results/vce`) into
+the NuShellX `sources` directory in a remote location, specified by `$to`.
 
 ### Future developments
 _Coming soon._

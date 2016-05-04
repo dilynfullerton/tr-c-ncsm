@@ -1,4 +1,5 @@
 #!/bin/bash
+# pulls relevant results from cougar to the current directory
 
 # cougar -> here
 from='cougar:~/NCSM/calc/mcalc/results';

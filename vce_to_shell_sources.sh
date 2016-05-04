@@ -1,2 +1,5 @@
 #!/bin/bash
-rsync -r ./results/vce cougar:~/nushellx/linux/calculations/t0/sources/
+# puts vce results into the NuShellX sources directory
+from='./results/vce';
+to='cougar:~/nushellx/linux/calculations/t0/sources/';
+rsync -r $from $to;
