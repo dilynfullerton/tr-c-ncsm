@@ -6,7 +6,7 @@ INT filename and output file name:
   <<Z>>   <<N>>  24.0   ! Z, N, hbar*Omega
   <<NHW>>   <<PAR>>    <<TOT2>>   !  Nhw  =  sum(2n+l),  Parity  (0  for  +,  1  for  -),  Total  2
   0   <<N1>>   <<N2>>   ! N_min,N_1max,N_2max
-  1   0    10.  ! iham(1: H=Trel+G, 2: H=Hrel+G, 3: H=SPE+G), iclmb, strcm
+  1   0    <<BETA>>  ! iham(1: H=Trel+G, 2: H=Hrel+G, 3: H=SPE+G), iclmb, strcm
   2            ! NN=2, NN+3N=3
   2            ! major=2 do not change
   0            ! nshll/jorder do not change

@@ -152,9 +152,14 @@ from _make_dirs import EgvFileNotFoundException
 # CONSTANTS
 N_SHELL = 1  # 0=s, 1=p, 2=sd, ...
 N_COMPONENT = 2  # 1=neutrons, 2=protons and neutrons
-NMAX = 2
+NMAX = 0
 N1 = 15
 N2 = 15
+BETA_CM = 0.0
+# todo: ^ right now this is the only acceptable value. it-code still exhibits
+# todo: beta dependence
+NCSD_NUM_STATES = 20
+NCSD_NUM_ITER = 200
 
 # files
 FNAME_FMT_VCE_INT = 'A%d.int'  # A value
@@ -602,8 +607,9 @@ class InvalidNmaxException(Exception):
 
 
 def ncsd_multiple_calculations(
-        a_presc_list, a_values, z, nmax,
-        nshell=N_SHELL, n1=N1, n2=N1, scalefactor=None, remove_protons=False,
+        a_presc_list, a_values, z, nmax=NMAX, nshell=N_SHELL, n1=N1, n2=N1,
+        scalefactor=None, remove_protons=False,
+        beta_cm=BETA_CM, num_states=NCSD_NUM_STATES, num_iter=NCSD_NUM_ITER,
         force=False, verbose=False, progress=True, threading=True,
         cluster_submit=False, walltime=None, remove_tmp_files=True,
         str_prog_ncsd=STR_PROG_NCSD,
@@ -623,6 +629,9 @@ def ncsd_multiple_calculations(
     :param scalefactor: float value by which the off-diagonal valence
     coupling terms in the interaction are scaled; if None, no scaling is done
     :param remove_protons: if true, scales Vpp and Vpn to 0
+    :param beta_cm: center of mass beta term
+    :param num_states: max number of NCSD states to calculate
+    :param num_iter: number of iteractions for Lanczos algorithm
     :param force: if true, force doing the NCSD calculation, even if it has
     already been done
     :param verbose: if true, prints the regular NCSD output to stdout; else
@@ -662,6 +671,7 @@ def ncsd_multiple_calculations(
     a_aeff_maps = prepare_directories(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
         z=z, n1=n1, n2=n2, nshell=nshell,
+        beta_cm=beta_cm, num_states=num_states, num_iter=num_iter,
         scalefactor=scalefactor, remove_protons=remove_protons,
         cluster_submit=cluster_submit, walltime=walltime, progress=progress,
         dpath_results=dpath_results, dpath_templates=dpath_templates,
@@ -700,8 +710,9 @@ def ncsd_multiple_calculations(
 
 
 def ncsd_single_calculation(
-        a, aeff, z, scalefactor, remove_protons,
-        nmax=NMAX, n1=N1, n2=N1, nshell=N_SHELL,
+        a, aeff, z, nmax=NMAX, nshell=N_SHELL, n1=N1, n2=N1,
+        scalefactor=None, remove_protons=False,
+        beta_cm=BETA_CM, num_states=NCSD_NUM_STATES, num_iter=NCSD_NUM_ITER,
         force=False, verbose=False, progress=True,
         cluster_submit=False, walltime=None, remove_tmp_files=True,
         dpath_templates=DPATH_TEMPLATES, dpath_results=DPATH_RESULTS,
@@ -717,6 +728,9 @@ def ncsd_single_calculation(
     :param scalefactor: factor by which to scale off-diagonal coupling terms of
     the TBME interaction
     :param remove_protons: if true, scale Vpp and Vpn to 0
+    :param beta_cm: center of mass beta term
+    :param num_states: number of NCSD states to calculate
+    :param num_iter: number of iteractions for Lanczos algorithm
     :param force: if true, does the calculation even if output files already
     exist
     :param verbose: if true, prints the regular output of NCSD to stdout, else
@@ -739,6 +753,7 @@ def ncsd_single_calculation(
         a_list=[a], aeff_list=[aeff], nhw_list=[nhw],
         z=z, n1=n1, n2=n2, nshell=nshell,
         scalefactor=scalefactor, remove_protons=remove_protons,
+        beta_cm=beta_cm, num_states=num_states, num_iter=num_iter,
         cluster_submit=cluster_submit, walltime=walltime, progress=progress,
         dpath_templates=dpath_templates, dpath_results=dpath_results,
         force=force,
@@ -764,9 +779,9 @@ def ncsd_single_calculation(
 
 
 def ncsd_exact_calculations(
-        z, a_range,
-        nmax=NMAX, n1=N1, n2=N2, nshell=N_SHELL,
+        z, a_range, nmax=NMAX, nshell=N_SHELL, n1=N1, n2=N2,
         int_scalefactor=None, remove_protons=False,
+        beta_cm=BETA_CM, num_states=NCSD_NUM_STATES, num_iter=NCSD_NUM_ITER,
         force=False, verbose=False, progress=True,
         cluster_submit=False, walltime=None, remove_tmp_files=True,
         str_prog_ncsd_ex=STR_PROG_NCSD_EX,
@@ -783,6 +798,9 @@ def ncsd_exact_calculations(
     :param int_scalefactor: float factor by which the off-diagonal valence
     coupling terms in the TBME interaction are scaled
     :param remove_protons: if true, scales Vpp and Vpn to 0
+    :param beta_cm: center of mass beta term
+    :param num_states: max number of NCSD states to calculate
+    :param num_iter: max iteractions for Lanczos algorithm
     :param force: if true, force calculation of NCSD even if output files are
     present
     :param verbose: if true, print regular NCSD output to stdout; otherwise
@@ -805,6 +823,7 @@ def ncsd_exact_calculations(
         z=z, a_values=a_range, a_presc_list=[a_range],
         nmax=nmax, n1=n1, n2=n2, nshell=nshell,
         scalefactor=int_scalefactor, remove_protons=remove_protons,
+        beta_cm=beta_cm, num_states=num_states, num_iter=num_iter,
         cluster_submit=cluster_submit, walltime=walltime,
         force=force, verbose=verbose, progress=progress,
         remove_tmp_files=remove_tmp_files,
@@ -1124,8 +1143,9 @@ def vce_multiple_calculations(
 
 def ncsd_vce_calculations(
         a_prescriptions, a_range, z=None,
-        nmax=NMAX, n1=N1, n2=N2, nshell=N_SHELL, ncomponent=N_COMPONENT,
+        nmax=NMAX, nshell=N_SHELL, ncomponent=N_COMPONENT, n1=N1, n2=N2,
         int_scalefactor=None, remove_protons=False,
+        beta_cm=BETA_CM, num_states=NCSD_NUM_STATES, num_iter=NCSD_NUM_ITER,
         force_ncsd=False, force_trdens=False, force_all=False,
         verbose=False, progress=True, threading=True,
         cluster_submit=False, walltime=None, remove_tmp_files=True,
@@ -1147,6 +1167,9 @@ def ncsd_vce_calculations(
     :param int_scalefactor: float factor by which the off-diagonal valence
     coupling terms in the interaction are scaled
     :param remove_protons: if true, scale Vpn and Vpp to 0
+    :param beta_cm: center of mass beta term
+    :param num_states: number of NCSD states to calculate
+    :param num_iter: number of iterations for Lanczos algorithm
     :param force_ncsd: if true, forces recalculation of NCSD, even if output
     files already exist
     :param force_trdens: if true, forces recalculation of TRDENS, even if
@@ -1178,6 +1201,7 @@ def ncsd_vce_calculations(
         z=z, a_values=a_values, a_presc_list=a_presc_list,
         nmax=nmax, n1=n1, n2=n2, nshell=nshell,
         scalefactor=int_scalefactor, remove_protons=remove_protons,
+        beta_cm=beta_cm, num_states=num_states, num_iter=num_iter,
         force=force_all or force_ncsd,
         verbose=verbose, progress=progress, threading=threading,
         cluster_submit=cluster_submit, walltime=walltime,
