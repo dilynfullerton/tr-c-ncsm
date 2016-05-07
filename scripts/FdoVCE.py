@@ -1,5 +1,9 @@
 #!/usr/bin/python
-"""
+"""FdoVCE.py
+Script of Ragnar Stroberg, edited for compatibility with my code.
+The preceding 'F' is for "functions" because all I really did was wrap the
+script into functions.
+
 To run as a script:
 
     $ FdoVCE.py Aeff4 [Aeff5 Aeff6] outfile
