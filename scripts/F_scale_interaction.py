@@ -129,6 +129,14 @@ def run(fpath_src, fpath_dst, scalefn0=lambda a, b: b, force=False,
 
 def scale_off_diag_outside_valence(src, dst, nshell, scalefactor,
                                    rm_proton_interaction=False):
+    """Wrapper for run to scale off-diagonal coupling terms which couple
+    core to valence, core to beyond valence, or valence to beyond valence.
+    :param src: source TBME interaction file
+    :param dst: location (and name) for scaled TBME interaction file
+    :param nshell: 0=s, 1=p, 2=sd, ...
+    :param scalefactor: float value to multiply to off diagonal coupling terms
+    :param rm_proton_interaction: if true, set Vpp and Vpn to 0.0
+    """
     scalefn = get_scaleif_fn(
         elt_cond_fn=ecf_off_diag_outside_valence(nshell),
         cols_to_scale=[0, 3, 4, 5], scalefactor=scalefactor,
