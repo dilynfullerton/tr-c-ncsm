@@ -2,12 +2,15 @@
 _Coming soon_: MORE information about this stuff. Oooh weee! I can't wait
 
 ### Overview
+---
 _Coming soon._
 
 ### Dependencies
+---
 * python 2 (2.4 or higher)
 
 ### Setup
+---
 The following should be done to prepare for usage:
 
 1. Clone this repository to the desired calculation directory.  
@@ -42,6 +45,7 @@ the cluster, add the following to `./templates/job.sh`.
    ```
 
 ### Usage
+---
 #### Importing python functions
 It is recommended that the user create their own python script to
 import and use the primary user functions:
@@ -75,4 +79,5 @@ a remove location, specified by `$to`.
 the NuShellX `sources` directory in a remote location, specified by `$to`.
 
 ### Future developments
+---
 _Coming soon._
