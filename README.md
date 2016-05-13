@@ -80,4 +80,3 @@ the NuShellX `sources` directory in a remote location, specified by `$to`.
 ### Future developments
 ---
 _Coming soon._  
-For now, see [TODO.md](TODO.md)
