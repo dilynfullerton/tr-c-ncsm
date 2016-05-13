@@ -1,0 +1,24 @@
+#+TITLE: tr-c-ncsm TODO list
+#+AUTHOR: Dilyn Fullerton
+#+DATE: 2016-05-12
+
+* TODO Documentation
+
+** TODO Add more examples in EXAMPLES.md
+
+** TODO Write a brief overview (purpose, outline, etc.) in README.md
+
+** TODO Write grammars for the shell scripts in README.md
+
+** TODO Write basic documentation for main user functions in README.md
+
+* TODO Clean up script behavior of ncsm_vce_calc.py and ncsm_single_calc.py
+
+* TODO Implement a way to remove proton contribution to Trel in NCSD code
+
+* TODO Find source of beta-dependence in NCSD code and fix
+
+* TODO Implement a way to monitor and wait for jobs using qstat?
+
+* TODO Implement a way to work seamlessly with nushellx scripts?
+

@@ -57,9 +57,6 @@ import and use the primary user functions:
 * `vce_single_calculation()`
 * `vce_multiple_calculations()`
 
-_Coming soon_: Documentation and examples of usage here. For now, see
-the documentation in the respective files.
-
 #### Running as a script
 The user may opt to run these via a UNIX-style command. Two commands
 are provided:
@@ -67,8 +64,10 @@ are provided:
 * `ncsm_vce_calc.py`
 * `ncsm_single_calc.py`
 
-_Coming soon_: Documentation and examples of usage here. For now, see
-the documentation in the respective files.
+_Coming soon_: Grammars for these shell scripts
+
+#### Examples
+See [EXAMPLES.md](EXAMPLES.md)
 
 #### Other useful scripts
 * `get_results.sh` pulls only relevant results from a remote `$from`
@@ -80,4 +79,5 @@ the NuShellX `sources` directory in a remote location, specified by `$to`.
 
 ### Future developments
 ---
-_Coming soon._
+_Coming soon._  
+For now, see [TODO.md](TODO.md)
