@@ -2,6 +2,7 @@
 ### Examples of usage
 #### Example 1: Basic _p_-shell calculation on the cluster
 ##### Python:
+
    ```python
    from ncsm_vce_calc import ncsd_vce_calculations
    from ncsm_vce_calc import ncsd_exact_calculations
@@ -35,6 +36,7 @@ make comparisons for the full mass range.
    
 
 ##### Shell:
+
    ```bash
    python ncsm_vce_calc.py -t 01:00:00 -e 4 10 4 10 6;
    python ncsm_vce_calc.py -t 01:00:00 4 5 6 4 10 6;
@@ -45,6 +47,7 @@ _Coming soon_: Explanation
 
 #### Example 2: Basic _sd_-shell calculation on the cluster
 ##### Python:
+
    ```python
    from ncsm_vce_calc import ncsd_vce_calculations
    from ncsm_vce_calc import ncsd_exact_calculations
@@ -65,6 +68,7 @@ _Coming soon_: Explanation
 _Coming soon_: Explanation
 
 ##### Shell:
+
    ```bash
    python ncsm_vce_calc.py -t 03:00:00 -e 16 24 16 24 2 2;
    python ncsm_vce_calc.py -t 03:00:00 16 17 18 16 24 2 2;
