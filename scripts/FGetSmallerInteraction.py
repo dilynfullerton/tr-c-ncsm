@@ -31,13 +31,10 @@ def run(fname, n1, n2, f_out_name=None):
         if n1_bef == n1 and n2_bef == n2:
             return 0
     f = open(fname)
-    
     line = f.readline()
     ldat = line.split()
     hw, a_tbme = [float(item) for item in ldat[3:]]
-
     index_max = (n1+1)*(n1+2)/2
-    
     next_lines = list()
     ntbme = 0
     for line in f:
@@ -49,14 +46,12 @@ def run(fname, n1, n2, f_out_name=None):
             continue
         next_lines.append(line.rstrip('\n'))
         ntbme += 1
-    
     s = ' %9d   %4d %4d %10.4f %10.4f' % (ntbme, n1, n2, hw, a_tbme)
     next_lines.insert(0, s)
     f.close()
-    
     if f_out_name is not None:
         f_out = open(f_out_name, 'w')
-        f_out.write('\n'.join(next_lines))
+        f_out.write('\n'.join(next_lines) + '\n')
         f_out.close()
     else:
         for line in next_lines:
