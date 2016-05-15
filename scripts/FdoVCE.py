@@ -29,6 +29,23 @@ class InsufficientArgumentsException(Exception):
     pass
 
 
+def get_j2_range(nshell):
+    """Given the shell and whether the reversed convention is used, returns
+    the ordered list of 2*j values for which single particle energies should
+    be retrieved
+    :param nshell: 0=s, 1=p, 2=sd, ...
+    """
+    j2_range = [1 + 2*xx for xx in range(nshell + 1)]
+    if nshell == 2:
+        j2_range = list(reversed(j2_range))
+    elif nshell != 1:
+        print (
+            'The correct convention for ordering SPEs is not known for '
+            'nshell %d. They will be ordered by increasing j' % nshell
+        )
+    return j2_range
+
+
 def get_e0(fpath):
     """Given the file path to the first NCSD outfile (helium 4 for Nshell=1),
     returns the first energy with J=0
@@ -50,15 +67,16 @@ def get_e0(fpath):
             '\nA ground state could not be retrieved from %s' % fpath)
 
 
-def get_spe(fpath, e0, nshell):
+def get_spe(fpath, e0, j2_range):
     """Given the path to the second NCSD outfile, returns a list of
     single particle energies ordered by increasing J
     :param fpath: path to the second NCSD outfile (helium 5 for Nshell=1)
     :param e0: zero body term (retrieved by get_e0)
-    :param nshell: major oscillator shell (0=s, 1=p, 2=sd, ...)
+    :param j2_range: ordered list of 2*j values for which SPE's exist for
+    the shell. This should be listed in the order SPE's are to be written
+    in the interaction file
     """
-    spe_list = [999.] * (nshell + 1)
-    j2_range = [1 + 2*xx for xx in range(nshell + 1)]
+    spe_list = [999.] * len(j2_range)
     f = open(fpath)
     for line in f:
         if 'State # ' not in line:
@@ -76,12 +94,14 @@ def get_spe(fpath, e0, nshell):
     return spe_list
 
 
-def get_header_string(aeff_str, e0, spe):
+def get_header_string(aeff_str, e0, spe, j2_range):
     """Returns the header to the interaction file, along with the zero body
     term and single particle energies
     :param aeff_str: Aeff for header line
     :param e0: zero body term
     :param spe: list of single particle energies ordered by increasing j
+    :param j2_range: list of 2*j values for single particle energies, in the
+    order they are to be printed
     :return: header lines
     """
     header_lines = list()
@@ -90,7 +110,7 @@ def get_header_string(aeff_str, e0, spe):
         '%s' % str(aeff_str))
     header_lines.append('!  Zero body term: %10.6f' % (e0,))
     header_lines.append('!  Index  n  l  j tz')
-    for j, idx in zip([1 + 2*xx for xx in range(len(spe))], range(len(spe))):
+    for j, idx in zip(j2_range, range(len(spe))):
         header_lines.append('!  %d     %d  %d  %d  %d' % (idx+1, 0, 1, j, 1))
     header_lines.append('! ')
     header_lines.append(
@@ -98,11 +118,14 @@ def get_header_string(aeff_str, e0, spe):
     return '\n'.join(header_lines)
 
 
-def get_tbme(aeff, e0, spe, fpath_write_int, fpath_heff, presc=None):
+def get_tbme(aeff, e0, spe, j2_range, fpath_write_int, fpath_heff, presc=None):
     """Writes interaction file based on Valence Cluster Expansion
     :param aeff: Aeff used for 3rd NCSD (helium6 if Nshell=1)
     :param e0: core energy
     :param spe: list of single particle energies (in order of increasing j)
+    :param j2_range: ordered list of 2*j values for which SPE's exist for
+    the shell. This should be listed in the order SPE's are to be written
+    in the interaction file.
     :param fpath_write_int: file path for NuShellX interaction file to write
     :param fpath_heff: file path of Heff_OLS matrix
     :param presc: 3-tuple representing the A-prescription. If None, assumed to
@@ -110,9 +133,11 @@ def get_tbme(aeff, e0, spe, fpath_write_int, fpath_heff, presc=None):
     """
     write_lines = list()
     if presc is not None and (presc[0] != aeff or presc[1] != aeff):
-        write_lines.append(get_header_string(str(presc), e0, spe))
+        aeff_str = str(presc)
     else:
-        write_lines.append(get_header_string(str(aeff), e0, spe))
+        aeff_str = str(aeff)
+    write_lines.append(get_header_string(
+        aeff_str=aeff_str, e0=e0, spe=spe, j2_range=j2_range))
     f = open(fpath_heff)
     line = f.readline()
     dim = int(line.split()[0])
@@ -152,9 +177,10 @@ def run(presc, fpath_write_int, fpath_he4, fpath_he5, fpath_heff_ols, nshell):
     :param nshell: major oscillator shell (0=s, 1=p, 2=sd,...)
     """
     e0 = get_e0(fpath=fpath_he4)
-    spe = get_spe(fpath=fpath_he5, e0=e0, nshell=nshell)
+    j2_range = get_j2_range(nshell=nshell)
+    spe = get_spe(fpath=fpath_he5, e0=e0, j2_range=j2_range)
     get_tbme(
-        aeff=presc[2], e0=e0, spe=spe, presc=presc,
+        aeff=presc[2], e0=e0, spe=spe, presc=presc, j2_range=j2_range,
         fpath_write_int=fpath_write_int, fpath_heff=fpath_heff_ols,
     )
 
