@@ -41,8 +41,13 @@ the ellipses as necessary.
 the cluster, add the following to `./templates/job.sh`.  
 
    ```bash
+   #PBS -m ae
    #PBS -M youremail@here
    ```
+The arguments `a` and `e` prompt sending a message when the job either
+aborts or completes normally. Personally, I prefer using only `a` so
+that I only receive a message when the job is prematurely aborted by
+the cluster.
 
 ### Usage
 ---

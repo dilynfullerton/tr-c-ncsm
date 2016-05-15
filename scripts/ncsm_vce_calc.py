@@ -321,7 +321,7 @@ def _run_trdens(
                 ferr.write(err)
                 ferr.close()
                 raise TrdensRunException(
-                    '\nA problem occurred while running NCSD. '
+                    '\nA problem occurred while running TRDENS. '
                     'See %s' % path.join(dpath_a6, fname_stderr)
                 )
             return p.poll(), out, err
