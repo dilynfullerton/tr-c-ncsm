@@ -2438,6 +2438,13 @@ c     DRF Get normalization factor
                delcd = 0.0
             endif
             norm0 = sqrt((1.0+delab)*(1.0+delcd))
+c     DRF Add triangular condition (is this necessary?)
+            tri0 = 1.0
+            if (jmx0.lt.jt) then
+               tri0 = 0.0
+            elseif (1.lt.it) then
+               tri0 = 0.0
+            endif
 c$$$            if (trelaeff.ne.trel) then
 c$$$               if (2.le.ia.and.2.lt.ic.and.ib.le.3.and.id.le.3) then
 c$$$                  print *,'a,b,c,d,J,T = ',ia,ib,ic,id,jt,it
@@ -2456,7 +2463,7 @@ c$$$               endif
 c$$$            endif
 c     DRF Add result to matrix element
             gful(idx,jset) = gful(idx,jset) +
-     &           comft2*itrel*trelaeff/norm0
+     &           comft2*itrel*tri0*trelaeff/norm0
          enddo
             
 c----------------------------------------------------------------------------
