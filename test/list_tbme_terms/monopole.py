@@ -19,5 +19,3 @@ with open(fpath, 'r') as f:
             denominator += a_jt
 
 print('Monopole for {}: {}'.format(idx, numerator/denominator))
-        
-        

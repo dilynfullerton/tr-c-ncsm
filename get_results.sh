@@ -13,4 +13,4 @@ to='./';
 rsync -Hrl \
   --exclude="*.tmp" \
   --exclude="*.egv" \
-  $from $to;
+  ${from} ${to};

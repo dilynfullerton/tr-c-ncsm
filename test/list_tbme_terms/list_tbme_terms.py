@@ -15,9 +15,9 @@ with open(fpath, 'r') as fin:
         for line in fin:
             ldat = line.split()
             a, b, c, d, j, t = [int(x) for x in ldat[:6]]
-            space = [1,2,3]
+            space = [1, 2, 3]
             core = [1]
-            val = [2,3]
+            val = [2, 3]
             in_space = b in space and d in space
             if not in_space:
                 continue
@@ -28,6 +28,3 @@ with open(fpath, 'r') as fin:
             write_map[(j, t, a, b, c, d)] = line
         for k, v in sorted(write_map.items()):
             fout.write(v)
-                    
-              
-              

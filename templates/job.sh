@@ -6,9 +6,9 @@
 #PBS -j oe 
 
 NTHREADS=12
-export OMP_NUM_THREADS=$NTHREADS
+export OMP_NUM_THREADS=${NTHREADS}
 
-cd $PBS_O_WORKDIR
+cd ${PBS_O_WORKDIR}
 
 # mpirun -np 12 NCSD
 NCSD

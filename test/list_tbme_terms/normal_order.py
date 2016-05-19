@@ -21,7 +21,7 @@ def normal_order(v_map, A):
     g_ijkl = dict()
     for label, v in sorted(v_map.items()):
         a, b, c, d, j, t = label
-        norm = sqrt((1+int(a==b))*(1+int(c==d))) 
+        norm = sqrt((1+int(a == b))*(1+int(c == d)))
         v = v * norm * 2 / (A - 1)
         if (a, b) == (c, d):
             if get_n(a) * get_n(b):
@@ -57,28 +57,28 @@ def write_file(fpath, e0, f_ij, g_ijkl):
 
 dpath = getcwd()
 fname = 'nmax0'
-fpath = path.join(dpath, fname)
+fpath0 = path.join(dpath, fname)
 trel_map = dict()
 vpn_map = dict()
 vpp_map = dict()
 vnn_map = dict()
 
 # fill maps
-with open(fpath, 'r') as f:
-    for line in f:
+with open(fpath0, 'r') as fr:
+    for line in fr:
         ldat = line.split()
-        label = tuple([int(x) for x in ldat[:6]])
+        label0 = tuple([int(x) for x in ldat[:6]])
         trel, hrel, clmb, vpn, vpp, vnn = [float(x) for x in ldat[6:]]
-        trel_map[label] = trel
-        vpn_map[label] = vpn
-        vpp_map[label] = vpp
-        vnn_map[label] = vnn
+        trel_map[label0] = trel
+        vpn_map[label0] = vpn
+        vpp_map[label0] = vpp
+        vnn_map[label0] = vnn
 
-A = 4
+A_ = 4
 Aeff = 4
 
-trel_e0, trel_f_ij, trel_g_ijkl = normal_order(trel_map, A)
-vnn_e0, vnn_f_ij, vnn_g_ijkl = normal_order(vnn_map, A)
+trel_e0, trel_f_ij, trel_g_ijkl = normal_order(trel_map, A_)
+vnn_e0, vnn_f_ij, vnn_g_ijkl = normal_order(vnn_map, A_)
 # vpn_e0, vpn_f_ij, vpn_g_ijkl = normal_order(vpn_map)
 # vpp_e0, vpp_f_ij, vpp_g_ijkl = normal_order(vpp_map)
 
@@ -88,6 +88,6 @@ write_file(path.join(dpath, 'NO_vnn'), vnn_e0, vnn_f_ij, vnn_g_ijkl)
 print('Trel   = {:8.4f}'.format(trel_e0))
 print('Vnn    = {:8.4f}'.format(vnn_e0))
 print()
-he4_4 = (1 - 1/A) * trel_e0 + vnn_e0
-print('A = {}, Aeff = {}'.format(A, Aeff))
+he4_4 = (1 - 1 / A_) * trel_e0 + vnn_e0
+print('A = {}, Aeff = {}'.format(A_, Aeff))
 print('  Energy = {:8.4f}'.format(he4_4))
