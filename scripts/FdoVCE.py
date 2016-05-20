@@ -34,6 +34,13 @@ def get_j2_range(nshell):
     the ordered list of 2*j values for which single particle energies should
     be retrieved
     :param nshell: 0=s, 1=p, 2=sd, ...
+    :return j2_range, idx_range
+    j2_range is the ordered list of 2*j values
+    idx_range is the ordered list of the indices of those 2*j values with
+    respect to increasing j.
+    For example, for
+        j2_range  = [7/2, 1/2, 3/2, 5/2]
+        idx_range = [  4,   1,   2,   3]
     """
     j2_i_range = [(1 + 2*xx, xx + 1) for xx in range(nshell + 1)]
     if nshell == 2:
