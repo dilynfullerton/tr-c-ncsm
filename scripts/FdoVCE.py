@@ -35,15 +35,17 @@ def get_j2_range(nshell):
     be retrieved
     :param nshell: 0=s, 1=p, 2=sd, ...
     """
-    j2_range = [1 + 2*xx for xx in range(nshell + 1)]
+    j2_i_range = [(1 + 2*xx, xx + 1) for xx in range(nshell + 1)]
     if nshell == 2:
-        j2_range = list(reversed(j2_range))
+        j2_i_range = list(reversed(j2_range))
     elif nshell != 1:
         print (
             'The correct convention for ordering SPEs is not known for '
             'nshell %d. They will be ordered by increasing j' % nshell
         )
-    return j2_range
+    j2_range = [tup[0] for tup in j2_i_range]
+    idx_range = [tup[1] for tup in j2_i_range]
+    return j2_range, idx_range
 
 
 def get_e0(fpath):
@@ -118,7 +120,8 @@ def get_header_string(aeff_str, e0, spe, j2_range):
     return '\n'.join(header_lines)
 
 
-def get_tbme(aeff, e0, spe, j2_range, fpath_write_int, fpath_heff, presc=None):
+def get_tbme(aeff, e0, spe, j2_range, idx_range, 
+             fpath_write_int, fpath_heff, presc=None):
     """Writes interaction file based on Valence Cluster Expansion
     :param aeff: Aeff used for 3rd NCSD (helium6 if Nshell=1)
     :param e0: core energy
@@ -126,6 +129,10 @@ def get_tbme(aeff, e0, spe, j2_range, fpath_write_int, fpath_heff, presc=None):
     :param j2_range: ordered list of 2*j values for which SPE's exist for
     the shell. This should be listed in the order SPE's are to be written
     in the interaction file.
+    :param idx_range: list of indices numbered according to increasing j and 
+    ordered according to the same convention as j2_range.
+    For example if the ordering of j's was [j=7/2, j=1/2, j=3/2, j=5/2],
+    idx_range would be [4, 1, 2, 3].
     :param fpath_write_int: file path for NuShellX interaction file to write
     :param fpath_heff: file path of Heff_OLS matrix
     :param presc: 3-tuple representing the A-prescription. If None, assumed to
@@ -145,6 +152,8 @@ def get_tbme(aeff, e0, spe, j2_range, fpath_write_int, fpath_heff, presc=None):
     for i in range(dim):
         ldat = f.readline().split()
         p, q = [int(dat) for dat in ldat[1:3]]
+        p = idx_range.index(p)
+        q = idx_range.index(q)
         j, t = [int(dat) for dat in ldat[9:11]]
         kets.append({'p': p, 'q': q, 'J': j, 'T': t})
     for i in range(dim):
@@ -177,7 +186,7 @@ def run(presc, fpath_write_int, fpath_he4, fpath_he5, fpath_heff_ols, nshell):
     :param nshell: major oscillator shell (0=s, 1=p, 2=sd,...)
     """
     e0 = get_e0(fpath=fpath_he4)
-    j2_range = get_j2_range(nshell=nshell)
+    j2_range, idx_range = get_j2_range(nshell=nshell)
     spe = get_spe(fpath=fpath_he5, e0=e0, j2_range=j2_range)
     get_tbme(
         aeff=presc[2], e0=e0, spe=spe, presc=presc, j2_range=j2_range,
