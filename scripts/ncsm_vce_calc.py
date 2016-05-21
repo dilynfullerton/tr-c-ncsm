@@ -358,7 +358,7 @@ def _run_vce(
     # Check that files exist
     for f in [a4_fpath, a5_fpath, heff_fpath]:
         if not path.exists(f):
-            raise NcsdOutfileNotFoundException(
+            raise OutfileNotFoundException(
                 'NCSD outfile not found: %s' % f)
     # Do vce
     a_range = list(a_range)
@@ -832,7 +832,7 @@ def ncsd_exact_calculations(
     )
 
 
-class NcsdOutfileNotFoundException(Exception):
+class OutfileNotFoundException(Exception):
     pass
 
 
@@ -882,7 +882,7 @@ def vce_single_calculation(
     # check that files exist
     for f in a_aeff_outfile_map.values():
         if not path.exists(f):
-            raise NcsdOutfileNotFoundException(
+            raise OutfileNotFoundException(
                 'NCSD outfile not found: %s' % f)
     # for the 3rd a value, make trdens file and run TRDENS
     a_aeff6 = (a_values[2], a_prescription[2])
@@ -912,7 +912,7 @@ def vce_single_calculation(
             nshell=nshell, dirpath_aeff6=dpath_a6, dirpath_vce=vce_dirpath,
             a_aeff_to_outfile_fpath_map=a_aeff_outfile_map,
         )
-    except NcsdOutfileNotFoundException:
+    except OutfileNotFoundException:
         raise
 
 
@@ -976,7 +976,7 @@ def _vce_multiple_calculations_t(
             )
         except EgvFileNotFoundException, e:
             em.put(str(e))
-        except NcsdOutfileNotFoundException, e:
+        except OutfileNotFoundException, e:
             em.put(str(e))
         except TrdensRunException, e:
             em.put(str(e))
@@ -1056,7 +1056,7 @@ def _vce_multiple_calculations(
                 a_aeff_dir_map=a_aeff_to_dpath_map,
             )
             jobs_completed += 1
-        except NcsdOutfileNotFoundException, e:
+        except OutfileNotFoundException, e:
             error_messages.append(str(e))
             continue
         except EgvFileNotFoundException, e:
@@ -1209,18 +1209,15 @@ def ncsd_vce_calculations(
         dpath_templates=dpath_templates, dpath_results=dpath_results,
     )
     a_aeff_to_dir, a_aeff_to_egv, a_aeff_to_job, a_aeff_to_out = a_aeff_maps
-    vce_a_values = list()
     vce_a_presc_list = list()
-    for a in a_values:
-        for presc in a_presc_list:
-            for aeff in presc:
-                if (a, aeff) not in completed_job_list:
-                    continue
-            else:
-                vce_a_values.append(a)
-                vce_a_presc_list.append(presc)
+    for presc in a_presc_list:
+        for a, aeff in zip(a_values, presc):
+            if (a, aeff) not in completed_job_list:
+                continue
+        else:
+            vce_a_presc_list.append(presc)
     vce_multiple_calculations(
-        z=z, a_values=vce_a_values, a_presc_list=vce_a_presc_list,
+        z=z, a_values=a_values, a_presc_list=vce_a_presc_list,
         a_range=a_range, nmax=nmax, n1=n1, n2=n2,
         nshell=nshell, ncomponent=ncomponent,
         int_scalefactor=int_scalefactor, remove_protons=remove_protons,
