@@ -478,7 +478,7 @@ def _ncsd_multiple_calculations_t(
     True
     :param max_open_threads: maximum number of threads to be allowed to open
     for the calculations
-    :return: list of directories for which the calculation was completed
+    :return: list of (A, Aeff) pairs for which the job was completed
     """
     def _r(args, q, em):
         try:
@@ -497,7 +497,7 @@ def _ncsd_multiple_calculations_t(
     )
     while not error_messages.empty():
         print error_messages.get()
-    return list(map(lambda job: a_aeff_to_dpath_map[job], completed_job_list))
+    return completed_job_list
 
 
 def _ncsd_multiple_calculations_s(
@@ -522,19 +522,16 @@ def _ncsd_multiple_calculations_s(
     command is saved
     :param fname_stderr: file name in which standard error of the qsub
     command is saved
-    :return: list of directories in which the calculation is ALREADY complete.
-    Note: This is NOT the list of jobs that have been submitted; it is the
-    list of jobs already COMPLETED, so that the VCE portion of the calculation
-    knows what calculations it can begin.
+    :return: list of (A, Aeff) pairs for which the job is ALREADY complete
     """
     submitted_jobs = 0
     if progress and len(a_aeff_set) > 0:
         print '  Submitting jobs...'
-    completed_dpath_list = list()
+    completed_job_list = list()
     for a, aeff in a_aeff_set:
         fpath_egv = a_aeff_to_egvfile_map[(a, aeff)]
         if path.exists(fpath_egv) and not force:
-            completed_dpath_list.append(a_aeff_to_dpath_map[(a, aeff)])
+            completed_job_list.append((a, aeff))
         else:
             job = a_aeff_to_jobfile_map[(a, aeff)]
             dpath = a_aeff_to_dpath_map[(a, aeff)]
@@ -555,7 +552,7 @@ def _ncsd_multiple_calculations_s(
             print '  1 job submitted to cluster'
         else:
             print '  %d jobs submitted to cluster' % submitted_jobs
-    return completed_dpath_list
+    return completed_job_list
 
 
 def _ncsd_multiple_calculations(
@@ -574,7 +571,7 @@ def _ncsd_multiple_calculations(
     :param progress: if true, shows a progress bar, indicated the number of
     jobs completed. Verbose output is suppressed.
     :param str_prog_ncsd: string to display above progress bar, if showing
-    :return: list of directories in which the calculation was completed
+    :return: list of (A, Aeff) pairs for which the job is ALREADY complete
     """
     # do ncsd
     jobs_total = len(a_aeff_set)
@@ -582,7 +579,7 @@ def _ncsd_multiple_calculations(
     progress = progress and not verbose
     if progress and jobs_total > 0:
         print str_prog_ncsd
-    completed_dpath_list = list()
+    completed_job_list = list()
     for a, aeff in sorted(a_aeff_set):
         dpath = a_aeff_to_dpath_map[(a, aeff)]
         if progress:
@@ -595,11 +592,11 @@ def _ncsd_multiple_calculations(
         except NcsdRunException, e:
             print e
             continue
-        completed_dpath_list.append(dpath)
+        completed_job_list.append((a, aeff))
         jobs_completed += 1
     if progress:
         _print_progress(jobs_completed, jobs_total, end=True)
-    return completed_dpath_list
+    return completed_job_list
 
 
 class InvalidNmaxException(Exception):
@@ -681,7 +678,7 @@ def ncsd_multiple_calculations(
     # make (A, Aeff) set and do NCSD
     a_aeff_set = set([(a, aeff) for a, aeff, nhw in a_aeff_nhw_set])
     if cluster_submit:
-        completed_dpath_list = _ncsd_multiple_calculations_s(
+        completed_job_list = _ncsd_multiple_calculations_s(
             a_aeff_set=a_aeff_set,
             a_aeff_to_dpath_map=a_aeff_to_dir,
             a_aeff_to_egvfile_map=a_aeff_to_egv,
@@ -689,7 +686,7 @@ def ncsd_multiple_calculations(
             progress=progress, force=force,
         )
     elif threading and len(a_aeff_nhw_set) > 1:
-        completed_dpath_list = _ncsd_multiple_calculations_t(
+        completed_job_list = _ncsd_multiple_calculations_t(
             a_aeff_set=a_aeff_set,
             a_aeff_to_dpath_map=a_aeff_to_dir,
             a_aeff_to_egvfile_map=a_aeff_to_egv,
@@ -697,7 +694,7 @@ def ncsd_multiple_calculations(
             str_prog_ncsd=str_prog_ncsd
         )
     else:
-        completed_dpath_list = _ncsd_multiple_calculations(
+        completed_job_list = _ncsd_multiple_calculations(
             a_aeff_set=a_aeff_set,
             a_aeff_to_dpath_map=a_aeff_to_dir,
             a_aeff_to_egvfile_map=a_aeff_to_egv,
@@ -705,8 +702,9 @@ def ncsd_multiple_calculations(
             str_prog_ncsd=str_prog_ncsd
         )
     if remove_tmp_files:
-        remove_ncsd_tmp_files(completed_dpath_list)
-    return a_aeff_maps
+        remove_ncsd_tmp_files(
+            [a_aeff_to_dir[job] for job in completed_job_list])
+    return a_aeff_maps, completed_job_list
 
 
 def ncsd_single_calculation(
@@ -759,7 +757,7 @@ def ncsd_single_calculation(
         force=force,
     )[:3]
     if cluster_submit:
-        completed_dpaths_list = _ncsd_multiple_calculations_s(
+        completed_job_list = _ncsd_multiple_calculations_s(
             a_aeff_set=set([(a, aeff)]),
             a_aeff_to_dpath_map=a_aeff_to_dpath,
             a_aeff_to_egvfile_map=a_aeff_to_egv,
@@ -767,7 +765,7 @@ def ncsd_single_calculation(
             force=force, progress=progress,
         )
     else:
-        completed_dpaths_list = _ncsd_multiple_calculations(
+        completed_job_list = _ncsd_multiple_calculations(
             a_aeff_set=set([(a, aeff)]),
             a_aeff_to_dpath_map=a_aeff_to_dpath,
             a_aeff_to_egvfile_map=a_aeff_to_egv,
@@ -775,7 +773,9 @@ def ncsd_single_calculation(
             verbose=verbose,
         )
     if remove_tmp_files:
-        remove_ncsd_tmp_files(completed_dpaths_list)
+        remove_ncsd_tmp_files(
+            [a_aeff_to_dpath[job] for job in completed_job_list])
+    return completed_job_list
 
 
 def ncsd_exact_calculations(
@@ -819,7 +819,7 @@ def ncsd_exact_calculations(
     if nmax % 2:
         raise InvalidNmaxException(
             '\nInvalid Nmax: %d. Nmax must be even.' % nmax)
-    ncsd_multiple_calculations(
+    return ncsd_multiple_calculations(
         z=z, a_values=a_range, a_presc_list=[a_range],
         nmax=nmax, n1=n1, n2=n2, nshell=nshell,
         scalefactor=int_scalefactor, remove_protons=remove_protons,
@@ -883,7 +883,7 @@ def vce_single_calculation(
     for f in a_aeff_outfile_map.values():
         if not path.exists(f):
             raise NcsdOutfileNotFoundException(
-                '\nNCSD outfile not found: %s' % f)
+                'NCSD outfile not found: %s' % f)
     # for the 3rd a value, make trdens file and run TRDENS
     a_aeff6 = (a_values[2], a_prescription[2])
     dpath_a6 = a_aeff_dir_map[a_aeff6]
@@ -1197,7 +1197,7 @@ def ncsd_vce_calculations(
     if z is None:
         z = int(a_values[0] / ncomponent)
     a_presc_list = list(a_prescriptions)
-    a_aeff_maps = ncsd_multiple_calculations(
+    a_aeff_maps, completed_job_list = ncsd_multiple_calculations(
         z=z, a_values=a_values, a_presc_list=a_presc_list,
         nmax=nmax, n1=n1, n2=n2, nshell=nshell,
         scalefactor=int_scalefactor, remove_protons=remove_protons,
@@ -1209,9 +1209,20 @@ def ncsd_vce_calculations(
         dpath_templates=dpath_templates, dpath_results=dpath_results,
     )
     a_aeff_to_dir, a_aeff_to_egv, a_aeff_to_job, a_aeff_to_out = a_aeff_maps
+    vce_a_values = list()
+    vce_a_presc_list = list()
+    for a in a_values:
+        for presc in a_presc_list:
+            for aeff in presc:
+                if (a, aeff) not in completed_job_list:
+                    continue
+            else:
+                vce_a_values.append(a)
+                vce_a_presc_list.append(presc)
     vce_multiple_calculations(
-        z=z, a_values=a_values, a_presc_list=a_presc_list, a_range=a_range,
-        nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
+        z=z, a_values=vce_a_values, a_presc_list=vce_a_presc_list,
+        a_range=a_range, nmax=nmax, n1=n1, n2=n2,
+        nshell=nshell, ncomponent=ncomponent,
         int_scalefactor=int_scalefactor, remove_protons=remove_protons,
         force_trdens=force_trdens or force_all,
         verbose=verbose, progress=progress, threading=threading,
