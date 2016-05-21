@@ -44,7 +44,7 @@ def get_j2_range(nshell):
     """
     j2_i_range = [(1 + 2*xx, xx + 1) for xx in range(nshell + 1)]
     if nshell == 2:
-        j2_i_range = list(reversed(j2_range))
+        j2_i_range = list(reversed(j2_i_range))
     elif nshell != 1:
         print (
             'The correct convention for ordering SPEs is not known for '
