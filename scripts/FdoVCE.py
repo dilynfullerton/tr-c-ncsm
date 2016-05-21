@@ -196,7 +196,8 @@ def run(presc, fpath_write_int, fpath_he4, fpath_he5, fpath_heff_ols, nshell):
     j2_range, idx_range = get_j2_range(nshell=nshell)
     spe = get_spe(fpath=fpath_he5, e0=e0, j2_range=j2_range)
     get_tbme(
-        aeff=presc[2], e0=e0, spe=spe, presc=presc, j2_range=j2_range,
+        aeff=presc[2], e0=e0, spe=spe, presc=presc,
+        j2_range=j2_range, idx_range=idx_range,
         fpath_write_int=fpath_write_int, fpath_heff=fpath_heff_ols,
     )
 
