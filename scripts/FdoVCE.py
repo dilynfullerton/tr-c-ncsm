@@ -159,8 +159,8 @@ def get_tbme(aeff, e0, spe, j2_range, idx_range,
     for i in range(dim):
         ldat = f.readline().split()
         p, q = [int(dat) for dat in ldat[1:3]]
-        p = idx_range.index(p)
-        q = idx_range.index(q)
+        p = idx_range.index(p) + 1
+        q = idx_range.index(q) + 1
         j, t = [int(dat) for dat in ldat[9:11]]
         kets.append({'p': p, 'q': q, 'J': j, 'T': t})
     for i in range(dim):
