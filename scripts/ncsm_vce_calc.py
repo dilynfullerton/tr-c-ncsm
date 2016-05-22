@@ -1213,7 +1213,7 @@ def ncsd_vce_calculations(
     for presc in a_presc_list:
         for a, aeff in zip(a_values, presc):
             if (a, aeff) not in completed_job_list:
-                continue
+                break
         else:
             vce_a_presc_list.append(presc)
     vce_multiple_calculations(
