@@ -163,6 +163,8 @@ def get_tbme(aeff, e0, spe, j2_range, idx_range,
         q = idx_range.index(q) + 1
         j, t = [int(dat) for dat in ldat[9:11]]
         kets.append({'p': p, 'q': q, 'J': j, 'T': t})
+    # get TBMEs
+    tbme_list = list()
     for i in range(dim):
         ldat = f.readline().split()
         for j in range(i, dim):
@@ -171,11 +173,27 @@ def get_tbme(aeff, e0, spe, j2_range, idx_range,
             v = float(ldat[j])
             if i == j:
                 v -= (e0 + spe[kets[i]['p'] - 1] + spe[kets[i]['q'] - 1])
-            next_line = '%3d %3d %3d %3d  %3d %3d  %10.6f' % (
+            tbme_list.append((
                 kets[i]['p'], kets[i]['q'], kets[j]['p'], kets[j]['q'],
-                kets[i]['J'], kets[i]['T'], v)
-            write_lines.append(next_line)
+                kets[i]['J'], kets[i]['T'], v))
     f.close()
+    # write TBME's in general convention:
+    # a <= b, a <= c <= d
+    next_tbme_list = list()
+    for a, b, c, d, j, t, v in tbme_list:
+        if a > b:
+            a, b = b, a
+        if c > d:
+            c, d = d, c
+        if a > c:
+            a, b, c, d = c, d, a, b
+        next_tbme_list.append((a, b, c, d, j, t, v))
+    # sort TBME's by j, t, a, b, c, d
+    next_tbme_list = sorted(next_tbme_list, key=lambda e: (e[4], e[5], e[:4]))
+    # make lines
+    for tbme in next_tbme_list:
+        next_line = '%3d %3d %3d %3d  %3d %3d  %10.6f' % tbme
+        write_lines.append(next_line)
     # write the file
     outfile = open(fpath_write_int, 'w')
     outfile.write('\n'.join(write_lines))
