@@ -21,9 +21,10 @@
 
 The call to `ncsd_vce_calculations()` above will submit the necessary
 `NCSD` jobs to the cluster using `qsub`. Then a valence cluster
-expansion will be attempted on the reulsts.
-Unfortunately it will fail the first
-time, since the NCSD jobs will not yet be complete.
+expansion will be attempted any of the jobs that have already been
+completed.
+All of the VCE jobs will not be complete at the time of termination
+since the NCSD jobs will not yet be complete.
 This is a limitation in submitting to the cluster, as
 a method for waiting for completion has not been developed. Thus the
 `ncsd_vce_calculations()` method will have to be run again once the
