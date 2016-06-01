@@ -1,8 +1,6 @@
 #!/usr/bin/python
 """FdoVCE.py
 Script of Ragnar Stroberg, edited for compatibility with my code.
-The preceding 'F' is for "functions" because all I really did was wrap the
-script into functions.
 
 To run as a script:
 
@@ -12,9 +10,6 @@ To run as a script:
 Generates an interaction file based on He4, He5, and He6 output files.
 
 If Aeff5 and Aeff6 are not specified, asssumes they are the same as Aeff4.
-If filenames for he 4, 5, and 6 are not specified, assumes the convention
-he[i]_[Aeff_i]/he[i]_A[Aeff_i].out is used, in which [i] is 4, 5, 6 and
-[Aeff_i] is Aeff4, Aeff5, Aeff6.
 """
 
 from sys import argv
@@ -22,10 +17,6 @@ from InvalidNumberOfArgumentsException import InvalidNumberOfArgumentsException
 
 
 class GroundStateEnergyNotFoundException(Exception):
-    pass
-
-
-class InsufficientArgumentsException(Exception):
     pass
 
 
@@ -78,7 +69,7 @@ def get_e0(fpath):
 
 def get_spe(fpath, e0, j2_range):
     """Given the path to the second NCSD outfile, returns a list of
-    single particle energies ordered by increasing J
+    single particle energies ordered based on the ordering of j2_range
     :param fpath: path to the second NCSD outfile (helium 5 for Nshell=1)
     :param e0: zero body term (retrieved by get_e0)
     :param j2_range: ordered list of 2*j values for which SPE's exist for
@@ -145,6 +136,7 @@ def get_tbme(aeff, e0, spe, j2_range, idx_range,
     :param presc: 3-tuple representing the A-prescription. If None, assumed to
     be (aeff, aeff, aeff)
     """
+    # get the top header lines to write to *.int file
     write_lines = list()
     if presc is not None and (presc[0] != aeff or presc[1] != aeff):
         aeff_str = str(presc)
@@ -152,6 +144,7 @@ def get_tbme(aeff, e0, spe, j2_range, idx_range,
         aeff_str = str(aeff)
     write_lines.append(get_header_string(
         aeff_str=aeff_str, e0=e0, spe=spe, j2_range=j2_range))
+    # open Heff_OLS file for reading
     f = open(fpath_heff)
     line = f.readline()
     dim = int(line.split()[0])

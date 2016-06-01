@@ -47,7 +47,7 @@ from scripts.ncsm_vce_calc import ncsd_single_calculation
 from scripts.ncsm_vce_calc import ncsd_exact_calculations
 from scripts.ncsm_vce_calc import NCSD_CLUSTER_WALLTIME
 
-# todo this script section is some really smelly code
+# TODO: this script section is some really smelly code
 if __name__ == "__main__":
     user_args = argv[1:]
     force0, exact_range = False, False

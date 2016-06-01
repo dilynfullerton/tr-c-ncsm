@@ -156,8 +156,8 @@ NMAX = 0
 N1 = 15
 N2 = 15
 BETA_CM = 0.0
-# todo: ^ right now this is the only acceptable value. it-code still exhibits
-# todo: beta dependence
+# TODO: ^ right now this is the only acceptable value. it-code still exhibits
+# TODO: beta dependence
 NCSD_NUM_STATES = 20
 NCSD_NUM_ITER = 200
 
@@ -1280,7 +1280,7 @@ def _force_from_argv0(argv0):
     return force_ncsd, force_trdens, force_all
 
 
-# todo make this script handling better
+# TODO: make this script handling better
 if __name__ == "__main__":
     user_args = argv[1:]
     f_ncsd, f_trdens, f_all = (False,) * 3

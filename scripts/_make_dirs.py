@@ -68,7 +68,7 @@ def _get_name(z, z_name_map=Z_NAME_MAP, alt_name=Z_NAME_FMT_ALT):
         return alt_name % z
 
 
-# todo does this really need its own function?
+# TODO: does this really need its own function?
 def _make_base_directories(a_aeff_to_dpath_map):
     """Makes directories for (A, Aeff) pairs if they do not exist yet
     :param a_aeff_to_dpath_map: map from A value to directory path
@@ -120,8 +120,8 @@ def _get_mfdp_restrictions_lines(nmax, max_allowed_nmax=MAX_NMAX):
     :param nmax: major oscillator model space truncation
     :param max_allowed_nmax: max number of ines to be generated
     """
-    # todo Is this correct to produce restrictions up to Nmax, or should they
-    # todo be produces up to Nhw?
+    # TODO: Is this correct to produce restrictions up to Nmax, or should they
+    # TODO: be produces up to Nhw?
     lines = list()
     for n in range(min(nmax, max_allowed_nmax) + 1):
         i = (n + 1) * (n + 2)
@@ -133,7 +133,7 @@ class UnknownParityException(Exception):
     pass
 
 
-# todo make this function general
+# TODO: make this function general
 def _get_parity(a, nshell):
     """Returns the parity for a particular mass number and shell
     :param a: mass number (A)
@@ -278,7 +278,7 @@ class UnknownNumStatesException(Exception):
     pass
 
 
-# todo IMPORTANT write this method to be general
+# TODO: IMPORTANT write this method to be general
 # This should determine 'nhw_mod' and 'dim_nhw_mod'. These are the names
 # of the variables in trdens-kernels.f, which are retrieved from trdens.in.
 # I am only somewhat confident that this works when A - A0 = 0
@@ -292,7 +292,7 @@ def _get_num_states(a, a0, nshell):
     :param a0: first mass in the shell
     :param nshell: major oscillator shell (0=s, 1=p, 2=sd,...)
     """
-    nhw_mod = (a - a0) * nshell  # todo is this correct generally
+    nhw_mod = (a - a0) * nshell  # TODO: is this correct generally
     dim_nhw_mod = 0
     for j1_2 in range(1, (a-a0)*(nshell+1), 2):
         dim_nhw_mod += (j1_2 + 1)/2
