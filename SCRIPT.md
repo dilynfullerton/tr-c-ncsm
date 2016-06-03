@@ -1,8 +1,8 @@
 # tr-c-ncsm
 ### Script grammars
 #### ncsm_vce_calc.py
-##### Form:
 Perform `NCSD`, `TRDENS`, and VCE calculations for the desired
+##### Form:
 prescriptions.  
    ```bash
    ncsm_vce_calc.py [-f [F_ARGS]] [-v] [-s SCALEFACTOR] [-t WALLTIME]
@@ -78,9 +78,10 @@ Truncation levels for TBME interaction file.
 * `RM_PROT ::= (0|1)`  
 If `0` (false), proceed as usual. If `1` (true), remove the proton
 parts of the interaction by scaling them to 0.
+
 #### ncsm_single_calc.py
-##### Form:
 Perform `NCSD` calculations only for a single mass number or for a range.
+##### Form:
    ```bash
    ncsm_single_calc.py [-f] [-e] [-v] [-s SCALEFACTOR] [-t WALLTIME]
    Z A [AEFF [NMAX [NSHELL [RM_PROT [N1 N2]]]]]
