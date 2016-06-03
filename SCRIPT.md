@@ -59,7 +59,7 @@ are generated. If `A_MAX` is not specified, this will be the only mass
 number for which a NuShellX \*.int file is generated.
 * `A_MAX ::= int`  
 With `A_MIN`, this defines an inclusive mass range `[A_MIN, A_MAX]`
-for which NuShellX \*.int files are generated.
+for which NuShellX \*.int files are generated.  
 **Note:** These will all be the *same* interaction, linked to have
 different file names to facilitate the use of my scripts in
 [tr-c-nushellx](https://github.com/dilynfullerton/tr-c-nushellx).
