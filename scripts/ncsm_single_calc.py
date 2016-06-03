@@ -58,16 +58,16 @@ if __name__ == "__main__":
     rm_prot0 = False
     while True:
         a0 = user_args[0]
-        if '-f' == a0.lower():
+        if '-f' == a0.lower() or '--force' == a0:
             force0 = True
-        elif '-e' == a0:
+        elif '-e' == a0 or '--exact' == a0:
             exact_range = True
-        elif '-v' == a0:
+        elif '-v' == a0 or '--verbose' == a0:
             verbose0, progress0 = True, False
-        elif '-s' == a0:
+        elif '-s' == a0 or '--scale-int' == a0:
             user_args = user_args[1:]
             scalefactor0 = round(float(user_args[0]), 2)
-        elif '-t' == a0:
+        elif '-t' == a0 or '--walltime' == a0:
             user_args = user_args[1:]
             cluster_submit0 = True
             walltime0 = user_args[0]
