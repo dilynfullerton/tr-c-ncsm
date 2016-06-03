@@ -2,8 +2,8 @@
 ### Script grammars
 #### ncsm_vce_calc.py
 Perform `NCSD`, `TRDENS`, and VCE calculations for the desired
-##### Form:
 prescriptions.  
+##### Form:
    ```bash
    ncsm_vce_calc.py [-f [F_ARGS]] [-v] [-s SCALEFACTOR] [-t WALLTIME]
    ( AEFF4 AEFF5 AEFF6 | (-e|-m|-M) AP_MIN AP_MAX )
