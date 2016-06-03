@@ -1293,8 +1293,9 @@ if __name__ == "__main__":
     z_0 = None
     while True:
         a0 = user_args[0]
-        if re.match('^-f[ntv]{0,3}$', a0.lower()):
-            f_ncsd, f_trdens, f_all = _force_from_argv0(a0)
+        if a0 == '-f' or a0 == '--force':
+            user_args = user_args[1:]
+            f_ncsd, f_trdens, f_all = _force_from_argv0(user_args[0])
         elif a0 == '-m' or a0 == '--combinations':
             com = True
         elif a0 == '-M' or a0 == '--multicombinations':
