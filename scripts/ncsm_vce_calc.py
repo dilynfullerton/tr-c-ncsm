@@ -23,7 +23,7 @@ However, this python file is also configured to run as a UNIX-style command.
 
 To run as a script (assuming this file has been added to PATH):
 
-    $ ncsm_vce_calc.py [-f[nt]] [-v] [-s scalefactor] [-t walltime]
+    $ ncsm_vce_calc.py [-f [nt]] [-v] [-s scalefactor] [-t walltime]
     ( Aeff4 Aeff5 Aeff6 | [-m|-M|-e] Ap_min Ap_max) Amin
     [Amax [nmax [nshell [ncomponent [Z [n1 n2 [rm_prot]]]]]]]
 
@@ -36,9 +36,9 @@ Note that unlike typical UNIX commands, string arguments cannot be strung
 together following a single '-'. Each argument must be provided separately.
 (TODO: Fix this)
 
--F or -f
+--f
     force recalculation of all steps (NCSD, TRDENS)
--f[nt]*
+-f [nt]*
     n
         force recalculation of NCSD; this also forces TRDENS
     t
