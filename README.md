@@ -74,27 +74,27 @@ are provided:
    ( AEFF4 AEFF5 AEFF6 | (-e|-m|-M) AP_MIN AP_MAX )
    A_MIN [A_MAX [NMAX [NSHELL [NCOMPONENT [Z [N1 N2 [RM_PROT]]]]]]]
    ```
-* `(-v | --verbose)`:
+* `(-v | --verbose)`:  
     Print regular `NCSD` and `TRDENS` output to standard out.
-* `(-f | --force) [FARGS]`:
+* `(-f | --force) [FARGS]`:  
     Forces recalculation of `NCSD`, `TRDENS`, and VCE even if output
     files exist. If `t` in `FARGS`, only recalculates `TRDENS` and VCE.
-* `(-s | --scale-int) SCALEFACTOR`:
+* `(-s | --scale-int) SCALEFACTOR`:  
     Scale off-diagonal terms that couple core to valence, core to
     outside, and valence to outside terms in the TBME interaction by
 	the given `SCALEFACTOR`.
-* `(-t | --walltime) WALLTIME`:
+* `(-t | --walltime) WALLTIME`:  
     Submit the job to the cluster using `qsub`, allowing the given
     `WALLTIME`.
-* `(-e | --exact) AP_MIN AP_MAX`:
+* `(-e | --exact) AP_MIN AP_MAX`:  
     Do `NCSD`, `TRDENS`, and VCE for all prescriptions of the form
     `(Aeff, Aeff, Aeff)` where `Aeff` ranges from `AP_MIN` to `AP_MAX`
     inclusive.
-* `(-m | --combinations) AP_MIN AP_MAX`:
+* `(-m | --combinations) AP_MIN AP_MAX`:  
     Do `NCSD`, `TRDENS`, and VCE for all prescriptions of the form
     `(Aeff4, Aeff5, Aeff6)`, where
     `AP_MIN <= Aeff4 < Aeff5 < Aeff6 <= AP_MAX`.
-* `(-M | --multicombinations) AP_MIN AP_MAX`:
+* `(-M | --multicombinations) AP_MIN AP_MAX`:  
     Do `NCSD`, `TRDENS`, and VCE for all prescriptions of the form
     `(Aeff4, Aeff5, Aeff6)`, where
     `AP_MIN <= Aeff4 <= Aeff5 <= Aeff6 <= AP_MAX`.
