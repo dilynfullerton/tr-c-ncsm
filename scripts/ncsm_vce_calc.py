@@ -133,7 +133,6 @@ Example: Sample calculation in the sd-shell.
 
 from __future__ import division
 
-import re
 from Queue import Queue
 from math import floor
 from os import path, remove, link
