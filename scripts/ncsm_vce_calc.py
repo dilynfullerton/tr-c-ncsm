@@ -365,7 +365,7 @@ def _run_vce(
     fpath_fmt = path.join(dirpath_vce, FNAME_FMT_VCE_INT)
     fpath = fpath_fmt % a_0
     vce_calculation(a_prescription, fpath, a4_fpath, a5_fpath, heff_fpath,
-                    nshell=nshell)
+                    nshell=nshell, a_values=a_values)
     # Same interaction is used for all masses
     for a in a_range:
         next_fpath = fpath_fmt % a
