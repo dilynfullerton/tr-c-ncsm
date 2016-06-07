@@ -20,6 +20,10 @@ class GroundStateEnergyNotFoundException(Exception):
     pass
 
 
+class SingleParticleEnergyNotFoundException(Exception):
+    pass
+
+
 def get_j2_range(nshell):
     """Given the shell and whether the reversed convention is used, returns
     the ordered list of 2*j values for which single particle energies should
@@ -90,6 +94,9 @@ def get_spe(fpath, e0, j2_range):
                 spe_list[ii] = e - e0
         if 999. not in spe_list:
             break
+    else:
+        raise SingleParticleEnergyNotFoundException(
+            '\nOne or more SPE(s) could not be retrieved from %s' % fpath)
     f.close()
     return spe_list
 
