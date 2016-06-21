@@ -5,7 +5,7 @@ Script of Ragnar Stroberg, edited for compatibility with my code.
 To run as a script:
 
     $ FdoVCE.py Aeff4 Aeff5 Aeff6 A4 A5 A6 outfile
-    [he4fname he5fname he6fname [nshell]]
+    he4fname he5fname he6fname [nshell]
 
 Generates an interaction file based on He4, He5, and He6 output files.
 """
@@ -233,11 +233,7 @@ def run(presc, fpath_write_int, fpath_he4, fpath_he5, fpath_heff_ols, nshell,
 
 if __name__ == "__main__":
     nshell0 = 1
-    if len(argv) == 8:
-        a_prescription0 = tuple([int(x) for x in argv[1:4]])
-        a_values0 = tuple([int(x) for x in argv[4:7]])
-        out_fname = argv[7]
-    elif len(argv) == 11:
+    if len(argv) == 11:
         a_prescription0 = tuple([int(x) for x in argv[1:4]])
         a_values0 = tuple([int(x) for x in argv[4:7]])
         out_fname = argv[7]
@@ -255,7 +251,7 @@ if __name__ == "__main__":
     else:
         raise InvalidNumberOfArgumentsException(
             '\nFdoVCE.py called with %d arguments. ' % (len(argv)-1,) +
-            'Please call with 7, 10, or 11 arguments.\n'
+            'Please call with 10, or 11 arguments.\n'
         )
     # TODO: make this script behavior better
     run(presc=a_prescription0, a_values=a_values0, fpath_write_int=out_fname,

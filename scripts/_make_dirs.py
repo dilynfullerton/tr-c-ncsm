@@ -284,37 +284,39 @@ class UnknownNumStatesException(Exception):
 # I am only somewhat confident that this works when A - A0 = 0
 # (he6 in p shell, o18 in sd shell, etc). For anything else, I would not trust
 # it.
-def _get_num_states(a, a0, nshell):
+def _get_num_states(a, a0, nshell, nmax):
     """Given a mass number, the first mass number in the shell, and the shell,
     returns the model space Nhw and model space dimension for use in the
     trdens.in input file
     :param a: mass number (A)
     :param a0: first mass in the shell
     :param nshell: major oscillator shell (0=s, 1=p, 2=sd,...)
+    :param nmax: shell truncation
     """
-    nhw_mod = (a - a0) * nshell  # TODO: is this correct generally
+    nhw_mod = (a - a0) * nshell + nmax  # TODO: is this correct generally
     dim_nhw_mod = 0
-    for j1_2 in range(1, (a-a0)*(nshell+1), 2):
+    for j1_2 in range(1, nhw_mod+2, 2):
         dim_nhw_mod += (j1_2 + 1)/2
-        for j2_2 in range(j1_2+1, (a-a0)*(nshell+1), 2):
+        for j2_2 in range(j1_2+1, nhw_mod+2, 2):
             dim_nhw_mod += j1_2 + 1
     return nhw_mod, dim_nhw_mod
 
 
-def _get_trdens_replace_map(a, a0, nshell):
+def _get_trdens_replace_map(a, a0, nshell, nmax):
     """Given a mass number, the first mass number in the shell, and the shell,
     returns a map from placeholder string in the trdens.in template file to
     the value or string that replaces it.
     :param a: mass number (A)
     :param a0: first mass in the shell
     :param nshell: major oscillator shell (0=s, 1=p, 2=sd,...)
+    :param nmax: shell truncation
     """
-    nnn, num_states = _get_num_states(a, a0, nshell)
+    nnn, num_states = _get_num_states(a, a0, nshell, nmax)
     return {'<<NNN>>': str(nnn), '<<NUMSTATES>>': str(num_states)}
 
 
 def make_trdens_file(
-        a, a0, nuc_dir, nshell,
+        a, a0, nuc_dir, nshell, nmax,
         dpath_results=DPATH_RESULTS, dpath_temp=DPATH_TEMPLATES,
         fname_tmp_trdens_in=FNAME_TMP_TRDENS_IN
 ):
@@ -323,6 +325,7 @@ def make_trdens_file(
     :param a: mass number
     :param a0: lowest mass number in the shell
     :param nshell: major oscillator shell (0=s, 1=p, 2=sd, ...)
+    :param nmax: shell truncation
     :param nuc_dir: directory name
     :param dpath_results: path to the results directory
     :param dpath_temp: path to the templates directory
@@ -331,7 +334,7 @@ def make_trdens_file(
     src = path.join(dpath_temp, fname_tmp_trdens_in)
     path_elt = path.join(dpath_results, nuc_dir)
     dst = path.join(path_elt, FNAME_TRDENS_IN)
-    rep_map = _get_trdens_replace_map(a=a, a0=a0, nshell=nshell)
+    rep_map = _get_trdens_replace_map(a=a, a0=a0, nshell=nshell, nmax=nmax)
     _rewrite_file(src=src, dst=dst, replace_map=rep_map)
 
 

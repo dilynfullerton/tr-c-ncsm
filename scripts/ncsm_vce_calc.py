@@ -157,7 +157,7 @@ N2 = 15
 BETA_CM = 0.0
 # TODO: ^ right now this is the only acceptable value. it-code still exhibits
 # TODO: beta dependence
-NCSD_NUM_STATES = 20
+NCSD_NUM_STATES = 30
 NCSD_NUM_ITER = 200
 
 # files
@@ -887,7 +887,8 @@ def vce_single_calculation(
     a_aeff6 = (a_values[2], a_prescription[2])
     dpath_a6 = a_aeff_dir_map[a_aeff6]
     make_trdens_file(
-        a=a_values[2], a0=a_values[0], nuc_dir=dpath_a6, nshell=nshell,
+        a=a_values[2], a0=a_values[0],
+        nshell=nshell, nmax=nmax, nuc_dir=dpath_a6,
         dpath_results=dpath_results, dpath_temp=dpath_templates
     )
     nhw = nmax + _min_orbitals(z) + _min_orbitals(a_values[2] - z)
