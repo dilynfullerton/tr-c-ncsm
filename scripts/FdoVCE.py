@@ -251,7 +251,7 @@ if __name__ == "__main__":
         he4_fname = argv[8]
         he5_fname = argv[9]
         he6_fname = argv[10]
-        nshell0 = argv[11]
+        nshell0 = int(argv[11])
     else:
         raise InvalidNumberOfArgumentsException(
             '\nFdoVCE.py called with %d arguments. ' % (len(argv)-1,) +
