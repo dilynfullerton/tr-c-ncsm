@@ -1141,6 +1141,8 @@ def vce_multiple_calculations(
         )
 
 
+# TODO: add a check to ensure num_states is great enough for required VCE
+# TODO: calculations
 def ncsd_vce_calculations(
         a_prescriptions, a_range, z=None,
         nmax=NMAX, nshell=N_SHELL, ncomponent=N_COMPONENT, n1=N1, n2=N2,
