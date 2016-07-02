@@ -36,7 +36,7 @@ Note that unlike typical UNIX commands, string arguments cannot be strung
 together following a single '-'. Each argument must be provided separately.
 (TODO: Fix this)
 
---f
+--force
     force recalculation of all steps (NCSD, TRDENS)
 -f [nt]*
     n
@@ -154,11 +154,11 @@ N_COMPONENT = 2  # 1=neutrons, 2=protons and neutrons
 NMAX = 0
 N1 = 15
 N2 = 15
-BETA_CM = 0.0
-# TODO: ^ right now this is the only acceptable value. it-code still exhibits
-# TODO: beta dependence
+BETA_CM = 10.0
+# TODO: ^ right now 0.0 is the only truely acceptable value.
+# TODO: it-code still exhibits beta dependence
 NCSD_NUM_STATES = 30
-NCSD_NUM_ITER = 200
+NCSD_NUM_ITER = 500
 
 # files
 FNAME_FMT_VCE_INT = 'A%d.int'  # A value
