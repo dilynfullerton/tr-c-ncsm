@@ -293,7 +293,7 @@ def _get_num_states(a, a0, nshell, nmax):
     :param nshell: major oscillator shell (0=s, 1=p, 2=sd,...)
     :param nmax: shell truncation
     """
-    nhw_mod = (a - a0) * nshell + nmax  # TODO: is this correct generally
+    nhw_mod = (a - a0) * nshell #+ nmax  # TODO: is this correct generally
     dim_nhw_mod = 0
     for j1_2 in range(1, nhw_mod+2, 2):
         dim_nhw_mod += (j1_2 + 1)/2
