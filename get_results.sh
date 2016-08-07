@@ -3,7 +3,7 @@
 
 # cougar -> here
 from='cougar:~/NCSM/calc/mcalc/results';
-#from='cougar:~/NCSM/calc/mcalc/try';
+# from='cougar:~/NCSM/calc/mcalc/try';
 to='./';
 
 # here -> itheory
