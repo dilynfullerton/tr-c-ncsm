@@ -125,7 +125,7 @@ One body operator in occupation number representation:
 \begin{equation}\label{eq:ocn1bd}
   \begin{aligned}
     &T = \displaystyle\sum_{i=1}^A t_i(\posvect_i) =
-    \displaystyle\sum_{ab}t_{ab}\creop_a\annop_b,\\
+    \displaystyle\sum_{ab}t_{ab}~\creop_a\annop_b,\\
     &t_{ab} = \matelt{a}{T}{b}
   \end{aligned}
 \end{equation}
@@ -136,7 +136,7 @@ Two body operator in occupation number representation:
     &V = \frac{1}{2}\displaystyle\sum_{i \neq j}
     v\left(\posvect_i, \posvect_j\right) =
     \frac{1}{2}\displaystyle\sum_{abcd}
-    v_{abcd}\creop_a\creop_b\annop_d\annop_c,\\
+    v_{abcd}~\creop_a\creop_b\annop_d\annop_c,\\
     &v_{abcd} = \matelt{ab}{V}{cd}
   \end{aligned}
 \end{equation}
@@ -150,9 +150,9 @@ The following is the mixed 1,2-body operator based on Definition
 
 \begin{equation}\label{eq:trel1op1,2}
   \trelopi_1^{(1,2)} = \left(1-\frac{1}{\aeff}\right)
-  \displaystyle\sum_{abJT}\tau_{ab}^{JT}\creop_a\annop_b
+  \displaystyle\sum_{abJT}\tau_{ab}^{JT}~\creop_a\annop_b
   -\frac{1}{2\aeff} \displaystyle\sum_{\substack{abcd\\JT}}
-  \tau_{abcd}^{JT}\creop_a\creop_b\annop_d\annop_c,
+  \tau_{abcd}^{JT}~\creop_a\creop_b\annop_d\annop_c,
 \end{equation}
 
 where
@@ -183,9 +183,9 @@ The following is the mixed 1,2-body operator based on Definition
 
 \begin{equation}\label{eq:trel2op1,2}
   \trelopi_2^{(1,2)} = \cfrac{A-1}{\aeff}
-  \displaystyle\sum_{abJT}\tau_{ab}^{JT}\creop_a\annop_b
+  \displaystyle\sum_{abJT}\tau_{ab}^{JT}~\creop_a\annop_b
   -\frac{1}{2\aeff} \displaystyle\sum_{\substack{abcd\\JT}}
-  \tau_{abcd}^{JT}\creop_a\creop_b\annop_d\annop_c
+  \tau_{abcd}^{JT}~\creop_a\creop_b\annop_d\annop_c
 \end{equation}
 
 where $\tau_{ab}^{JT}$ and $\tau_{abcd}^{JT}$ are as defined in Equation
@@ -199,9 +199,9 @@ operators. A general 1,2-body operator $\mathcal{O}$ may be translated into
 a fully 2-body operator according to the equation
 
 \begin{equation*}
-  \mathcal{O} = \displaystyle\sum_{ij}o_{ij}\creop_i\annop_j =
+  \mathcal{O} = \displaystyle\sum_{ij}o_{ij}~\creop_i\annop_j =
   \frac{1}{4}\displaystyle\sum_{ijkl}\tilde{o}_{ijkl}
-  \creop_i\creop_j\annop_l\annop_k,
+  ~\creop_i\creop_j\annop_l\annop_k,
 \end{equation*}
 
 where $\tilde{o}_{ijkl}$ is the antisymmetrized two-body matrix element
@@ -216,12 +216,12 @@ defined by
 
 for some normalization $\mathcal{N}$~\cite{promoting1to2}.
 In the case where this is coupled to some $J$ and $T$ (as here), the
-transformation for an operator $\mathcal{T}$ is
+transformation for an operator $\mathcal{T}^{JT}$ is
 
 \begin{equation}\label{eq:12to2}
-  \mathcal{T} = \displaystyle\sum_{ij}\tau_{ij}^{JT}\creop_i\annop_j =
+  \mathcal{T}^{JT} = \displaystyle\sum_{ij}\tau_{ij}^{JT}~\creop_i\annop_j =
   \frac{1}{4}\cdot\frac{1}{A-1}\displaystyle\sum_{ijkl}\tilde{\tau}_{ijkl}^{JT}
-  \creop_i\creop_j\annop_l\annop_k,
+  ~\creop_i\creop_j\annop_l\annop_k,
 \end{equation}
 
 where
@@ -238,7 +238,7 @@ and I have defined
 
 \begin{gather*}
   \mathcal{N}_{abcd} = \sqrt[-1]{(1-\delta_{ab})(1-\delta_{cd})}\\
-  \rho_{abcd}^{JT} = o_{ac}^{JT}\delta_{bd} + o_{bd}^{JT}\delta_{ac}\\
+  \rho_{abcd}^{JT} = \tau_{ac}^{JT}\delta_{bd} + \tau_{bd}^{JT}\delta_{ac}\\
   \phi_{ab}^{JT} = j_a+j_b-J + t_a+t_b-T\\
   \bigtriangleup(a,b,c) = 
   \begin{cases}
@@ -257,14 +257,14 @@ Equation (\ref{eq:trel1op1,2}) using Equation (\ref{eq:12to2}).
   \begin{aligned}
     \trelopi_1^{(2)} &= \left(1-\frac{1}{\aeff}\right)
     \displaystyle\sum_{\substack{abcd\\JT}} \frac{1}{4(A-1)}
-    \tilde{\tau}_{abcd}^{JT} \creop_a\creop_b\annop_d\annop_c
+    \tilde{\tau}_{abcd}^{JT}~\creop_a\creop_b\annop_d\annop_c
     -\frac{1}{2\aeff} \displaystyle\sum_{\substack{abcd\\JT}}
-    \tau_{abcd}^{JT} \creop_a\creop_b\annop_d\annop_c\\
+    \tau_{abcd}^{JT}~\creop_a\creop_b\annop_d\annop_c\\
     &= \frac{2}{\aeff} \displaystyle\sum_{\substack{abcd\\JT}}
     \left(
     \frac{1}{8}\cdot\cfrac{\aeff-1}{A-1}
     \tilde{\tau}_{abcd}^{JT} -\frac{1}{4}\tau_{abcd}^{JT}
-    \right) \creop_a\creop_b\annop_d\annop_c,
+    \right)\creop_a\creop_b\annop_d\annop_c,
   \end{aligned}
 \end{equation}
 
@@ -281,12 +281,12 @@ Equation (\ref{eq:trel2op1,2}) using Equation (\ref{eq:12to2}).
   \begin{aligned}
     \trelopi_2^{(2)} &= \left(\frac{A-1}{\aeff}\right)
     \displaystyle\sum_{\substack{abcd\\JT}} \frac{1}{4(A-1)}
-    \tilde{\tau}_{abcd}^{JT} \creop_a\creop_b\annop_d\annop_c
+    \tilde{\tau}_{abcd}^{JT}~\creop_a\creop_b\annop_d\annop_c
     -\frac{1}{2\aeff} \displaystyle\sum_{\substack{abcd\\JT}}
-    \tau_{abcd}^{JT} \creop_a\creop_b\annop_d\annop_c\\
+    \tau_{abcd}^{JT}~\creop_a\creop_b\annop_d\annop_c\\
     &= \frac{2}{\aeff} \displaystyle\sum_{\substack{abcd\\JT}}
     \left( \frac{1}{8}\tilde{\tau}_{abcd}^{JT}
-    -\frac{1}{4}\tau_{abcd}^{JT} \right) \creop_a\creop_b\annop_d\annop_c.
+    -\frac{1}{4}\tau_{abcd}^{JT} \right)\creop_a\creop_b\annop_d\annop_c.
   \end{aligned}
 \end{equation}
 
@@ -301,12 +301,12 @@ the code, so we define
   \left( \frac{1}{2} \tilde{\tau}_{abcd}^{JT} - \tau_{abcd}^{JT} \right),
 \end{equation}
 
-%% so that Equation (\ref{eq:trel2op2}) can be simplified to
+so that Equation (\ref{eq:trel2op2}) can be simplified to
 
 \begin{equation}
   \trelopi_2^{(2)} = \frac{2}{\aeff}
   \displaystyle\sum_{\substack{abcd\\JT}} {(\tau_{\rm{file}})}_{abcd}^{JT}
-  \creop_a\creop_b\annop_d\annop_c.
+  ~\creop_a\creop_b\annop_d\annop_c.
 \end{equation}
 
 We also define
@@ -323,7 +323,7 @@ Definition~\ref{def:trel2}, can be simplified to
   \trelopi_1^{(2)} = \frac{2}{\aeff}
   \displaystyle\sum_{\substack{abcd\\JT}} \left[ 
   {(\tau_{\rm{file}})}_{abcd}^{JT} + {(\tau_{\rm{add}})}_{abcd}^{JT}
-  \right] \creop_a\creop_b\annop_d\annop_c.
+  \right]\creop_a\creop_b\annop_d\annop_c.
 \end{equation}
 
 Now since Definition~\ref{def:trel1} for relative kinetic energy is the
