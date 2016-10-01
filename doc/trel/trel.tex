@@ -199,18 +199,18 @@ operators. A general 1,2-body operator $\mathcal{O}$ may be translated into
 a fully 2-body operator according to the equation
 
 \begin{equation*}
-  \mathcal{O} = \displaystyle\sum_{ij}o_{ij}~\creop_i\annop_j =
-  \frac{1}{4}\displaystyle\sum_{ijkl}\tilde{o}_{ijkl}
-  ~\creop_i\creop_j\annop_l\annop_k,
+  \mathcal{O} = \displaystyle\sum_{ab}o_{ab}~\creop_a\annop_b =
+  \frac{1}{4}\displaystyle\sum_{abcd}\tilde{o}_{abcd}
+  ~\creop_a\creop_b\annop_d\annop_c,
 \end{equation*}
 
-where $\tilde{o}_{ijkl}$ is the antisymmetrized two-body matrix element
+where $\tilde{o}_{abcd}$ is the antisymmetrized two-body matrix element
 defined by
 
 \begin{equation*}
-  \tilde{o}_{ijkl} = \mathcal{N}\left(
-  o_{ik}\delta_{jl} + o_{jl}\delta_{ik} -
-  \left( o_{il}\delta_{jk} + o_{jk}\delta_{il} \right)
+  \tilde{o}_{abcd} = \mathcal{N}\left(
+  o_{ac}\delta_{bd} + o_{bd}\delta_{ac} -
+  \left( o_{ad}\delta_{bc} + o_{bc}\delta_{ad} \right)
   \right)
 \end{equation*}
 
@@ -219,15 +219,16 @@ In the case where this is coupled to some $J$ and $T$ (as here), the
 transformation for an operator $\mathcal{T}^{JT}$ is
 
 \begin{equation}\label{eq:12to2}
-  \mathcal{T}^{JT} = \displaystyle\sum_{ij}\tau_{ij}^{JT}~\creop_i\annop_j =
-  \frac{1}{4}\cdot\frac{1}{A-1}\displaystyle\sum_{ijkl}\tilde{\tau}_{ijkl}^{JT}
-  ~\creop_i\creop_j\annop_l\annop_k,
+  \mathcal{T}^{JT} = \displaystyle\sum_{abJT}\tau_{ab}^{JT}~\creop_a\annop_b =
+  \frac{1}{4}\cdot\frac{1}{A-1}
+  \displaystyle\sum_{\substack{abcd\\JT}}\tilde{\tau}_{abcd}^{JT}
+  ~\creop_a\creop_b\annop_d\annop_c,
 \end{equation}
 
 where
 
 \begin{equation}\label{eq:12to2op}
-  \tilde{\tau}_{ijkl}^{JT} = \mathcal{N}_{abcd} \left(
+  \tilde{\tau}_{abcd}^{JT} = \mathcal{N}_{abcd} \left(
   \rho_{abcd}^{JT} - {(-1)}^{\phi_{ab}^{JT}}\rho_{abdc}^{JT}
   \right)
   \bigtriangleup\left(j_a, j_b, J\right)
@@ -240,9 +241,9 @@ and I have defined
   \mathcal{N}_{abcd} = \sqrt[-1]{(1-\delta_{ab})(1-\delta_{cd})}\\
   \rho_{abcd}^{JT} = \tau_{ac}^{JT}\delta_{bd} + \tau_{bd}^{JT}\delta_{ac}\\
   \phi_{ab}^{JT} = j_a+j_b-J + t_a+t_b-T\\
-  \bigtriangleup(a,b,c) = 
+  \bigtriangleup(x,y,z) = 
   \begin{cases}
-    1, & |a-b|\leq c\leq a+b\\
+    1, & |x-y|\leq z\leq x+y\\
     0, & \rm{else}\\
   \end{cases}
 \end{gather*}
