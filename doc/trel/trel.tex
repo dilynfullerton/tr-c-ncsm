@@ -62,7 +62,7 @@ Expanding this in terms of particle momenta gives
 \begin{equation*}
   \treli_1 =
   \left(\displaystyle\sum_{i=1}^A \cfrac{\momvect_i^2}{2m}\right)
-  ~- \cfrac{\momvect_{\rm{tot}}^2}{2m\aeff},
+  - \cfrac{\momvect_{\rm{tot}}^2}{2m\aeff},
 \end{equation*}
 
 where
@@ -135,9 +135,9 @@ Two body operator in occupation number representation:
   \begin{aligned}
     &V = \frac{1}{2}\displaystyle\sum_{i \neq j}
     v\left(\posvect_i, \posvect_j\right) =
-    \frac{1}{2}\displaystyle\sum_{abcd}
+    \frac{1}{4}\displaystyle\sum_{abcd}
     v_{abcd}~\creop_a\creop_b\annop_d\annop_c,\\
-    &v_{abcd} = \matelt{ab}{V}{cd}
+    &v_{abcd} = \matelt{ab}{V}{cd} - \matelt{ab}{V}{dc}
   \end{aligned}
 \end{equation}
 
@@ -151,7 +151,7 @@ The following is the mixed 1,2-body operator based on Definition
 \begin{equation}\label{eq:trel1op1,2}
   \trelopi_1^{(1,2)} = \left(1-\frac{1}{\aeff}\right)
   \displaystyle\sum_{abJT}\tau_{ab}^{JT}~\creop_a\annop_b
-  -\frac{1}{2\aeff} \displaystyle\sum_{\substack{abcd\\JT}}
+  -\frac{1}{4\aeff} \displaystyle\sum_{\substack{abcd\\JT}}
   \tau_{abcd}^{JT}~\creop_a\creop_b\annop_d\annop_c,
 \end{equation}
 
@@ -184,7 +184,7 @@ The following is the mixed 1,2-body operator based on Definition
 \begin{equation}\label{eq:trel2op1,2}
   \trelopi_2^{(1,2)} = \cfrac{A-1}{\aeff}
   \displaystyle\sum_{abJT}\tau_{ab}^{JT}~\creop_a\annop_b
-  -\frac{1}{2\aeff} \displaystyle\sum_{\substack{abcd\\JT}}
+  -\frac{1}{4\aeff} \displaystyle\sum_{\substack{abcd\\JT}}
   \tau_{abcd}^{JT}~\creop_a\creop_b\annop_d\annop_c
 \end{equation}
 
@@ -258,12 +258,11 @@ Equation (\ref{eq:trel1op1,2}) using Equation (\ref{eq:12to2}).
     \trelopi_1^{(2)} &= \left(1-\frac{1}{\aeff}\right)
     \displaystyle\sum_{\substack{abcd\\JT}} \frac{1}{4(A-1)}
     \tilde{\tau}_{abcd}^{JT}~\creop_a\creop_b\annop_d\annop_c
-    -\frac{1}{2\aeff} \displaystyle\sum_{\substack{abcd\\JT}}
+    -\frac{1}{4\aeff} \displaystyle\sum_{\substack{abcd\\JT}}
     \tau_{abcd}^{JT}~\creop_a\creop_b\annop_d\annop_c\\
     &= \frac{2}{\aeff} \displaystyle\sum_{\substack{abcd\\JT}}
-    \left(
-    \frac{1}{8}\cdot\cfrac{\aeff-1}{A-1}
-    \tilde{\tau}_{abcd}^{JT} -\frac{1}{4}\tau_{abcd}^{JT}
+    \frac{1}{8}\left(
+    \cfrac{\aeff-1}{A-1}~\tilde{\tau}_{abcd}^{JT} - \tau_{abcd}^{JT}
     \right)\creop_a\creop_b\annop_d\annop_c,
   \end{aligned}
 \end{equation}
@@ -282,11 +281,11 @@ Equation (\ref{eq:trel2op1,2}) using Equation (\ref{eq:12to2}).
     \trelopi_2^{(2)} &= \left(\frac{A-1}{\aeff}\right)
     \displaystyle\sum_{\substack{abcd\\JT}} \frac{1}{4(A-1)}
     \tilde{\tau}_{abcd}^{JT}~\creop_a\creop_b\annop_d\annop_c
-    -\frac{1}{2\aeff} \displaystyle\sum_{\substack{abcd\\JT}}
+    -\frac{1}{4\aeff} \displaystyle\sum_{\substack{abcd\\JT}}
     \tau_{abcd}^{JT}~\creop_a\creop_b\annop_d\annop_c\\
     &= \frac{2}{\aeff} \displaystyle\sum_{\substack{abcd\\JT}}
-    \left( \frac{1}{8}\tilde{\tau}_{abcd}^{JT}
-    -\frac{1}{4}\tau_{abcd}^{JT} \right)\creop_a\creop_b\annop_d\annop_c.
+    \frac{1}{8}\left( \tilde{\tau}_{abcd}^{JT} - \tau_{abcd}^{JT} \right)
+    \creop_a\creop_b\annop_d\annop_c.
   \end{aligned}
 \end{equation}
 
@@ -297,8 +296,8 @@ on Defintion~\ref{def:trel2}. This is also multiplied by $2/A_{\rm{eff}}$ in
 the code, so we define
 
 \begin{equation}
-  {(\tau_{\rm{file}})}_{abcd}^{JT} = \frac{1}{4}
-  \left( \frac{1}{2} \tilde{\tau}_{abcd}^{JT} - \tau_{abcd}^{JT} \right),
+  {(\tau_{\rm{file}})}_{abcd}^{JT} = \frac{1}{8}
+  \left( \tilde{\tau}_{abcd}^{JT} - \tau_{abcd}^{JT} \right),
 \end{equation}
 
 so that Equation (\ref{eq:trel2op2}) can be simplified to
@@ -313,7 +312,7 @@ We also define
 
 \begin{equation}
   {(\tau_{\rm{add}})}_{abcd}^{JT} = \frac{1}{8}\cdot
-  \cfrac{\aeff-A}{A-1} \tilde{\tau}_{abcd}^{JT},
+  \cfrac{\aeff-A}{A-1}~\tilde{\tau}_{abcd}^{JT},
 \end{equation}
 
 so that Equation (\ref{eq:trel1op2}), the two-body operator based on
