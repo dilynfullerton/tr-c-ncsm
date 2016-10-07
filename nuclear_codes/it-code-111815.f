@@ -2379,6 +2379,7 @@ c     DRF Add additional Aeff-dependent part of Trel
          do jset = 0, nsetm1, 1
             trelaeff = 0.0
             jmx0 = (j2x(ia)+j2x(ib))/2.0
+            jmn0 = abs(j2x(ia)-j2x(ib)/2.0
 c     DRF Adding four terms to trel:
 c     DRF   (<a|t|c><b|d> + <b|t|d><a|c> - <a|t|d><b|c> - <b|t|c><a|d>)
             do ii = 1, 4
@@ -2440,9 +2441,9 @@ c     DRF Get normalization factor
             norm0 = sqrt((1.0+delab)*(1.0+delcd))
 c     DRF Add triangular condition (is this necessary?)
             tri0 = 1.0
-            if (jmx0.lt.jt) then
+            if (jt<jmn0.or.jmx0.lt.jt) then
                tri0 = 0.0
-            elseif (1.lt.it) then
+            elseif (it<0.or.1.lt.it) then
                tri0 = 0.0
             endif
 c$$$            if (trelaeff.ne.trel) then
