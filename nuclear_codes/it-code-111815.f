@@ -2379,7 +2379,7 @@ c     DRF Add additional Aeff-dependent part of Trel
          do jset = 0, nsetm1, 1
             trelaeff = 0.0
             jmx0 = (j2x(ia)+j2x(ib))/2.0
-            jmn0 = abs(j2x(ia)-j2x(ib)/2.0
+            jmn0 = abs(j2x(ia)-j2x(ib))/2.0
 c     DRF Adding four terms to trel:
 c     DRF   (<a|t|c><b|d> + <b|t|d><a|c> - <a|t|d><b|c> - <b|t|c><a|d>)
             do ii = 1, 4
