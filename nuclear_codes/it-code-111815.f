@@ -2441,9 +2441,9 @@ c     DRF Get normalization factor
             norm0 = sqrt((1.0+delab)*(1.0+delcd))
 c     DRF Add triangular condition (is this necessary?)
             tri0 = 1.0
-            if (jt<jmn0.or.jmx0.lt.jt) then
+            if (jt.lt.jmn0.or.jmx0.lt.jt) then
                tri0 = 0.0
-            elseif (it<0.or.1.lt.it) then
+            elseif (it.lt.0.or.1.lt.it) then
                tri0 = 0.0
             endif
 c$$$            if (trelaeff.ne.trel) then
