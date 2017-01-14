@@ -1,5 +1,6 @@
 \documentclass{article}
 \usepackage{amsmath}
+\usepackage{amsthm}
 \usepackage{amsfonts}
 \usepackage{hyperref}
 \usepackage[margin=1.0in]{geometry}
@@ -7,111 +8,164 @@
 \usepackage{float}
 \setlength\parindent{0pt}
 
+
+%% Defintions
+\def\aeff{A_{\rm{eff}}}
+\def\trel{T_{\rm{rel}}}
+\def\treli_#1{T_{\rm{rel},#1}}
+\def\trelop{\hat{T}_{\rm{rel}}}
+\def\trelopi_#1^#2{\hat{T}_{\rm{rel}, #1}^{#2}}
+\def\momvect{\boldsymbol{p}}
+\def\posvect{\boldsymbol{x}}
+\def\creop{a^{\dagger}}
+\def\annop{a}
+\def\matelt#1#2#3{\left\langle{#1}\middle|{#2}\middle|{#3}\right\rangle}
+
+\newtheorem{definition}{Definition}[section]
+
+%% Document start
 \begin{document}
-\title{$T_{\rm{rel}}$ and the Importance-Truncation Code}
+\title{$T_{\rm{rel}}$ and the NCSD Importance-Truncation Code}
 \author{Dilyn Fullerton}
-\date{2016-06-01}
+\date{2016--09--30}
 \maketitle
+
+\tableofcontents
 
 \section{Introduction}
 The purpose of this composition is to record the exact modifications
 I made to the No-Core Shell Model importance truncation code
 (\texttt{it-code-111815.f}) and the motivation behind them.
 
-\section{Two definitions of $T_{\rm{rel}}$}
-
-For an $A$-particle system with an effective mass $A_{\rm{eff}}$,
-relative kinetic energy, $T_{\rm{rel}}$, may be defined in two different
-ways.
-
-\subsection{Definition 1}
-
+\section{Two definitions of $\trel$}
+For an $A$-particle system with an effective mass $\aeff$,
+relative kinetic energy, $\trel$, may be defined in two different
+ways~\cite{treldefs}.
+\\\\
+%% Definition 1
 The first way to define relative kinetic energy is by subtracting
 the center of mass kinetic energy from the total kinetic energy.
 The sums are over the number of particles, $A$, but an effective
-particle number, $A_{\rm{eff}}$, is used in the center of mass term.
+particle number, $\aeff$, is used in the center of mass term.
 
+\begin{definition}\label{def:trel1}
+  Let the relative kinetic energy with respect to an effective mass $\aeff$
+  be defined by the total kinetic energy minus the kinetic energy of
+  the center of mass, where the effective term is used in the center of
+  mass kinetic energy.
+  \begin{equation*}
+    \treli_1 = T^A - T_{\rm{CM}}^{\aeff}
+  \end{equation*}
+\end{definition}
+
+Expanding this in terms of particle momenta gives
 \begin{equation*}
-  \begin{aligned}
-    T_{\rm{rel},1} &= T - T_{\rm{CM}} \\
-    &= \displaystyle\sum_{i=1}^A \cfrac{\textbf{p}_i^2}{2m}
-    ~- \cfrac{\textbf{p}_{\rm{tot}}^2}{2mA_{\rm{eff}}}, \\
-  \end{aligned}
+  \treli_1 =
+  \left(\displaystyle\sum_{i=1}^A \cfrac{\momvect_i^2}{2m}\right)
+  - \cfrac{\momvect_{\rm{tot}}^2}{2m\aeff},
 \end{equation*}
 
 where
 
 \begin{equation*}
-  \textbf{p}_{\rm{tot}} = \displaystyle\sum_{i=1}^A \textbf{p}_i.
+  \momvect_{\rm{tot}} = \displaystyle\sum_{i=1}^A \momvect_i.
 \end{equation*}
 
-This can be written in the form
+This can be rewritten into the form
 
-\begin{equation}\label{eq:def1}
-  T_{\rm{rel},1} =
-  \left(1-\frac{1}{A_{\rm{eff}}}\right) \displaystyle\sum_{i=1}^A\tau_i
-  - \frac{1}{2A_{\rm{eff}}}
+\begin{equation}\label{eq:trel1}
+  \treli_1 =
+  \left(1-\frac{1}{\aeff}\right) \displaystyle\sum_{i=1}^A\tau_i
+  - \frac{1}{2\aeff}
   \displaystyle\sum_{i\neq j=1}^A\tau_{ij},
 \end{equation}
 
 where
 
 \begin{equation}\label{eq:ti,tij}
-  \tau_i = \cfrac{\textbf{p}_i^2}{2m}, \quad
-  \tau_{ij} = \cfrac{\textbf{p}_i\cdot\textbf{p}_j}{m}.
+  \tau_i = \cfrac{\momvect_i^2}{2m}, \quad
+  \tau_{ij} = \cfrac{\momvect_i\cdot\momvect_j}{m}.
 \end{equation}
 
-\subsection{Definition 2}
-
+%% Definition 2
 The second way to define relative kinetic energy is by adding the
 relative momentum differences of all of the particles. The sum, again,
-is over the true particle number, $A$, while $A_{\rm{eff}}$ is used as
+is over the true particle number, $A$, while $\aeff$ is used as
 the effective particle number for defining the mass.
 
-\begin{equation*}
-  T_{\rm{rel},2}= \displaystyle\sum_{i<j=1}^A
-  \cfrac{(\textbf{p}_i-\textbf{p}_j)^2}{2mA_{\rm{eff}}}
-\end{equation*}
+\begin{definition}\label{def:trel2}
+  Let the relative kinetic energy with respect to an effective mass $\aeff$
+  be defined by the sum of differences of momenta of individual particles
+  according to
+  \begin{equation*}
+    \treli_2 = \displaystyle\sum_{i<j=1}^A
+    \cfrac{{(\momvect_i-\momvect_j)}^2}{2m\aeff}
+  \end{equation*}
+\end{definition}
 
-The can be written in the form
+This can be rewritten into the form
 
-\begin{equation}\label{eq:def2}
-  T_{\rm{rel},2}= \cfrac{A-1}{A_{\rm{eff}}} \displaystyle\sum_{i=1}^A\tau_i
-  - \cfrac{1}{2A_{\rm{eff}}} \displaystyle\sum_{i\neq j=1}^A\tau_{ij},
+\begin{equation}\label{eq:trel2}
+  \treli_2 = \cfrac{A-1}{\aeff} \displaystyle\sum_{i=1}^A\tau_i
+  ~-\cfrac{1}{2\aeff} \displaystyle\sum_{i\neq j=1}^A\tau_{ij},
 \end{equation}
 
-where $\tau_i$ and $\tau_{ij}$ are defined as in (\ref{eq:ti,tij}).
-
-The two definitions are clearly equal when $A_{\rm{eff}}=A$; however,
+where $\tau_i$ and $\tau_{ij}$ are defined as in Equation (\ref{eq:ti,tij}).
+\\\\
+The two definitions are clearly equal when $\aeff=A$; however,
 they are different in general.
 
-\section{Operators based on Definition 1}
+%% Mixed 1,2 operators
+\section{Mixed 1,2-body operators based on $\trel$ definitions}
+We can translate the coordinate forms of the the two kinetic energy
+definitions into their occumpation number representation according to
+the following equations~\cite{suhonen}.
+\\\\
+One body operator in occupation number representation:
+\begin{equation}\label{eq:ocn1bd}
+  \begin{aligned}
+    &T = \displaystyle\sum_{i=1}^A t_i(\posvect_i) =
+    \displaystyle\sum_{ab}t_{ab}~\creop_a\annop_b,\\
+    &t_{ab} = \matelt{a}{T}{b}
+  \end{aligned}
+\end{equation}
 
-We find the operators that stem from defining $T_{\rm{rel}}$ according
-to (\ref{eq:def1}).
+Two body operator in occupation number representation:
+\begin{equation}\label{eq:ocn2bd}
+  \begin{aligned}
+    &V = \frac{1}{2}\displaystyle\sum_{i \neq j}
+    v\left(\posvect_i, \posvect_j\right) =
+    \frac{1}{4}\displaystyle\sum_{abcd}
+    v_{abcd}~\creop_a\creop_b\annop_d\annop_c,\\
+    &v_{abcd} = \matelt{ab}{V}{cd} - \matelt{ab}{V}{dc}
+  \end{aligned}
+\end{equation}
 
-\subsection{Mixed 1,2-body operator}
+%% Mixed 1,2 operators for Trel 1
+\subsection{Mixed 1,2-body operator for Definition~\ref{def:trel1}}
+The following is the mixed 1,2-body operator based on Definition
+\ref{def:trel1}. The operator is obtained by translating Equation
+(\ref{eq:trel1}) to occupation number representation using Equations
+(\ref{eq:ocn1bd}) and (\ref{eq:ocn2bd}).
 
-Equation (\ref{eq:def1}) translates easily into a 1,2-body operator.
-
-\begin{equation}\label{eq:def1op1,2}
-  \hat{T}_{\rm{rel},1}^{(1,2)} = \left(1-\frac{1}{A_{\rm{eff}}}\right)
-  \displaystyle\sum_{abJT}\tau_{ab}^{JT}a_a^{\dagger}a_b
-  -\frac{1}{2A_{\rm{eff}}} \displaystyle\sum_{\substack{abcd\\JT}}
-  \tau_{abcd}^{JT}a_a^{\dagger}a_b^{\dagger}a_ca_d,
+\begin{equation}\label{eq:trel1op1,2}
+  \trelopi_1^{(1,2)} = \left(1-\frac{1}{\aeff}\right)
+  \displaystyle\sum_{abJT}\tau_{ab}^{JT}~\creop_a\annop_b
+  -\frac{1}{4\aeff} \displaystyle\sum_{\substack{abcd\\JT}}
+  \tau_{abcd}^{JT}~\creop_a\creop_b\annop_d\annop_c,
 \end{equation}
 
 where
 
 \begin{equation}\label{eq:tab,tabcd}
-  \tau_{ab}^{JT} = \left\langle a\middle|
-  \frac{\textbf{p}^2}{2m} \middle|b\right\rangle_{JT}, \quad
-  \tau_{abcd}^{JT} = \left\langle ab\middle|
-  \frac{\textbf{p}_1\cdot\textbf{p}_2}{m} \middle|cd\right\rangle_{JT}
+  \tau_{ab}^{JT} = \matelt{a}{\frac{\momvect^2}{2m}}{b}_{JT}, \quad
+  \tau_{abcd}^{JT} = \matelt{ab}{\frac{\momvect_1\cdot\momvect_2}{m}}{cd}_{JT},
 \end{equation}
+
+and
+
 \begin{equation*}
-  \left\langle a\middle|
-  \frac{\textbf{p}^2}{2m} \middle|b\right\rangle_{JT} = 
+  \matelt{a}{\frac{\momvect^2}{2m}}{b}_{JT} = 
   \begin{cases}
     \frac{1}{2}(2n_a+l_a+3/2),
     & n_a=n_b, l_a=l_b, j_a=j_b\\
@@ -121,137 +175,166 @@ where
   \end{cases}.
 \end{equation*}
 
-\subsection{Fully 2-body operator}
+\subsection{Mixed 1,2-body operator for Definition~\ref{def:trel2}}
+The following is the mixed 1,2-body operator based on Definition
+\ref{def:trel2}. The operator is obtained by translating Equation
+(\ref{eq:trel2}) to occupation number representation using Equations
+(\ref{eq:ocn1bd}) and (\ref{eq:ocn2bd}).
 
-The 1,2-body operator defined above (\ref{eq:def1op1,2}) can be
-refactored into a fully 2-body operator.
+\begin{equation}\label{eq:trel2op1,2}
+  \trelopi_2^{(1,2)} = \cfrac{A-1}{\aeff}
+  \displaystyle\sum_{abJT}\tau_{ab}^{JT}~\creop_a\annop_b
+  -\frac{1}{4\aeff} \displaystyle\sum_{\substack{abcd\\JT}}
+  \tau_{abcd}^{JT}~\creop_a\creop_b\annop_d\annop_c
+\end{equation}
 
-\begin{equation}\label{eq:def1op2}
-  \begin{aligned}
-    \hat{T}_{\rm{rel},1}^{(2)} &= \left(1-\frac{1}{A_{\rm{eff}}}\right)
-    \displaystyle\sum_{\substack{abcd\\JT}} \frac{\alpha}{4(A-1)}
-    \tilde{\tau}_{abcd}^{JT} a_a^{\dagger}a_b^{\dagger}a_ca_d
-    -\frac{1}{2A_{\rm{eff}}} \displaystyle\sum_{\substack{abcd\\JT}}
-    \tau_{abcd}^{JT} a_a^{\dagger}a_b^{\dagger}a_ca_d\\
-    &= \frac{2}{A_{\rm{eff}}} \displaystyle\sum_{\substack{abcd\\JT}}
-    \left(
-    \frac{\alpha}{8}\cdot\cfrac{A_{\rm{eff}}-1}{A-1}
-    \tilde{\tau}_{abcd}^{JT} -\frac{1}{4}\tau_{abcd}^{JT}
-    \right) a_a^{\dagger}a_b^{\dagger}a_ca_d,
-  \end{aligned}
+where $\tau_{ab}^{JT}$ and $\tau_{abcd}^{JT}$ are as defined in Equation
+(\ref{eq:tab,tabcd}).
+
+
+%% Fully 2 body operators
+\section{Fully 2-body operators from mixed 1,2-body operators}
+We now look to translate the 1,2-body $\trelop$ operators into fully 2-body
+operators. A general 1-body operator $\mathcal{O}$ may be translated into
+a fully 2-body operator according to the equation
+
+\begin{equation*}
+  \mathcal{O} = \displaystyle\sum_{ab}o_{ab}~\creop_a\annop_b =
+  \frac{1}{4}\displaystyle\sum_{abcd}\tilde{o}_{abcd}
+  ~\creop_a\creop_b\annop_d\annop_c,
+\end{equation*}
+
+where $\tilde{o}_{abcd}$ is the antisymmetrized two-body matrix element
+defined by
+
+\begin{equation*}
+  \tilde{o}_{abcd} = \mathcal{N}\left(
+  o_{ac}\delta_{bd} + o_{bd}\delta_{ac} -
+  \left( o_{ad}\delta_{bc} + o_{bc}\delta_{ad} \right)
+  \right)
+\end{equation*}
+
+for some normalization $\mathcal{N}$~\cite{promoting1to2}.
+In the case where this is coupled to some $J$ and $T$ (as here), the
+transformation for an operator $\mathcal{T}^{JT}$ is
+
+\begin{equation}\label{eq:12to2}
+  \mathcal{T}^{JT} = \displaystyle\sum_{abJT}\tau_{ab}^{JT}~\creop_a\annop_b =
+  \frac{1}{4}\cdot\frac{1}{A-1}
+  \displaystyle\sum_{\substack{abcd\\JT}}\tilde{\tau}_{abcd}^{JT}
+  ~\creop_a\creop_b\annop_d\annop_c,
 \end{equation}
 
 where
 
-\begin{equation}\label{eq:ttil}
-  \tilde{\tau}_{abcd}^{JT} = N_{abcd}
-  \left( \rho_{abcd}^{JT} -(-1)^{\phi_{ab}} \rho_{abdc}^{JT} \right)
-  \bigtriangleup(j_a,j_b,J) \bigtriangleup(t_a,t_b,T)
+\begin{equation}\label{eq:12to2op}
+  \tilde{\tau}_{abcd}^{JT} = \mathcal{N}_{abcd} \left(
+  \rho_{abcd}^{JT} - {(-1)}^{\phi_{ab}^{JT}}\rho_{abdc}^{JT}
+  \right)
+  \bigtriangleup\left(j_a, j_b, J\right)
+  \bigtriangleup\left(t_a, t_b, T\right),
 \end{equation}
+
+and I have defined
+
 \begin{gather*}
-  \alpha = 2\\
-  N_{abcd} = \sqrt[-1]{(1-\delta_{ab})(1-\delta_{cd})}\\
-  \rho_{abcd}^{JT} =
-  \tau_{ac}^{JT}\delta_{bd} + \tau_{bd}^{JT}\delta_{ac}\\
-  \phi_{ab} = j_a+j_b-J + t_a+t_b-T\\
-  \bigtriangleup(a,b,c) = 
+  \mathcal{N}_{abcd} = \sqrt[-1]{(1-\delta_{ab})(1-\delta_{cd})}\\
+  \rho_{abcd}^{JT} = \tau_{ac}^{JT}\delta_{bd} + \tau_{bd}^{JT}\delta_{ac}\\
+  \phi_{ab}^{JT} = j_a+j_b-J + t_a+t_b-T\\
+  \bigtriangleup(x,y,z) = 
   \begin{cases}
-    1, & 0\leq c\leq a+b\\
+    1, & |x-y|\leq z\leq x+y\\
     0, & \rm{else}\\
   \end{cases}
 \end{gather*}
 
-\section{Operators based on Definition 2}
+%% Fully 2-body operator for trel 1
+\subsection{Fully 2-body operator for Definition~\ref{def:trel1}}
+The following is the fully 2-body operator based on Definition~\ref{def:trel1}.
+The operator is obtained by translating the mixed 1,2-body operator in
+Equation (\ref{eq:trel1op1,2}) using Equation (\ref{eq:12to2}).
 
-We find the operators that stem from defining $T_{\rm{rel}}$ according
-to (\ref{eq:def2}).
-
-\subsection{Mixed 1,2-body operator}
-
-Equation (\ref{eq:def2}) translates easily into a 1,2-body operator.
-
-\begin{equation}\label{eq:def2op1,2}
-  \hat{T}_{\rm{rel},2}^{(1,2)} = \cfrac{A-1}{A_{\rm{eff}}}
-  \displaystyle\sum_{abJT}\tau_{ab}^{JT}a_a^{\dagger}a_b
-  -\frac{1}{2A_{\rm{eff}}} \displaystyle\sum_{\substack{abcd\\JT}}
-  \tau_{abcd}^{JT}a_a^{\dagger}a_b^{\dagger}a_ca_d.
+\begin{equation}\label{eq:trel1op2}
+  \begin{aligned}
+    \trelopi_1^{(2)} &= \left(1-\frac{1}{\aeff}\right)
+    \displaystyle\sum_{\substack{abcd\\JT}} \frac{1}{4(A-1)}
+    \tilde{\tau}_{abcd}^{JT}~\creop_a\creop_b\annop_d\annop_c
+    -\frac{1}{4\aeff} \displaystyle\sum_{\substack{abcd\\JT}}
+    \tau_{abcd}^{JT}~\creop_a\creop_b\annop_d\annop_c\\
+    &= \frac{2}{\aeff} \displaystyle\sum_{\substack{abcd\\JT}}
+    \frac{1}{8}\left(
+    \cfrac{\aeff-1}{A-1}~\tilde{\tau}_{abcd}^{JT} - \tau_{abcd}^{JT}
+    \right)\creop_a\creop_b\annop_d\annop_c,
+  \end{aligned}
 \end{equation}
 
-\subsection{Fully 2-body operator}
+where $\tau_{abcd}^{JT}$ is as defined in Equation (\ref{eq:tab,tabcd}) and
+$\tilde{\tau}_{abcd}^{JT}$ is as defined in Equation (\ref{eq:12to2op}).
 
-The 1,2-body operator defined above (\ref{eq:def2op1,2}) can be
-refactored into a fully 2-body operator.
+%% Fully 2-body operator for trel 2
+\subsection{Fully 2-body operator for Definition~\ref{def:trel2}}
+The following is the fully 2-body operator based on Definition~\ref{def:trel2}.
+The operator is obtained by translating the mixed 1,2-body operator in
+Equation (\ref{eq:trel2op1,2}) using Equation (\ref{eq:12to2}).
 
-\begin{equation}\label{eq:def2op2}
+\begin{equation}\label{eq:trel2op2}
   \begin{aligned}
-    \hat{T}_{\rm{rel},2}^{(2)} &= \left(\frac{A-1}{A_{\rm{eff}}}\right)
-    \displaystyle\sum_{\substack{abcd\\JT}} \frac{\alpha}{4(A-1)}
-    \tilde{\tau}_{abcd}^{JT} a_a^{\dagger}a_b^{\dagger}a_ca_d
-    -\frac{1}{2A_{\rm{eff}}} \displaystyle\sum_{\substack{abcd\\JT}}
-    \tau_{abcd}^{JT} a_a^{\dagger}a_b^{\dagger}a_ca_d\\
-    &= \frac{2}{A_{\rm{eff}}} \displaystyle\sum_{\substack{abcd\\JT}}
-    \left( \frac{\alpha}{8}\tilde{\tau}_{abcd}^{JT}
-    -\frac{1}{4}\tau_{abcd}^{JT} \right) a_a^{\dagger}a_b^{\dagger}a_ca_d.
+    \trelopi_2^{(2)} &= \left(\frac{A-1}{\aeff}\right)
+    \displaystyle\sum_{\substack{abcd\\JT}} \frac{1}{4(A-1)}
+    \tilde{\tau}_{abcd}^{JT}~\creop_a\creop_b\annop_d\annop_c
+    -\frac{1}{4\aeff} \displaystyle\sum_{\substack{abcd\\JT}}
+    \tau_{abcd}^{JT}~\creop_a\creop_b\annop_d\annop_c\\
+    &= \frac{2}{\aeff} \displaystyle\sum_{\substack{abcd\\JT}}
+    \frac{1}{8}\left( \tilde{\tau}_{abcd}^{JT} - \tau_{abcd}^{JT} \right)
+    \creop_a\creop_b\annop_d\annop_c.
   \end{aligned}
 \end{equation}
 
 \section{Importance truncation code}
 
 The kinetic energy term in the \texttt{it-code-111815.f} file is based
-on Defintion 2. This is also multiplied by $2/A_{\rm{eff}}$ in the
-code, so we define
+on Defintion~\ref{def:trel2}. This is also multiplied by $2/A_{\rm{eff}}$ in
+the code, so we define
 
 \begin{equation}
-  (\tau_{\rm{file}})_{abcd}^{JT} = \frac{1}{4}
-  \left( \frac{\alpha}{2} \tilde{\tau}_{abcd}^{JT} - \tau_{abcd}^{JT}
-  \right),
+  {(\tau_{\rm{file}})}_{abcd}^{JT} = \frac{1}{8}
+  \left( \tilde{\tau}_{abcd}^{JT} - \tau_{abcd}^{JT} \right),
 \end{equation}
 
-so that (\ref{eq:def2op2}) can be simplified to
+so that Equation (\ref{eq:trel2op2}) can be simplified to
 
 \begin{equation}
-  \hat{T}_{\rm{rel},2}^{(2)} = \frac{2}{A_{\rm{eff}}}
-  \displaystyle\sum_{\substack{abcd\\JT}} (\tau_{\rm{file}})_{abcd}^{JT}
-  a_a^{\dagger}a_b^{\dagger}a_ca_d.
+  \trelopi_2^{(2)} = \frac{2}{\aeff}
+  \displaystyle\sum_{\substack{abcd\\JT}} {(\tau_{\rm{file}})}_{abcd}^{JT}
+  ~\creop_a\creop_b\annop_d\annop_c.
 \end{equation}
 
 We also define
 
 \begin{equation}
-  (\tau_{\rm{add}})_{abcd}^{JT} = \frac{\alpha}{8}\cdot
-  \cfrac{A_{\rm{eff}}-A}{A-1}
-  \tilde{\tau}_{abcd}^{JT},
+  {(\tau_{\rm{add}})}_{abcd}^{JT} = \frac{1}{8}\cdot
+  \cfrac{\aeff-A}{A-1}~\tilde{\tau}_{abcd}^{JT},
 \end{equation}
 
-so that (\ref{eq:def1op2}), the two-body operator based on
-Definition 1, can be simplified to
+so that Equation (\ref{eq:trel1op2}), the two-body operator based on
+Definition~\ref{def:trel1}, can be simplified to
 
 \begin{equation}
-  \hat{T}_{\rm{rel},1}^{(2)} = \frac{2}{A_{\rm{eff}}}
+  \trelopi_1^{(2)} = \frac{2}{\aeff}
   \displaystyle\sum_{\substack{abcd\\JT}} \left[ 
-  (\tau_{\rm{file}})_{abcd}^{JT} + (\tau_{\rm{add}})_{abcd}^{JT}
-  \right] a_a^{\dagger}a_b^{\dagger}a_ca_d.
+  {(\tau_{\rm{file}})}_{abcd}^{JT} + {(\tau_{\rm{add}})}_{abcd}^{JT}
+  \right]\creop_a\creop_b\annop_d\annop_c.
 \end{equation}
 
-Now since Definition 1 for relative kinetic energy is the definition
-that is truely fundamental, $(\tau_{\rm{add}})_{abcd}^{JT}$ defines
+Now since Definition~\ref{def:trel1} for relative kinetic energy is the
+definition that we take to be truely fundamental,
+${(\tau_{\rm{add}})}_{abcd}^{JT}$ defines
 the modification to the code in order to produce the correct
-kinetic energy when $A_{\rm{eff}}\neq A$.
-This is the modification I have implemented in
-\texttt{it-code-111815.f}.
+kinetic energy when $\aeff\neq A$.
+This is the modification I \textit{will soon} implement in
+\texttt{it-code-111815.f}~\cite{github}.
 
-\section{References}
-
-\begin{description}
-\item[Original and modified NCSM codes:]\hfill\\
-  \url{https://github.com/dilynfullerton/tr-c-ncsm/}
-\item[More general discussion of definitions of $T_{\rm{rel}}$:]\hfill\\
-  \url{http://wiki.triumf.ca/wiki/IMSRG/index.php/Relative_kinetic_energy}
-\item[Promoting a one-body to a two-body operator:]\hfill\\
-  \url{http://wiki.triumf.ca/wiki/IMSRG/index.php/Promoting_a_one-body_operator}
-\item[Occupation number representation of 1- and 2-body operators:]\hfill\\
-  Suhonen. \textit{From Nucleons to Nucleus}. Chapter 4.2.
-  
-\end{description}
+\bibliographystyle{amsplain}
+\bibliography{trel}
 
 \end{document}
