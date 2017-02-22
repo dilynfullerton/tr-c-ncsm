@@ -5,7 +5,7 @@ from ncsm_vce_calc import _exact
 
 # Script
 AP_RANGE = range(4, 9+1)
-A_PRESCRIPTIONS = _exact(AP_RANGE, 3) + [[4, 5, 6]]
+A_PRESCRIPTIONS = list(_exact(AP_RANGE, 3)) + [[4, 5, 6]]
 Z = 2  # Helium
 NMAX = 2
 N_SHELL = 1  # p shell

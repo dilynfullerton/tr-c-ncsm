@@ -1,11 +1,11 @@
 #!/usr/bin/python
 
-from ncsm_vce_calc import ncsd_vce_calculations
+from ncsm_vce_calc import ncsd_vce_calculations, ncsd_exact_calculations
 from ncsm_vce_calc import _exact
 
 # Script
 AP_RANGE = range(6, 13+1)
-A_PRESCRIPTIONS = _exact(AP_RANGE, 3) + [[6, 7, 8]]
+A_PRESCRIPTIONS = list(_exact(AP_RANGE, 3)) + [[6, 7, 8]]
 Z = 3  # Lithium
 NMAX = 2
 N_SHELL = 1  # p shell
