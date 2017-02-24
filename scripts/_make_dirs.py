@@ -40,7 +40,8 @@ FNAME_EXT_JOBSUB = '.sh'
 FNAME_FMT_EGV = 'mfdp_%d.egv'  # Nhw
 FNAME_MFDP = 'mfdp.dat'
 FNAME_TMP_TRDENS_IN = 'trdens.in'
-FNAME_TMP_JOBSUB = 'job.sh'
+FNAME_TMP_JOBSUB_NCSD = 'ncsd_job.sh'
+FNAME_TMP_JOBSUB_TRDENS = 'trdens_job.sh'
 FNAME_TRDENS_IN = 'trdens.in'
 LNAME_TBME = 'TBME.int'
 LNAME_EGV = 'mfdp.egv'
@@ -407,8 +408,7 @@ def _get_job_replace_map(walltime):
 
 
 def _make_job_submit_file(
-        dst_fpath, walltime,
-        dpath_temp=DPATH_TEMPLATES, fname_tmp_jobsub=FNAME_TMP_JOBSUB
+        dst_fpath, walltime, fname_tmp_jobsub, dpath_temp=DPATH_TEMPLATES,
 ):
     """For the given walltime, writes the job.sh submit file to the given
     destination (dst_fpath)
@@ -422,7 +422,8 @@ def _make_job_submit_file(
     _rewrite_file(src=src_fpath, dst=dst_fpath, replace_map=rep_map)
 
 
-def _make_job_submit_files(a_aeff_to_jobsub_fpath_map, walltime):
+def _make_job_submit_files(a_aeff_to_jobsub_fpath_map, walltime,
+                           fname_tmp_jobsub=FNAME_TMP_JOBSUB):
     """For each jobsub_fpath in a_aeff_to_jobsub_fpath_map, makes the job.sh
     file for submission to the cluster. As these are all the same for a given
     walltime, one file is written and the rest are linked.
@@ -433,7 +434,8 @@ def _make_job_submit_files(a_aeff_to_jobsub_fpath_map, walltime):
     """
     job_files = list(a_aeff_to_jobsub_fpath_map.values())
     dst = job_files.pop()
-    _make_job_submit_file(dst_fpath=dst, walltime=walltime)
+    _make_job_submit_file(
+        dst_fpath=dst, walltime=walltime, fname_tmp_jobsub=fname_tmp_jobsub)
     # link this file to rest of destination paths
     for dst2 in job_files:
         if path.exists(dst2):
@@ -634,6 +636,11 @@ def _get_a_aeff_to_jobsub_fpath_map(
             args += (scalefactor,)
         a_aeff_jobsub_map[(a, aeff)] = path.join(
             a_aeff_to_dirpath_map[(a, aeff)], fname_fmt % args)
+    a_aeff_to_ncsd = dict()
+    a_aeff_to_vce = dict()
+    for k, v in a_aeff_jobsub_map:
+        a_aeff_to_ncsd[k] = v + '_NCSD'
+        a_aeff_to_vce[k] = v + '_TRDENS'
     return a_aeff_jobsub_map
 
 
@@ -698,13 +705,13 @@ def prepare_directories(
         a_aeff_to_dirpath_map=a_aeff_to_dir_map
     )
     if cluster_submit:
-        a_aeff_to_jobfile_map = _get_a_aeff_to_jobsub_fpath_map(
+        a_aeff_to_ncsd_map, a_aeff_to_vce_map = _get_a_aeff_to_jobsub_fpath_map(
             a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
             z=z, n1=n1, n2=n2, a_aeff_to_dirpath_map=a_aeff_to_dir_map,
             scalefactor=scalefactor, remove_protons=remove_protons,
         )
     else:
-        a_aeff_to_jobfile_map = dict()
+        a_aeff_to_ncsd_map = dict()
     # make stuff
     if progress:
         print '  Making directories...'
@@ -730,8 +737,12 @@ def prepare_directories(
         if progress:
             print '  Writing cluster submit files...'
         _make_job_submit_files(
-            a_aeff_to_jobsub_fpath_map=a_aeff_to_jobfile_map,
-            walltime=walltime,
+            a_aeff_to_jobsub_fpath_map=a_aeff_to_ncsd_map,
+            walltime=walltime, fname_tmp_jobsub=FNAME_TMP_JOBSUB_NCSD
         )
-    return (a_aeff_to_dir_map, a_aeff_to_egvfile_map, a_aeff_to_jobfile_map,
-            a_aeff_to_outfile_map)
+        _make_job_submit_files(
+            a_aeff_to_jobsub_fpath_map=a_aeff_to_vce_map,
+            walltime=walltime, fname_tmp_jobsub=FNAME_TMP_JOBSUB_TRDENS
+        )
+    return (a_aeff_to_dir_map, a_aeff_to_egvfile_map, a_aeff_to_ncsd_map,
+            a_aeff_to_vce_map, a_aeff_to_outfile_map)
