@@ -1061,7 +1061,7 @@ def _vce_multiple_calculations_s(
             continue
     return len(error_messages) == 0
 
-    
+
 def _vce_multiple_calculations(
         z, a_values, a_presc_list, a_range, nmax, n1, n2, nshell, ncomponent,
         a_aeff_to_out_fpath_map, a_aeff_to_dpath_map,
