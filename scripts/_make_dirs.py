@@ -294,7 +294,7 @@ def _get_num_states(a, a0, nshell, nmax):
     :param nshell: major oscillator shell (0=s, 1=p, 2=sd,...)
     :param nmax: shell truncation
     """
-    nhw_mod = (a - a0) * nshell #+ nmax  # TODO: is this correct generally
+    nhw_mod = (a - a0) * nshell  # + nmax TODO: is this correct generally
     dim_nhw_mod = 0
     for j1_2 in range(1, nhw_mod+2, 2):
         dim_nhw_mod += (j1_2 + 1)/2
@@ -423,7 +423,7 @@ def _make_job_submit_file(
 
 
 def _make_job_submit_files(a_aeff_to_jobsub_fpath_map, walltime,
-                           fname_tmp_jobsub=FNAME_TMP_JOBSUB):
+                           fname_tmp_jobsub):
     """For each jobsub_fpath in a_aeff_to_jobsub_fpath_map, makes the job.sh
     file for submission to the cluster. As these are all the same for a given
     walltime, one file is written and the rest are linked.
@@ -638,10 +638,10 @@ def _get_a_aeff_to_jobsub_fpath_map(
             a_aeff_to_dirpath_map[(a, aeff)], fname_fmt % args)
     a_aeff_to_ncsd = dict()
     a_aeff_to_vce = dict()
-    for k, v in a_aeff_jobsub_map:
+    for k, v in a_aeff_jobsub_map.items():
         a_aeff_to_ncsd[k] = v + '_NCSD'
         a_aeff_to_vce[k] = v + '_TRDENS'
-    return a_aeff_jobsub_map
+    return a_aeff_to_ncsd, a_aeff_to_vce
 
 
 def remove_ncsd_tmp_files(dpaths_list):
@@ -712,6 +712,7 @@ def prepare_directories(
         )
     else:
         a_aeff_to_ncsd_map = dict()
+        a_aeff_to_vce_map = dict()
     # make stuff
     if progress:
         print '  Making directories...'
