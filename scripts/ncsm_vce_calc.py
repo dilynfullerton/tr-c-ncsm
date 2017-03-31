@@ -185,7 +185,7 @@ NCSD_CLUSTER_WALLTIME = '01:00:00'
 
 
 # FUNCTIONS
-def _generating_a_values(n_shell, n_component):
+def _generating_a_values(n_shell, n_component, z):
     """Based on the given major harmonic oscillator shell, gets the 3
     A values that are used to generate the effective Hamiltonian.
     Examples:
@@ -200,8 +200,11 @@ def _generating_a_values(n_shell, n_component):
     (16, 17, 18)
     :param n_shell: major oscillator shell
     """
-    a_0 = int((n_shell + 2) * (n_shell + 1) * n_shell / 3 * n_component)
-    return a_0, a_0 + 1, a_0 + 2
+    if z is None:
+        a_0 = int((n_shell + 2) * (n_shell + 1) * n_shell / 3 * n_component)
+        return a_0, a_0 + 1, a_0 + 2
+    else:
+        return 2*z, 2*z + 1, 2*z + 2
 
 
 def _min_orbitals(z):
@@ -227,7 +230,7 @@ class NcsdRunException(Exception):
 
 
 def _run_ncsd(
-        dpath, fpath_egv, force, verbose,
+        dpath, fpath_egv, force,
         fname_stdout=FNAME_NCSD_STDOUT, fname_stderr=FNAME_NCSD_STDERR
 ):
     """Run NCSD in the given directory (dpath)
@@ -236,11 +239,9 @@ def _run_ncsd(
     the calculation has already been done
     :param force: if true, does the calculation even if fpath_egv already
     exists
-    :param verbose: if true, print regular NCSD output to stdout. Note: This
-    is NOT compatible with multithreading.
-    :param fname_stdout: if verbose is False, specifies the name of the file
+    :param fname_stdout: specifies the name of the file
     to which to print the output of NCSD
-    :param fname_stderr: if verbose is False, specifies the name of the file
+    :param fname_stderr: specifies the name of the file
     to which to print error output of NCSD.
     :raises NcsdRunException: if there is error output of NCSD or if NCSD has
     not been compiled and sourced, NcsdRunException is raised
@@ -249,25 +250,20 @@ def _run_ncsd(
         return None
     args = ['NCSD']
     try:
-        if verbose:
-            p = Popen(args=args, cwd=dpath)
-            return p.wait()
-        else:
-            p = Popen(args=args, cwd=dpath, stdout=PIPE, stderr=PIPE)
-            out, err = p.communicate()
-            if out:
-                fout = open(path.join(dpath, fname_stdout), 'w')
-                fout.write(out)
-                fout.close()
-            if err:
-                ferr = open(path.join(dpath, fname_stderr), 'w')
-                ferr.write(err)
-                ferr.close()
-                raise NcsdRunException(
-                    '\nA problem occurred while running NCSD. '
-                    'See %s' % path.join(dpath, fname_stderr)
-                )
-            return p.poll(), out, err
+        p = Popen(args=args, cwd=dpath, stdout=PIPE, stderr=PIPE)
+        out, err = p.communicate()
+        if out:
+            fout = open(path.join(dpath, fname_stdout), 'w')
+            fout.write(out)
+            fout.close()
+        if err:
+            ferr = open(path.join(dpath, fname_stderr), 'w')
+            ferr.write(err)
+            ferr.close()
+            raise NcsdRunException(
+                '\nA problem occurred while running NCSD. '
+                'See %s' % path.join(dpath, fname_stderr))
+        return p.poll(), out, err
     except OSError:
         raise NcsdRunException(
             '\nA problem occurred while running NCSD. Make sure the code'
@@ -280,7 +276,7 @@ class TrdensRunException(Exception):
 
 
 def _run_trdens(
-        dpath_a6, force, verbose,
+        dpath_a6, force,
         fname_stdout=FNAME_TRDENS_STDOUT, fname_stderr=FNAME_TRDENS_STDERR
 ):
     """Run the TRDENS calculation in dpath_a6. It is assumed that input files
@@ -288,13 +284,11 @@ def _run_trdens(
     :param dpath_a6: Directory in which to run the TRDENS calulation
     :param force: If True, redoes the calculation even if output files
     already exist
-    :param verbose: if true, prints regular output of TRDENS to stdout,
-    otherwise suppresses output and writes it to
     _fname_stdout and _fname_stderr
     :param fname_stdout: filename to which to write standard output of
-    TRDENS if verbose is false
+    TRDENS 
     :param fname_stderr: filename to which to write standard error output
-    of TRDENS if verbose is false
+    of TRDENS 
     :raises TrdensRunException: if there is error output from TRDENS or the
     command fails to run, TrdensRunException is raised.
     """
@@ -305,30 +299,24 @@ def _run_trdens(
         remove(fpath_out)
     args = ['TRDENS']
     try:
-        if verbose:
-            p = Popen(args=args, cwd=dpath_a6)
-            return p.wait()
-        else:
-            p = Popen(args=args, cwd=dpath_a6, stdout=PIPE, stderr=PIPE)
-            out, err = p.communicate()
-            if out:
-                fout = open(path.join(dpath_a6, fname_stdout), 'w')
-                fout.write(out)
-                fout.close()
-            if err:
-                ferr = open(path.join(dpath_a6, fname_stderr), 'w')
-                ferr.write(err)
-                ferr.close()
-                raise TrdensRunException(
-                    '\nA problem occurred while running TRDENS. '
-                    'See %s' % path.join(dpath_a6, fname_stderr)
-                )
-            return p.poll(), out, err
+        p = Popen(args=args, cwd=dpath_a6, stdout=PIPE, stderr=PIPE)
+        out, err = p.communicate()
+        if out:
+            fout = open(path.join(dpath_a6, fname_stdout), 'w')
+            fout.write(out)
+            fout.close()
+        if err:
+            ferr = open(path.join(dpath_a6, fname_stderr), 'w')
+            ferr.write(err)
+            ferr.close()
+            raise TrdensRunException(
+                '\nA problem occurred while running TRDENS. '
+                'See %s' % path.join(dpath_a6, fname_stderr))
+        return p.poll(), out, err
     except OSError:
         raise TrdensRunException(
             '\nA problem occurred while running TRDENS. Make sure the code'
-            ' is compiled and sourced.'
-        )
+            ' is compiled and sourced.')
 
 
 def _run_vce(
@@ -484,9 +472,7 @@ def _ncsd_multiple_calculations_t(
             a_, aeff_ = args
             _run_ncsd(
                 dpath=a_aeff_to_dpath_map[(a_, aeff_)],
-                fpath_egv=a_aeff_to_egvfile_map[(a_, aeff_)],
-                force=force, verbose=False
-            )
+                fpath_egv=a_aeff_to_egvfile_map[(a_, aeff_)], force=force)
         except NcsdRunException, e:
             em.put(str(e))
         return q.put(currentThread())
@@ -556,7 +542,7 @@ def _ncsd_multiple_calculations_s(
 
 def _ncsd_multiple_calculations(
         a_aeff_set, a_aeff_to_dpath_map, a_aeff_to_egvfile_map,
-        force, verbose, progress, str_prog_ncsd=STR_PROG_NCSD
+        force, progress, str_prog_ncsd=STR_PROG_NCSD
 ):
     """Does the specified NCSD calculations on the head node without threading.
     :param a_aeff_set: set of (A, Aeff) for which to run NCSD calculations
@@ -565,8 +551,6 @@ def _ncsd_multiple_calculations(
     :param a_aeff_to_egvfile_map: map from (A, Aeff) to the *.egv file path,
     which, if it exists, signifies that the calculation has already been done
     :param force: if true, submits the job even if the *.egv file exists
-    :param verbose: if true, prints the output of each NCSD calculation to
-    stdout
     :param progress: if true, shows a progress bar, indicated the number of
     jobs completed. Verbose output is suppressed.
     :param str_prog_ncsd: string to display above progress bar, if showing
@@ -575,7 +559,6 @@ def _ncsd_multiple_calculations(
     # do ncsd
     jobs_total = len(a_aeff_set)
     jobs_completed = 0
-    progress = progress and not verbose
     if progress and jobs_total > 0:
         print str_prog_ncsd
     completed_job_list = list()
@@ -584,10 +567,8 @@ def _ncsd_multiple_calculations(
         if progress:
             _print_progress(jobs_completed, jobs_total)
         try:
-            _run_ncsd(
-                dpath=dpath, fpath_egv=a_aeff_to_egvfile_map[(a, aeff)],
-                force=force, verbose=verbose
-            )
+            _run_ncsd(dpath=dpath, fpath_egv=a_aeff_to_egvfile_map[(a, aeff)],
+                      force=force)
         except NcsdRunException, e:
             print e
             continue
@@ -606,7 +587,7 @@ def ncsd_multiple_calculations(
         a_presc_list, a_values, z, nmax=NMAX, nshell=N_SHELL, n1=N1, n2=N1,
         scalefactor=None, remove_protons=False,
         beta_cm=BETA_CM, num_states=NCSD_NUM_STATES, num_iter=NCSD_NUM_ITER,
-        force=False, verbose=False, progress=True, threading=True,
+        force=False, progress=True, threading=True,
         cluster_submit=False, walltime=None, remove_tmp_files=True,
         str_prog_ncsd=STR_PROG_NCSD,
         dpath_templates=DPATH_TEMPLATES, dpath_results=DPATH_RESULTS,
@@ -630,10 +611,8 @@ def ncsd_multiple_calculations(
     :param num_iter: number of iteractions for Lanczos algorithm
     :param force: if true, force doing the NCSD calculation, even if it has
     already been done
-    :param verbose: if true, prints the regular NCSD output to stdout; else
-    this is suppressed and written to a file instead
     :param progress: if true, show a progress bar. Note: will not show
-    progress bar if verbose is true
+    progress bar 
     :param threading: if true, starts the various calculations in separate
     threads on the head node
     :param cluster_submit: if true, submits the NCSD job to cluster
@@ -663,6 +642,10 @@ def ncsd_multiple_calculations(
         a_list.append(a)
         aeff_list.append(aeff)
         nhw_list.append(nhw)
+    if progress:
+        print 'Doing NCSD calculations for (A, Aeff):'
+        for a, aeff in zip(a_list, aeff_list):
+            print '  A=%2d, Aeff=%2d' % (a, aeff)
     # prepare directories and get maps
     a_aeff_maps = prepare_directories(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
@@ -697,7 +680,7 @@ def ncsd_multiple_calculations(
             a_aeff_set=a_aeff_set,
             a_aeff_to_dpath_map=dir_map,
             a_aeff_to_egvfile_map=egv_map,
-            force=force, verbose=verbose, progress=progress,
+            force=force, progress=progress,
             str_prog_ncsd=str_prog_ncsd
         )
     if remove_tmp_files:
@@ -710,7 +693,7 @@ def ncsd_single_calculation(
         a, aeff, z, nmax=NMAX, nshell=N_SHELL, n1=N1, n2=N1,
         scalefactor=None, remove_protons=False,
         beta_cm=BETA_CM, num_states=NCSD_NUM_STATES, num_iter=NCSD_NUM_ITER,
-        force=False, verbose=False, progress=True,
+        force=False, progress=True,
         cluster_submit=False, walltime=None, remove_tmp_files=True,
         dpath_templates=DPATH_TEMPLATES, dpath_results=DPATH_RESULTS,
 ):
@@ -730,9 +713,7 @@ def ncsd_single_calculation(
     :param num_iter: number of iteractions for Lanczos algorithm
     :param force: if true, does the calculation even if output files already
     exist
-    :param verbose: if true, prints the regular output of NCSD to stdout, else
-    suppresses this and saves it in a file
-    :param progress: if true, shows a progress bar (verbose mode will be off)
+    :param progress: if true, shows a progress bar 
     :param cluster_submit: if true, submits the job to the OpenMP cluster
     using qsub
     :param walltime: walltime to be allotted to a cluster submission
@@ -769,7 +750,6 @@ def ncsd_single_calculation(
             a_aeff_to_dpath_map=a_aeff_to_dpath,
             a_aeff_to_egvfile_map=a_aeff_to_egv,
             force=force, progress=progress,
-            verbose=verbose,
         )
     if remove_tmp_files:
         remove_ncsd_tmp_files(
@@ -781,7 +761,7 @@ def ncsd_exact_calculations(
         z, a_range, nmax=NMAX, nshell=N_SHELL, n1=N1, n2=N2,
         int_scalefactor=None, remove_protons=False,
         beta_cm=BETA_CM, num_states=NCSD_NUM_STATES, num_iter=NCSD_NUM_ITER,
-        force=False, verbose=False, progress=True,
+        force=False, progress=True,
         cluster_submit=False, walltime=None, remove_tmp_files=True,
         str_prog_ncsd_ex=STR_PROG_NCSD_EX,
         dpath_templates=DPATH_TEMPLATES, dpath_results=DPATH_RESULTS,
@@ -802,10 +782,7 @@ def ncsd_exact_calculations(
     :param num_iter: max iteractions for Lanczos algorithm
     :param force: if true, force calculation of NCSD even if output files are
     present
-    :param verbose: if true, print regular NCSD output to stdout; otherwise
-    output is suppressed and written to a file instead
-    :param progress: if true, show a progress bar. Note: will not be shown if
-    verbose is true.
+    :param progress: if true, show a progress bar. Note: will not be shown
     :param cluster_submit: if true, submit job to cluster
     :param walltime: if cluster_submit is true, this string hh:mm:ss specifies
     how much wall time is to be allotted each NCSD calculation
@@ -824,7 +801,7 @@ def ncsd_exact_calculations(
         scalefactor=int_scalefactor, remove_protons=remove_protons,
         beta_cm=beta_cm, num_states=num_states, num_iter=num_iter,
         cluster_submit=cluster_submit, walltime=walltime,
-        force=force, verbose=verbose, progress=progress,
+        force=force, progress=progress,
         remove_tmp_files=remove_tmp_files,
         str_prog_ncsd=str_prog_ncsd_ex,
         dpath_templates=dpath_templates, dpath_results=dpath_results,
@@ -844,7 +821,7 @@ def vce_single_calculation(
         a_aeff_dir_map, a_aeff_outfile_map,
         n1=N1, n2=N1, nshell=-1, ncomponent=-1,
         int_scalefactor=None, remove_protons=False,
-        force_trdens=False,  verbose=False,
+        force_trdens=False,
         dpath_results=DPATH_RESULTS, dpath_templates=DPATH_TEMPLATES,
 ):
     """Valence cluster expansion for a single A-prescription
@@ -870,8 +847,6 @@ def vce_single_calculation(
     directory name of vce calculation
     :param force_trdens: if true, forces redoing of the TRDENS calculation,
     even if output file(s) are present
-    :param verbose: if true, prints the regular output of TRDENS to stdout,
-    otherwise suppresses output
     :param dpath_templates: path to the templates directory
     :param dpath_results: path to the results directory
     """
@@ -897,7 +872,7 @@ def vce_single_calculation(
     except EgvFileNotFoundException:
         raise
     try:
-        _run_trdens(dpath_a6=dpath_a6, force=force_trdens, verbose=verbose)
+        _run_trdens(dpath_a6=dpath_a6, force=force_trdens)
     except TrdensRunException:
         raise
     # do valence cluster expansion
@@ -919,7 +894,7 @@ def vce_single_calculation(
 def _vce_multiple_calculations_t(
         z, a_values, a_presc_list, a_range, nmax, n1, n2, nshell, ncomponent,
         a_aeff_to_dpath_map, a_aeff_to_out_fpath_map,
-        dpath_templates, dpath_results, force_trdens, verbose, progress,
+        dpath_templates, dpath_results, force_trdens, progress,
         int_scalefactor=None, remove_protons=False,
         max_open_threads=MAX_OPEN_THREADS, str_prog_vce=STR_PROG_VCE,
 ):
@@ -953,8 +928,6 @@ def _vce_multiple_calculations_t(
     directory name of vce calculation
     :param force_trdens: if true, forces redoing of the TRDENS calculation,
     even if output file(s) are present
-    :param verbose: if true, prints the regular output of TRDENS to stdout,
-    otherwise suppresses output
     :param progress: if true, show a progress bar, indicating the number of
     closed threads
     :param max_open_threads: maximum number of threads to be opened
@@ -969,7 +942,7 @@ def _vce_multiple_calculations_t(
                 a_prescription=ap0, a_range=a_range,
                 nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
                 int_scalefactor=int_scalefactor, remove_protons=remove_protons,
-                force_trdens=force_trdens, verbose=verbose,
+                force_trdens=force_trdens,
                 dpath_templates=dpath_templates, dpath_results=dpath_results,
                 a_aeff_dir_map=a_aeff_to_dpath_map,
                 a_aeff_outfile_map=a_aeff_to_out_fpath_map,
@@ -1029,6 +1002,8 @@ def _vce_multiple_calculations_s(
         a_aeff_to_trdens_out[trjob] = path.join(
             a_aeff_to_dpath_map[trjob], FNAME_TRDENS_OUT)
     # submit TRDENS jobs to cluster
+    if progress:
+        print '  Submitting TRDENS job to cluster'
     _ncsd_multiple_calculations_s(
         a_aeff_set=trdens_jobs,
         a_aeff_to_dpath_map=a_aeff_to_dpath_map,
@@ -1040,6 +1015,8 @@ def _vce_multiple_calculations_s(
         fname_stderr=FNAME_TRDENS_STDERR,
     )
     # do valence cluster expansion
+    if progress:
+        print '  Doing valence cluster expansion'
     for a_prescription in a_presc_list:
         vce_dirpath = make_vce_directory(
             a_prescription=a_prescription, nmax=nmax, n1=n1, n2=n2,
@@ -1058,6 +1035,8 @@ def _vce_multiple_calculations_s(
             )
         except OutfileNotFoundException, e:
             error_messages.append(str(e))
+            if progress:
+                print '  ' + str(e)
             continue
     return len(error_messages) == 0
 
@@ -1065,7 +1044,7 @@ def _vce_multiple_calculations_s(
 def _vce_multiple_calculations(
         z, a_values, a_presc_list, a_range, nmax, n1, n2, nshell, ncomponent,
         a_aeff_to_out_fpath_map, a_aeff_to_dpath_map,
-        dpath_templates, dpath_results, force_trdens, verbose, progress,
+        dpath_templates, dpath_results, force_trdens, progress,
         int_scalefactor=None, remove_protons=False, str_prog_vce=STR_PROG_VCE,
 ):
     """Perform the specified TRDENS/VCE calculations on the head node without
@@ -1098,8 +1077,6 @@ def _vce_multiple_calculations(
     directory name of vce calculation
     :param force_trdens: if true, forces redoing of the TRDENS calculation,
     even if output file(s) are present
-    :param verbose: if true, prints the regular output of TRDENS to stdout,
-    otherwise suppresses output
     :param progress: if true, show a progress bar, indicating the number of
     closed threads
     :param str_prog_vce: string to be shown above progress bar
@@ -1107,7 +1084,6 @@ def _vce_multiple_calculations(
     """
     jobs_total = len(a_presc_list)
     jobs_completed = 0
-    progress = progress and not verbose
     if progress and jobs_total > 0:
         print str_prog_vce
     error_messages = list()
@@ -1120,7 +1096,7 @@ def _vce_multiple_calculations(
                 a_prescription=ap, a_range=a_range,
                 nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
                 int_scalefactor=int_scalefactor, remove_protons=remove_protons,
-                force_trdens=force_trdens, verbose=verbose,
+                force_trdens=force_trdens,
                 dpath_results=dpath_results, dpath_templates=dpath_templates,
                 a_aeff_outfile_map=a_aeff_to_out_fpath_map,
                 a_aeff_dir_map=a_aeff_to_dpath_map,
@@ -1149,7 +1125,7 @@ def vce_multiple_calculations(
         a_values, a_presc_list, a_range, z, nmax, n1, n2, nshell, ncomponent,
         a_aeff_to_out_fpath_map, a_aeff_to_dpath_map,
         a_aeff_to_jobfile_map,
-        force_trdens, verbose, progress, threading,
+        force_trdens, progress, threading,
         int_scalefactor=None, remove_protons=False,
         cluster_submit=True,
         dpath_templates=DPATH_TEMPLATES, dpath_results=DPATH_RESULTS,
@@ -1157,6 +1133,7 @@ def vce_multiple_calculations(
     """For every A prescription in a_presc_list, performs the valence
     cluster expansion to generate an interaction file. Assumes NCSD
     calculations have already been done sufficiently.
+    :param cluster_submit: if true, submits the job to the cluster
     :param z: proton number (Z)
     :param a_values: three base A values (e.g. if in p shell these are 4, 5, 6)
     :param a_presc_list: sequence of 3-tuples representing A prescriptions
@@ -1180,14 +1157,15 @@ def vce_multiple_calculations(
     directory name, signifying that proton part of the interaction was removed
     :param force_trdens: if true, force calculation of TRDENS even if output
     file is already present
-    :param verbose: if true, regular output of TRDENS is printed to stdout;
-    otherwise output is suppressed and written to a file instead
-    :param progress: if true, display a progress bar. Note: if verbose is
-    true, progress bar will not be displayed.
+    :param progress: if true, display a progress bar. 
     :param threading: if true, calculations will be multi-threaded
     :param dpath_templates: path to the templates directory
     :param dpath_results: path to the results directory
     """
+    if progress:
+        print 'Doing VCE calculations for prescriptions:'
+        for presc in a_presc_list:
+            print '  %s' % str(presc)
     if nmax % 2:
         raise InvalidNmaxException(
             '\nInvalid Nmax: %d. Nmax must be even.' % nmax)
@@ -1207,7 +1185,7 @@ def vce_multiple_calculations(
             a_values=a_values, a_presc_list=a_presc_list, a_range=a_range,
             z=z, nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
             int_scalefactor=int_scalefactor, remove_protons=remove_protons,
-            force_trdens=force_trdens, verbose=verbose, progress=progress,
+            force_trdens=force_trdens, progress=progress,
             dpath_results=dpath_results, dpath_templates=dpath_templates,
             a_aeff_to_out_fpath_map=a_aeff_to_out_fpath_map,
             a_aeff_to_dpath_map=a_aeff_to_dpath_map,
@@ -1217,7 +1195,7 @@ def vce_multiple_calculations(
             a_values=a_values, a_presc_list=a_presc_list, a_range=a_range,
             z=z, nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
             int_scalefactor=int_scalefactor, remove_protons=remove_protons,
-            force_trdens=force_trdens, verbose=verbose, progress=progress,
+            force_trdens=force_trdens, progress=progress,
             dpath_results=dpath_results, dpath_templates=dpath_templates,
             a_aeff_to_out_fpath_map=a_aeff_to_out_fpath_map,
             a_aeff_to_dpath_map=a_aeff_to_dpath_map,
@@ -1232,7 +1210,7 @@ def ncsd_vce_calculations(
         int_scalefactor=None, remove_protons=False,
         beta_cm=BETA_CM, num_states=NCSD_NUM_STATES, num_iter=NCSD_NUM_ITER,
         force_ncsd=False, force_trdens=False, force_all=False,
-        verbose=False, progress=True, threading=True,
+        progress=True, threading=True,
         cluster_submit=True, walltime=NCSD_CLUSTER_WALLTIME,
         remove_tmp_files=True,
         dpath_templates=DPATH_TEMPLATES, dpath_results=DPATH_RESULTS,
@@ -1261,10 +1239,7 @@ def ncsd_vce_calculations(
     :param force_trdens: if true, forces recalculation of TRDENS, even if
     output file already exists
     :param force_all: if true, forces recalculation of everything
-    :param verbose: if true, prints standard output for subprocesses to
-    stdout; otherwise this is suppressed and saved in a text file
-    :param progress: if true, shows a progress bar. Note if verbose is true,
-    progress bar will not be shown.
+    :param progress: if true, shows a progress bar. 
     :param threading: if true, calculation are multi-threaded
     :param cluster_submit: if true, NCSD calculation jobs will be submitted
     to the OpenMP cluster. NOTE: This may result in calculations remaining
@@ -1279,7 +1254,7 @@ def ncsd_vce_calculations(
     if nmax % 2:
         raise InvalidNmaxException(
             '\nInvalid Nmax: %d. Nmax must be even.' % nmax)
-    a_values = _generating_a_values(n_shell=nshell, n_component=ncomponent)
+    a_values = _generating_a_values(n_shell=nshell, n_component=ncomponent, z=z)
     if z is None:
         z = int(a_values[0] / ncomponent)
     a_presc_list = list(a_prescriptions)
@@ -1289,7 +1264,7 @@ def ncsd_vce_calculations(
         scalefactor=int_scalefactor, remove_protons=remove_protons,
         beta_cm=beta_cm, num_states=num_states, num_iter=num_iter,
         force=force_all or force_ncsd,
-        verbose=verbose, progress=progress, threading=threading,
+        progress=progress, threading=threading,
         cluster_submit=cluster_submit, walltime=walltime,
         remove_tmp_files=remove_tmp_files,
         dpath_templates=dpath_templates, dpath_results=dpath_results,
@@ -1308,7 +1283,7 @@ def ncsd_vce_calculations(
         nshell=nshell, ncomponent=ncomponent,
         int_scalefactor=int_scalefactor, remove_protons=remove_protons,
         force_trdens=force_trdens or force_all,
-        verbose=verbose, progress=progress, threading=threading,
+        progress=progress, threading=threading,
         dpath_results=dpath_results, dpath_templates=dpath_templates,
         cluster_submit=cluster_submit,
         a_aeff_to_out_fpath_map=outfile_map,
@@ -1373,7 +1348,7 @@ if __name__ == "__main__":
     user_args = argv[1:]
     f_ncsd, f_trdens, f_all = (False,) * 3
     multicom, com, exact = (False,) * 3
-    verbose0, progress0 = False, True
+    progress0 = True
     cluster_submit0 = False
     walltime0 = NCSD_CLUSTER_WALLTIME
     scalefactor0 = None
@@ -1391,7 +1366,7 @@ if __name__ == "__main__":
         elif a0 == '-e' or a0 == '--exact':
             exact = True
         elif a0 == '-v' or a0 == '--verbose':
-            verbose0, progress0 = True, False
+            progress0 = True
         elif a0 == '-s' or a0 == '--scale-int':
             user_args = user_args[1:]
             scalefactor0 = round(float(user_args[0]), 2)
@@ -1421,7 +1396,7 @@ if __name__ == "__main__":
             a_prescriptions=a_prescriptions0, a_range=a_range0, z=z_0,
             int_scalefactor=scalefactor0, remove_protons=rm_prot0,
             force_ncsd=f_ncsd, force_trdens=f_trdens,
-            force_all=f_all, verbose=verbose0, progress=progress0,
+            force_all=f_all, progress=progress0,
             cluster_submit=cluster_submit0, walltime=walltime0,
         )
     elif len(other_args) == 2:
@@ -1430,7 +1405,7 @@ if __name__ == "__main__":
             a_prescriptions=a_prescriptions0, a_range=a_range0, z=z_0,
             int_scalefactor=scalefactor0, remove_protons=rm_prot0,
             force_ncsd=f_ncsd, force_trdens=f_trdens,
-            force_all=f_all, verbose=verbose0, progress=progress0,
+            force_all=f_all, progress=progress0,
             cluster_submit=cluster_submit0, walltime=walltime0,
         )
     elif len(other_args) == 3:
@@ -1440,7 +1415,7 @@ if __name__ == "__main__":
             a_prescriptions=a_prescriptions0, a_range=a_range0, z=z_0,
             nmax=nmax_0, int_scalefactor=scalefactor0, remove_protons=rm_prot0,
             force_ncsd=f_ncsd, force_trdens=f_trdens,
-            force_all=f_all, verbose=verbose0, progress=progress0,
+            force_all=f_all, progress=progress0,
             cluster_submit=cluster_submit0, walltime=walltime0,
         )
     elif len(other_args) == 4:
@@ -1451,7 +1426,7 @@ if __name__ == "__main__":
             nmax=nmax_0, nshell=nshell_0,
             int_scalefactor=scalefactor0, remove_protons=rm_prot0,
             force_ncsd=f_ncsd, force_trdens=f_trdens,
-            force_all=f_all, verbose=verbose0, progress=progress0,
+            force_all=f_all, progress=progress0,
             cluster_submit=cluster_submit0, walltime=walltime0,
         )
     elif len(other_args) == 5:
@@ -1462,7 +1437,7 @@ if __name__ == "__main__":
             nmax=nmax_0, nshell=nshell_0, ncomponent=ncomponent_0,
             int_scalefactor=scalefactor0, remove_protons=rm_prot0,
             force_ncsd=f_ncsd, force_trdens=f_trdens,
-            force_all=f_all, verbose=verbose0, progress=progress0,
+            force_all=f_all, progress=progress0,
             cluster_submit=cluster_submit0, walltime=walltime0,
         )
     elif len(other_args) == 6:
@@ -1474,7 +1449,7 @@ if __name__ == "__main__":
             nmax=nmax_0, nshell=nshell_0, ncomponent=ncomponent_0,
             int_scalefactor=scalefactor0, remove_protons=rm_prot0,
             force_ncsd=f_ncsd, force_trdens=f_trdens,
-            force_all=f_all, verbose=verbose0, progress=progress0,
+            force_all=f_all, progress=progress0,
             cluster_submit=cluster_submit0, walltime=walltime0,
         )
     elif len(other_args) == 8:
@@ -1487,7 +1462,7 @@ if __name__ == "__main__":
             nshell=nshell_0, ncomponent=ncomponent_0,
             int_scalefactor=scalefactor0, remove_protons=rm_prot0,
             force_ncsd=f_ncsd, force_trdens=f_trdens,
-            force_all=f_all, verbose=verbose0, progress=progress0,
+            force_all=f_all, progress=progress0,
             cluster_submit=cluster_submit0, walltime=walltime0,
         )
     elif len(other_args) == 9:
@@ -1500,7 +1475,7 @@ if __name__ == "__main__":
             nshell=nshell_0, ncomponent=ncomponent_0,
             int_scalefactor=scalefactor0, remove_protons=bool(int(rm_prot0)),
             force_ncsd=f_ncsd, force_trdens=f_trdens,
-            force_all=f_all, verbose=verbose0, progress=progress0,
+            force_all=f_all, progress=progress0,
             cluster_submit=cluster_submit0, walltime=walltime0,
         )
     else:

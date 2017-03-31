@@ -22,7 +22,6 @@ for z0 in AP_RANGE:
         force_ncsd=False,
         force_trdens=True,
         force_all=False,
-        verbose=False,
         progress=False,
     )
 
@@ -36,7 +35,6 @@ for z0 in AP_RANGE:
         cluster_submit=True,
         walltime='48:00:00',
         force=False,
-        verbose=False,
         progress=False,
         remove_protons=False,
     )

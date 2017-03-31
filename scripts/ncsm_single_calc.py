@@ -51,7 +51,7 @@ from scripts.ncsm_vce_calc import NCSD_CLUSTER_WALLTIME
 if __name__ == "__main__":
     user_args = argv[1:]
     force0, exact_range = False, False
-    verbose0, progress0 = False, True
+    progress0 = True
     cluster_submit0 = False
     walltime0 = NCSD_CLUSTER_WALLTIME
     scalefactor0 = None
@@ -63,7 +63,7 @@ if __name__ == "__main__":
         elif '-e' == a0 or '--exact' == a0:
             exact_range = True
         elif '-v' == a0 or '--verbose' == a0:
-            verbose0, progress0 = True, False
+            progress0 = True
         elif '-s' == a0 or '--scale-int' == a0:
             user_args = user_args[1:]
             scalefactor0 = round(float(user_args[0]), 2)
@@ -78,18 +78,14 @@ if __name__ == "__main__":
         if len(user_args) == 2:
             z0, a0 = [int(x) for x in user_args]
             ncsd_single_calculation(
-                z=z0, a=a0, aeff=a0,
-                scalefactor=scalefactor0,
-                force=force0, verbose=verbose0,
+                z=z0, a=a0, aeff=a0, scalefactor=scalefactor0, force=force0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
                 remove_protons=rm_prot0,
             )
         elif len(user_args) == 3:
             z0, a0, aeff0 = [int(x) for x in user_args]
             ncsd_single_calculation(
-                z=z0, a=a0, aeff=aeff0,
-                scalefactor=scalefactor0,
-                force=force0, verbose=verbose0,
+                z=z0, a=a0, aeff=aeff0, scalefactor=scalefactor0, force=force0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
                 remove_protons=rm_prot0,
             )
@@ -97,8 +93,7 @@ if __name__ == "__main__":
             z0, a0, aeff0, nmax0 = [int(x) for x in user_args]
             ncsd_single_calculation(
                 z=z0, a=a0, aeff=aeff0, nmax=nmax0,
-                scalefactor=scalefactor0,
-                force=force0, verbose=verbose0,
+                scalefactor=scalefactor0, force=force0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
                 remove_protons=rm_prot0,
             )
@@ -106,7 +101,7 @@ if __name__ == "__main__":
             z0, a0, aeff0, nmax0, nshell0 = [int(x) for x in user_args]
             ncsd_single_calculation(
                 z=z0, a=a0, aeff=aeff0, nmax=nmax0, nshell=nshell0,
-                scalefactor=scalefactor0, force=force0, verbose=verbose0,
+                scalefactor=scalefactor0, force=force0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
                 remove_protons=rm_prot0,
             )
@@ -115,7 +110,7 @@ if __name__ == "__main__":
             z0, a0, aeff0, nmax0, nshell0, rm_prot0 = args
             ncsd_single_calculation(
                 z=z0, a=a0, aeff=aeff0, nmax=nmax0, nshell=nshell0,
-                scalefactor=scalefactor0, force=force0, verbose=verbose0,
+                scalefactor=scalefactor0, force=force0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
                 remove_protons=rm_prot0,
             )
@@ -125,7 +120,7 @@ if __name__ == "__main__":
             ncsd_single_calculation(
                 z=z0, a=a0, aeff=aeff0, nmax=nmax0, n1=n1_, n2=n2_,
                 nshell=nshell0,
-                scalefactor=scalefactor0, force=force0, verbose=verbose0,
+                scalefactor=scalefactor0, force=force0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
                 remove_protons=rm_prot0,
             )
@@ -141,7 +136,7 @@ if __name__ == "__main__":
             ncsd_exact_calculations(
                 z=z0, a_range=[amin],
                 int_scalefactor=scalefactor0,
-                force=force0, verbose=verbose0, progress=progress0,
+                force=force0, progress=progress0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
                 remove_protons=rm_prot0,
             )
@@ -150,7 +145,7 @@ if __name__ == "__main__":
             ncsd_exact_calculations(
                 z=z0, a_range=range(amin, amax+1),
                 int_scalefactor=scalefactor0,
-                force=force0, verbose=verbose0, progress=progress0,
+                force=force0, progress=progress0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
                 remove_protons=rm_prot0,
             )
@@ -159,7 +154,7 @@ if __name__ == "__main__":
             ncsd_exact_calculations(
                 z=z0, a_range=range(amin, amax+1), nmax=nmax0,
                 int_scalefactor=scalefactor0,
-                force=force0, verbose=verbose0, progress=progress0,
+                force=force0, progress=progress0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
                 remove_protons=rm_prot0,
             )
@@ -169,7 +164,7 @@ if __name__ == "__main__":
                 z=z0, a_range=range(amin, amax+1), nmax=nmax0,
                 nshell=nshell0,
                 int_scalefactor=scalefactor0,
-                force=force0, verbose=verbose0, progress=progress0,
+                force=force0, progress=progress0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
                 remove_protons=rm_prot0,
             )
@@ -180,7 +175,7 @@ if __name__ == "__main__":
                 z=z0, a_range=range(amin, amax+1), nmax=nmax0,
                 nshell=nshell0,
                 int_scalefactor=scalefactor0,
-                force=force0, verbose=verbose0, progress=progress0,
+                force=force0, progress=progress0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
                 remove_protons=rm_prot0,
             )
@@ -191,7 +186,7 @@ if __name__ == "__main__":
                 z=z0, a_range=range(amin, amax+1), nmax=nmax0,
                 nshell=nshell0, n1=n1_, n2=n2_,
                 int_scalefactor=scalefactor0,
-                force=force0, verbose=verbose0, progress=progress0,
+                force=force0, progress=progress0,
                 cluster_submit=cluster_submit0, walltime=walltime0,
                 remove_protons=rm_prot0,
             )

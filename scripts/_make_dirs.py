@@ -682,7 +682,7 @@ def prepare_directories(
     :param num_iter: number of iterations for lanczos algorithm
     :param dpath_templates: path to the templates directory
     :param dpath_results: path to the results directory
-    :param progress: if true, shows a progress bar (verbose mode will be off)
+    :param progress: if true, shows a progress bar
     :param cluster_submit: if true, submits the job to the OpenMP cluster
     using qsub
     :param walltime: walltime to be allotted to a cluster submission
