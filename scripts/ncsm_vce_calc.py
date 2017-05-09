@@ -134,10 +134,9 @@ Example: Sample calculation in the sd-shell.
 from __future__ import division
 
 from Queue import Queue
-from math import floor
 from os import path, remove, link
 from subprocess import Popen, PIPE
-from sys import argv, stdout
+from sys import argv
 from threading import Thread, currentThread
 from FdoVCE import run as vce_calculation
 from InvalidNumberOfArgumentsException import InvalidNumberOfArgumentsException
@@ -172,14 +171,8 @@ FNAME_TRDENS_STDOUT = '__stdout_trdens__.txt'
 FNAME_TRDENS_STDERR = '__stderr_trdens__.txt'
 FNAME_QSUB_STDOUT = '__stdout_qsub__.txt'
 FNAME_QSUB_STDERR = '__stderr_qsub__.txt'
-STR_PROG_NCSD = '  Doing NCSD calculations for (A, Aeff) pairs...'
-STR_PROG_VCE = '  Doing VCE calculations for Aeff prescriptions...'
-STR_PROG_NCSD_EX = '  Doing NCSD calculations for A=Aeff...'
 
 # other
-WIDTH_TERM = 79
-WIDTH_PROGRESS_BAR = 48
-STR_PROGRESS_BAR = '    Progress: %3d/%-3d '
 MAX_OPEN_THREADS = 10
 NCSD_CLUSTER_WALLTIME = '01:00:00'
 
@@ -362,37 +355,7 @@ def _run_vce(
         link(fpath, next_fpath)
 
 
-def _print_progress(
-        completed, total, end=False,
-        bar_len=WIDTH_PROGRESS_BAR, total_width=WIDTH_TERM,
-        text_fmt=STR_PROGRESS_BAR
-):
-    """Prints a progress bar based on completed and total.
-    :param completed: number of jobs completed
-    :param total: total number of jobs
-    :param end: if true, ends the print with a newline '\n' character, so that
-    standard printing can continue
-    :param bar_len: width in characters of the progress bar
-    :param total_width: total available width
-    :param text_fmt: text to format with completed and total
-    """
-    if not total > 0:
-        return
-    text = text_fmt % (floor(completed), total)
-    p = completed / total
-    bar_fill = int(floor(p * bar_len))
-    progress_bar = '[' + '#'*bar_fill + ' '*(bar_len - bar_fill) + ']'
-    sp_fill_len = total_width - len(text) - len(progress_bar)
-    if sp_fill_len < 0:
-        sp_fill_len = 0
-    line = '\r' + text + ' '*sp_fill_len + progress_bar
-    if end:
-        line += '\n'
-    stdout.write(line)
-    stdout.flush()
-
-
-def _threaded_calculation(fn, todo_list, max_open_threads, progress, str_prog):
+def _threaded_calculation(fn, todo_list, max_open_threads):
     """Abstract algorithm for performing a threaded calculation.
     :param fn: target function, which accepts 3 arguments: args, q, em.
         args: arguments for doing whatever is to be done by the function. These
@@ -405,9 +368,6 @@ def _threaded_calculation(fn, todo_list, max_open_threads, progress, str_prog):
     args a queue to push results to.
     :param todo_list: list of tuples which are given as the args argument to fn
     :param max_open_threads: maximum number of threads to have open at one time
-    :param progress: if true, prints a progress bar, showing how many threads
-    have closed
-    :param str_prog: string to display above the progress bar, if it is shown
     :return: list of completed jobs, list of error messages, either true or
     false, indicating whether all jobs were done
     """
@@ -418,9 +378,6 @@ def _threaded_calculation(fn, todo_list, max_open_threads, progress, str_prog):
     thread_job_map = dict()
     num_jobs_completed = 0
     num_jobs_total = len(todo_list)
-    if progress and num_jobs_total > 0:
-        print str_prog
-        _print_progress(num_jobs_completed, num_jobs_total)
     while len(todo_list) > 0 or len(active_thread_list) > 0:
         # if room, start new threads
         while len(todo_list) > 0 and len(active_thread_list) < max_open_threads:
@@ -438,18 +395,13 @@ def _threaded_calculation(fn, todo_list, max_open_threads, progress, str_prog):
                 active_thread_list.remove(t)
                 completed_job_list.append(thread_job_map[t])
                 num_jobs_completed += 1
-            if progress:
-                _print_progress(num_jobs_completed, num_jobs_total)
-    if progress:
-        _print_progress(num_jobs_completed, num_jobs_total, end=True)
     return (completed_job_list, error_messages,
             num_jobs_completed == num_jobs_total)
 
 
 def _ncsd_multiple_calculations_t(
         a_aeff_set, a_aeff_to_dpath_map, a_aeff_to_egvfile_map,
-        force, progress=True, str_prog_ncsd=STR_PROG_NCSD,
-        max_open_threads=MAX_OPEN_THREADS
+        force, max_open_threads=MAX_OPEN_THREADS
 ):
     """Runs given NCSD calculations on the head node using multi-threading
     :param a_aeff_set: set of (A, Aeff) for which to run NCSD calculations
@@ -459,10 +411,6 @@ def _ncsd_multiple_calculations_t(
     which, if it exists, signifies that the calculation has already been done
     :param force: if true, redoes the NCSD calculation even if the
     associated *.egv file already exists
-    :param progress: if true, prints a progress bar, showing how many threads
-    have closed
-    :param str_prog_ncsd: string to display above progress bar if progress is
-    True
     :param max_open_threads: maximum number of threads to be allowed to open
     for the calculations
     :return: list of (A, Aeff) pairs for which the job was completed
@@ -477,9 +425,7 @@ def _ncsd_multiple_calculations_t(
             em.put(str(e))
         return q.put(currentThread())
     completed_job_list, error_messages, exit_code = _threaded_calculation(
-        fn=_r, todo_list=list(a_aeff_set), max_open_threads=max_open_threads,
-        progress=progress, str_prog=str_prog_ncsd
-    )
+        fn=_r, todo_list=list(a_aeff_set), max_open_threads=max_open_threads)
     while not error_messages.empty():
         print error_messages.get()
     return completed_job_list
@@ -541,8 +487,7 @@ def _ncsd_multiple_calculations_s(
 
 
 def _ncsd_multiple_calculations(
-        a_aeff_set, a_aeff_to_dpath_map, a_aeff_to_egvfile_map,
-        force, progress, str_prog_ncsd=STR_PROG_NCSD
+        a_aeff_set, a_aeff_to_dpath_map, a_aeff_to_egvfile_map, force
 ):
     """Does the specified NCSD calculations on the head node without threading.
     :param a_aeff_set: set of (A, Aeff) for which to run NCSD calculations
@@ -551,21 +496,13 @@ def _ncsd_multiple_calculations(
     :param a_aeff_to_egvfile_map: map from (A, Aeff) to the *.egv file path,
     which, if it exists, signifies that the calculation has already been done
     :param force: if true, submits the job even if the *.egv file exists
-    :param progress: if true, shows a progress bar, indicated the number of
-    jobs completed. Verbose output is suppressed.
-    :param str_prog_ncsd: string to display above progress bar, if showing
     :return: list of (A, Aeff) pairs for which the job is ALREADY complete
     """
     # do ncsd
-    jobs_total = len(a_aeff_set)
     jobs_completed = 0
-    if progress and jobs_total > 0:
-        print str_prog_ncsd
     completed_job_list = list()
     for a, aeff in sorted(a_aeff_set):
         dpath = a_aeff_to_dpath_map[(a, aeff)]
-        if progress:
-            _print_progress(jobs_completed, jobs_total)
         try:
             _run_ncsd(dpath=dpath, fpath_egv=a_aeff_to_egvfile_map[(a, aeff)],
                       force=force)
@@ -574,8 +511,6 @@ def _ncsd_multiple_calculations(
             continue
         completed_job_list.append((a, aeff))
         jobs_completed += 1
-    if progress:
-        _print_progress(jobs_completed, jobs_total, end=True)
     return completed_job_list
 
 
@@ -585,11 +520,10 @@ class InvalidNmaxException(Exception):
 
 def ncsd_multiple_calculations(
         a_presc_list, a_values, z, nmax=NMAX, nshell=N_SHELL, n1=N1, n2=N1,
-        scalefactor=None, remove_protons=False,
-        beta_cm=BETA_CM, num_states=NCSD_NUM_STATES, num_iter=NCSD_NUM_ITER,
+        scalefactor=None, remove_protons=False, beta_cm=BETA_CM,
+        num_states=NCSD_NUM_STATES, num_iter=NCSD_NUM_ITER,
         force=False, progress=True, threading=True,
         cluster_submit=False, walltime=None, remove_tmp_files=True,
-        str_prog_ncsd=STR_PROG_NCSD,
         dpath_templates=DPATH_TEMPLATES, dpath_results=DPATH_RESULTS,
 ):
     """For a given list of A prescriptions, do the NCSD calculations
@@ -621,7 +555,6 @@ def ncsd_multiple_calculations(
     calculation
     :param remove_tmp_files: if true, removes all of the remnant *.tmp files
     following the NCSD calculation
-    :param str_prog_ncsd: string to show before progress bar
     :param dpath_templates: path to the templates directory
     :param dpath_results: path to the results directory
     """
@@ -661,27 +594,19 @@ def ncsd_multiple_calculations(
     a_aeff_set = set([(a, aeff) for a, aeff, nhw in a_aeff_nhw_set])
     if cluster_submit:
         completed_job_list = _ncsd_multiple_calculations_s(
-            a_aeff_set=a_aeff_set,
-            a_aeff_to_dpath_map=dir_map,
-            a_aeff_to_egvfile_map=egv_map,
-            a_aeff_to_jobfile_map=ncsd_job_map,
+            a_aeff_set=a_aeff_set, a_aeff_to_dpath_map=dir_map,
+            a_aeff_to_egvfile_map=egv_map, a_aeff_to_jobfile_map=ncsd_job_map,
             progress=progress, force=force,
         )
     elif threading and len(a_aeff_nhw_set) > 1:
         completed_job_list = _ncsd_multiple_calculations_t(
-            a_aeff_set=a_aeff_set,
-            a_aeff_to_dpath_map=dir_map,
-            a_aeff_to_egvfile_map=egv_map,
-            force=force, progress=progress,
-            str_prog_ncsd=str_prog_ncsd
+            a_aeff_set=a_aeff_set, a_aeff_to_dpath_map=dir_map,
+            a_aeff_to_egvfile_map=egv_map, force=force,
         )
     else:
         completed_job_list = _ncsd_multiple_calculations(
-            a_aeff_set=a_aeff_set,
-            a_aeff_to_dpath_map=dir_map,
-            a_aeff_to_egvfile_map=egv_map,
-            force=force, progress=progress,
-            str_prog_ncsd=str_prog_ncsd
+            a_aeff_set=a_aeff_set, a_aeff_to_dpath_map=dir_map,
+            a_aeff_to_egvfile_map=egv_map, force=force,
         )
     if remove_tmp_files:
         remove_ncsd_tmp_files(
@@ -746,10 +671,8 @@ def ncsd_single_calculation(
         )
     else:
         completed_job_list = _ncsd_multiple_calculations(
-            a_aeff_set=set([(a, aeff)]),
-            a_aeff_to_dpath_map=a_aeff_to_dpath,
-            a_aeff_to_egvfile_map=a_aeff_to_egv,
-            force=force, progress=progress,
+            a_aeff_set=set([(a, aeff)]), a_aeff_to_dpath_map=a_aeff_to_dpath,
+            a_aeff_to_egvfile_map=a_aeff_to_egv, force=force,
         )
     if remove_tmp_files:
         remove_ncsd_tmp_files(
@@ -759,11 +682,10 @@ def ncsd_single_calculation(
 
 def ncsd_exact_calculations(
         z, a_range, nmax=NMAX, nshell=N_SHELL, n1=N1, n2=N2,
-        int_scalefactor=None, remove_protons=False,
-        beta_cm=BETA_CM, num_states=NCSD_NUM_STATES, num_iter=NCSD_NUM_ITER,
-        force=False, progress=True,
-        cluster_submit=False, walltime=None, remove_tmp_files=True,
-        str_prog_ncsd_ex=STR_PROG_NCSD_EX,
+        int_scalefactor=None, remove_protons=False, beta_cm=BETA_CM,
+        num_states=NCSD_NUM_STATES, num_iter=NCSD_NUM_ITER,
+        force=False, progress=True, cluster_submit=False, walltime=None,
+        remove_tmp_files=True,
         dpath_templates=DPATH_TEMPLATES, dpath_results=DPATH_RESULTS,
 ):
     """For each A in a_range, does the NCSD calculation for A=Aeff.
@@ -788,7 +710,6 @@ def ncsd_exact_calculations(
     how much wall time is to be allotted each NCSD calculation
     :param remove_tmp_files: if true, removes all of the remnant *.tmp files
     following the NCSD calculation
-    :param str_prog_ncsd_ex: string to show before progress bar
     :param dpath_templates: path to the templates directory
     :param dpath_results: path to the results directory
     """
@@ -803,7 +724,6 @@ def ncsd_exact_calculations(
         cluster_submit=cluster_submit, walltime=walltime,
         force=force, progress=progress,
         remove_tmp_files=remove_tmp_files,
-        str_prog_ncsd=str_prog_ncsd_ex,
         dpath_templates=dpath_templates, dpath_results=dpath_results,
     )
 
@@ -894,9 +814,9 @@ def vce_single_calculation(
 def _vce_multiple_calculations_t(
         z, a_values, a_presc_list, a_range, nmax, n1, n2, nshell, ncomponent,
         a_aeff_to_dpath_map, a_aeff_to_out_fpath_map,
-        dpath_templates, dpath_results, force_trdens, progress,
+        dpath_templates, dpath_results, force_trdens,
         int_scalefactor=None, remove_protons=False,
-        max_open_threads=MAX_OPEN_THREADS, str_prog_vce=STR_PROG_VCE,
+        max_open_threads=MAX_OPEN_THREADS
 ):
     """Performs the specified TRDENS/VCE calculations in multiple threads on
     the head node.
@@ -928,11 +848,7 @@ def _vce_multiple_calculations_t(
     directory name of vce calculation
     :param force_trdens: if true, forces redoing of the TRDENS calculation,
     even if output file(s) are present
-    :param progress: if true, show a progress bar, indicating the number of
-    closed threads
     :param max_open_threads: maximum number of threads to be opened
-    :param str_prog_vce: string to be shown above progress bar
-    :return: list of completed jobs (A-prescriptions)
     """
     def _r(args, q, em):
         try:
@@ -957,9 +873,7 @@ def _vce_multiple_calculations_t(
             em.put(str(e))
         return q.put(currentThread())
     completed_job_list, error_messages, exit_code = _threaded_calculation(
-        fn=_r, todo_list=list(a_presc_list), max_open_threads=max_open_threads,
-        progress=progress, str_prog=str_prog_vce,
-    )
+        fn=_r, todo_list=list(a_presc_list), max_open_threads=max_open_threads)
     while not error_messages.empty():
         print error_messages.get()
     return completed_job_list
@@ -1043,9 +957,8 @@ def _vce_multiple_calculations_s(
 
 def _vce_multiple_calculations(
         z, a_values, a_presc_list, a_range, nmax, n1, n2, nshell, ncomponent,
-        a_aeff_to_out_fpath_map, a_aeff_to_dpath_map,
-        dpath_templates, dpath_results, force_trdens, progress,
-        int_scalefactor=None, remove_protons=False, str_prog_vce=STR_PROG_VCE,
+        a_aeff_to_out_fpath_map, a_aeff_to_dpath_map, dpath_templates,
+        dpath_results, force_trdens, int_scalefactor=None, remove_protons=False,
 ):
     """Perform the specified TRDENS/VCE calculations on the head node without
     threading.
@@ -1077,19 +990,12 @@ def _vce_multiple_calculations(
     directory name of vce calculation
     :param force_trdens: if true, forces redoing of the TRDENS calculation,
     even if output file(s) are present
-    :param progress: if true, show a progress bar, indicating the number of
-    closed threads
-    :param str_prog_vce: string to be shown above progress bar
     :return: True, if all jobs were completed; False otherwise
     """
     jobs_total = len(a_presc_list)
     jobs_completed = 0
-    if progress and jobs_total > 0:
-        print str_prog_vce
     error_messages = list()
     for ap in a_presc_list:
-        if progress:
-            _print_progress(jobs_completed, jobs_total)
         try:
             vce_single_calculation(
                 z=z, a_values=a_values,
@@ -1114,8 +1020,6 @@ def _vce_multiple_calculations(
         except OSError, e:
             error_messages.append(str(e))
             break
-    if progress:
-        _print_progress(jobs_completed, jobs_total, end=True)
     for em in error_messages:
         print em
     return jobs_completed == jobs_total
@@ -1144,10 +1048,12 @@ def vce_multiple_calculations(
     :param nshell: shell number (0=s, 1=p, 2=sd, ...)
     :param ncomponent: number of components
     (1 -> neutrons, 2 -> protons and neutrons)
-    :param a_aeff_to_dpath_map: map from (A, Aeff) to the directory in which
-    this calculation is being done
     :param a_aeff_to_out_fpath_map: map from (A, Aeff) to the *.out file
     produced by NCSD for this pair
+    :param a_aeff_to_dpath_map: map from (A, Aeff) to the directory in which
+    this calculation is being done
+    :param a_aeff_to_jobfile_map: map from (A, Aeff) to the *.sh job file for
+    submitting the TRDENS job
     :param int_scalefactor: factor by which TBME interaction file was scaled
     (for directory naming purposes); if None, directory will be named as
     usual
@@ -1183,7 +1089,7 @@ def vce_multiple_calculations(
             a_values=a_values, a_presc_list=a_presc_list, a_range=a_range,
             z=z, nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
             int_scalefactor=int_scalefactor, remove_protons=remove_protons,
-            force_trdens=force_trdens, progress=progress,
+            force_trdens=force_trdens,
             dpath_results=dpath_results, dpath_templates=dpath_templates,
             a_aeff_to_out_fpath_map=a_aeff_to_out_fpath_map,
             a_aeff_to_dpath_map=a_aeff_to_dpath_map,
@@ -1193,8 +1099,8 @@ def vce_multiple_calculations(
             a_values=a_values, a_presc_list=a_presc_list, a_range=a_range,
             z=z, nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
             int_scalefactor=int_scalefactor, remove_protons=remove_protons,
-            force_trdens=force_trdens, progress=progress,
-            dpath_results=dpath_results, dpath_templates=dpath_templates,
+            force_trdens=force_trdens, dpath_results=dpath_results,
+            dpath_templates=dpath_templates,
             a_aeff_to_out_fpath_map=a_aeff_to_out_fpath_map,
             a_aeff_to_dpath_map=a_aeff_to_dpath_map,
         )
