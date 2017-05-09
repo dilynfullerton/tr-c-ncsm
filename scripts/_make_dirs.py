@@ -82,8 +82,8 @@ def _make_base_directories(a_aeff_to_dpath_map):
 
 def make_vce_directory(
         a_prescription, nmax, n1, n2, nshell, ncomponent,
-        dpath_results=DPATH_RESULTS, dname_vce=DNAME_VCE,
-        scalefactor=None, remove_protons=False,
+        dpath_results=DPATH_RESULTS, dname_vce=DNAME_VCE, scalefactor=None,
+        remove_protons=False,
 ):
     """Makes the VCE directory for the given A-prescription
     :param a_prescription: 3-tuples of effective mass numbers, which are used
@@ -152,8 +152,8 @@ def _get_parity(a, nshell):
 
 
 def _get_mfdp_replace_map(
-        fname_tbme, outfile_name, z, a, n_hw, n_1, n_2, aeff, nshell,
-        beta_cm, num_states, num_iter,
+        fname_tbme, outfile_name, z, a, n_hw, n_1, n_2, aeff, nshell, beta_cm,
+        num_states, num_iter,
 ):
     """Returns a map from the placeholder string in mfdp.dat template file to
     the value or string that should replace it.
@@ -234,17 +234,17 @@ def _make_mfdp_file(
     temp_mfdp_path = path.join(dpath_temp, FNAME_MFDP)
     mfdp_path = path.join(dpath_elt, FNAME_MFDP)
     replace_map = _get_mfdp_replace_map(
-        fname_tbme=fname_tbme, outfile_name=fname_outfile,
-        z=z, a=a, n_hw=nhw, nshell=nshell, n_1=n1, n_2=n2, aeff=aeff,
-        beta_cm=beta_cm, num_states=num_states, num_iter=num_iter,
+        fname_tbme=fname_tbme, outfile_name=fname_outfile, z=z, a=a, n_hw=nhw,
+        nshell=nshell, n_1=n1, n_2=n2, aeff=aeff, beta_cm=beta_cm,
+        num_states=num_states, num_iter=num_iter,
     )
     _rewrite_file(src=temp_mfdp_path, dst=mfdp_path, replace_map=replace_map)
 
 
 def _make_mfdp_files(
-        a_list, aeff_list, nhw_list, z, nshell, n_1, n_2, beta_cm,
-        num_states, num_iter, a_aeff_to_dpath_map, a_aeff_to_outfile_fpath_map,
-        fname_tbme, dpath_temp,
+        a_list, aeff_list, nhw_list, z, nshell, n_1, n_2, beta_cm, num_states,
+        num_iter, a_aeff_to_dpath_map, a_aeff_to_outfile_fpath_map, fname_tbme,
+        dpath_temp,
 ):
     """Writes mfdp files for the specified NCSD calculations
     :param a_list: ordered list of A values
@@ -317,9 +317,8 @@ def _get_trdens_replace_map(a, a0, nshell, nmax):
 
 
 def make_trdens_file(
-        a, a0, nuc_dir, nshell, nmax,
-        dpath_results=DPATH_RESULTS, dpath_temp=DPATH_TEMPLATES,
-        fname_tmp_trdens_in=FNAME_TMP_TRDENS_IN
+        a, a0, nuc_dir, nshell, nmax, dpath_results=DPATH_RESULTS,
+        dpath_temp=DPATH_TEMPLATES, fname_tmp_trdens_in=FNAME_TMP_TRDENS_IN
 ):
     """Reads the trdens.in file from path_temp and rewrites it
     into path_elt in accordance with the given z, a
@@ -422,8 +421,9 @@ def _make_job_submit_file(
     _rewrite_file(src=src_fpath, dst=dst_fpath, replace_map=rep_map)
 
 
-def _make_job_submit_files(a_aeff_to_jobsub_fpath_map, walltime,
-                           fname_tmp_jobsub):
+def _make_job_submit_files(
+        a_aeff_to_jobsub_fpath_map, walltime, fname_tmp_jobsub
+):
     """For each jobsub_fpath in a_aeff_to_jobsub_fpath_map, makes the job.sh
     file for submission to the cluster. As these are all the same for a given
     walltime, one file is written and the rest are linked.
@@ -443,8 +443,8 @@ def _make_job_submit_files(a_aeff_to_jobsub_fpath_map, walltime,
         link(dst, dst2)
 
 
-def _truncate_spaces(nshell, n1, n2,
-                     dirpaths, scalefactor, remove_protons, force=False):
+def _truncate_spaces(
+        nshell, n1, n2, dirpaths, scalefactor, remove_protons, force=False):
     """For multiple directories, perform the operation of truncate_space
     :param nshell: major oscillator shell (0=s, 1=p, ...)
     :param n1: max allowed one-particle state
@@ -455,8 +455,8 @@ def _truncate_spaces(nshell, n1, n2,
     d0 = dirpaths.pop()
     # truncate interaction once
     fpath0, lpath0 = _truncate_space(
-        nshell=nshell, n1=n1, n2=n2, dpath_elt=d0,
-        scalefactor=scalefactor, remove_protons=remove_protons, force=force,
+        nshell=nshell, n1=n1, n2=n2, dpath_elt=d0, scalefactor=scalefactor,
+        remove_protons=remove_protons, force=force,
     )
     fname_tbme = path.split(fpath0)[1]
     lname_tbme = path.split(lpath0)[1]
@@ -509,9 +509,9 @@ def rename_egv_file(a6_dir, nhw, force):
 
 
 def get_a_aeff_to_dpath_map(
-        a_list, aeff_list, nhw_list, z, n1, n2,
-        scalefactor=None, remove_protons=False,
-        dpath_results=DPATH_RESULTS, dname_ncsd=DNAME_NCSD,
+        a_list, aeff_list, nhw_list, z, n1, n2, scalefactor=None,
+        remove_protons=False, dpath_results=DPATH_RESULTS,
+        dname_ncsd=DNAME_NCSD,
 ):
     """Given ordered lists a_list, aeff_list, nhw_list, constructs a map from
     (A,Aeff) to the directory in which the NCSD calculation is to be done
@@ -655,10 +655,9 @@ def remove_ncsd_tmp_files(dpaths_list):
 
 
 def prepare_directories(
-        a_list, aeff_list, nhw_list, z, n1, n2, nshell,
-        scalefactor, remove_protons, beta_cm, num_states, num_iter,
-        dpath_templates, dpath_results,
-        cluster_submit=False, walltime=None, progress=False,
+        a_list, aeff_list, nhw_list, z, n1, n2, nshell, scalefactor,
+        remove_protons, beta_cm, num_states, num_iter, dpath_templates,
+        dpath_results, cluster_submit=False, walltime=None, progress=False,
         force=False,
 ):
     """Creates directories and files necessary to run NCSD calculations.
@@ -691,14 +690,14 @@ def prepare_directories(
     """
     # get maps
     a_aeff_to_dir_map = get_a_aeff_to_dpath_map(
-        a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
-        z=z, n1=n1, n2=n2, scalefactor=scalefactor,
-        remove_protons=remove_protons, dpath_results=dpath_results,
+        a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list, z=z, n1=n1,
+        n2=n2, scalefactor=scalefactor, remove_protons=remove_protons,
+        dpath_results=dpath_results,
     )
     a_aeff_to_outfile_map = get_a_aeff_to_outfile_fpath_map(
-        a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
-        z=z, n1=n1, n2=n2, a_aeff_to_dirpath_map=a_aeff_to_dir_map,
-        scalefactor=scalefactor, remove_protons=remove_protons,
+        a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list, z=z, n1=n1,
+        n2=n2, a_aeff_to_dirpath_map=a_aeff_to_dir_map, scalefactor=scalefactor,
+        remove_protons=remove_protons,
     )
     a_aeff_to_egvfile_map = _get_a_aeff_to_egv_fpath_map(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
@@ -706,8 +705,8 @@ def prepare_directories(
     )
     if cluster_submit:
         a_aeff_to_ncsd_map, a_aeff_to_vce_map = _get_a_aeff_to_jobsub_fpath_map(
-            a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
-            z=z, n1=n1, n2=n2, a_aeff_to_dirpath_map=a_aeff_to_dir_map,
+            a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list, z=z, n1=n1,
+            n2=n2, a_aeff_to_dirpath_map=a_aeff_to_dir_map,
             scalefactor=scalefactor, remove_protons=remove_protons,
         )
     else:
@@ -720,8 +719,7 @@ def prepare_directories(
     if progress:
         print '  Truncating interaction to N1=%d N2=%d...' % (n1, n2)
     fname_tbme, lname_tbme = _truncate_spaces(
-        nshell=nshell, n1=n1, n2=n2,
-        dirpaths=a_aeff_to_dir_map.values(),
+        nshell=nshell, n1=n1, n2=n2, dirpaths=a_aeff_to_dir_map.values(),
         scalefactor=scalefactor, remove_protons=remove_protons, force=force
     )
     if progress:
@@ -730,20 +728,20 @@ def prepare_directories(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
         a_aeff_to_dpath_map=a_aeff_to_dir_map,
         a_aeff_to_outfile_fpath_map=a_aeff_to_outfile_map,
-        fname_tbme=lname_tbme, dpath_temp=dpath_templates,
-        z=z, nshell=nshell, n_1=n1, n_2=n2,
-        beta_cm=beta_cm, num_states=num_states, num_iter=num_iter,
+        fname_tbme=lname_tbme, dpath_temp=dpath_templates, z=z, nshell=nshell,
+        n_1=n1, n_2=n2, beta_cm=beta_cm, num_states=num_states,
+        num_iter=num_iter,
     )
     if cluster_submit:
         if progress:
             print '  Writing cluster submit files...'
         _make_job_submit_files(
-            a_aeff_to_jobsub_fpath_map=a_aeff_to_ncsd_map,
-            walltime=walltime, fname_tmp_jobsub=FNAME_TMP_JOBSUB_NCSD
+            a_aeff_to_jobsub_fpath_map=a_aeff_to_ncsd_map, walltime=walltime,
+            fname_tmp_jobsub=FNAME_TMP_JOBSUB_NCSD
         )
         _make_job_submit_files(
-            a_aeff_to_jobsub_fpath_map=a_aeff_to_vce_map,
-            walltime=walltime, fname_tmp_jobsub=FNAME_TMP_JOBSUB_TRDENS
+            a_aeff_to_jobsub_fpath_map=a_aeff_to_vce_map, walltime=walltime,
+            fname_tmp_jobsub=FNAME_TMP_JOBSUB_TRDENS
         )
     return (a_aeff_to_dir_map, a_aeff_to_egvfile_map, a_aeff_to_ncsd_map,
             a_aeff_to_vce_map, a_aeff_to_outfile_map)

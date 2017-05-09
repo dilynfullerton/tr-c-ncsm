@@ -432,9 +432,8 @@ def _ncsd_multiple_calculations_t(
 
 
 def _ncsd_multiple_calculations_s(
-        a_aeff_set,
-        a_aeff_to_dpath_map, a_aeff_to_egvfile_map, a_aeff_to_jobfile_map,
-        force, progress,
+        a_aeff_set, a_aeff_to_dpath_map, a_aeff_to_egvfile_map,
+        a_aeff_to_jobfile_map, force, progress,
         fname_stdout=FNAME_QSUB_STDOUT, fname_stderr=FNAME_QSUB_STDERR,
 ):
     """Does specified NCSD calculations by submitting them to the cluster
@@ -616,11 +615,11 @@ def ncsd_multiple_calculations(
 
 def ncsd_single_calculation(
         a, aeff, z, nmax=NMAX, nshell=N_SHELL, n1=N1, n2=N1,
-        scalefactor=None, remove_protons=False,
-        beta_cm=BETA_CM, num_states=NCSD_NUM_STATES, num_iter=NCSD_NUM_ITER,
-        force=False, progress=True,
-        cluster_submit=False, walltime=None, remove_tmp_files=True,
-        dpath_templates=DPATH_TEMPLATES, dpath_results=DPATH_RESULTS,
+        scalefactor=None, remove_protons=False, beta_cm=BETA_CM,
+        num_states=NCSD_NUM_STATES, num_iter=NCSD_NUM_ITER, force=False,
+        progress=True, cluster_submit=False, walltime=None,
+        remove_tmp_files=True, dpath_templates=DPATH_TEMPLATES,
+        dpath_results=DPATH_RESULTS,
 ):
     """Performs a single NCSD calculation for the given (A, Aeff) pair
     :param a: actual mass number A
@@ -683,10 +682,10 @@ def ncsd_single_calculation(
 def ncsd_exact_calculations(
         z, a_range, nmax=NMAX, nshell=N_SHELL, n1=N1, n2=N2,
         int_scalefactor=None, remove_protons=False, beta_cm=BETA_CM,
-        num_states=NCSD_NUM_STATES, num_iter=NCSD_NUM_ITER,
-        force=False, progress=True, cluster_submit=False, walltime=None,
-        remove_tmp_files=True,
-        dpath_templates=DPATH_TEMPLATES, dpath_results=DPATH_RESULTS,
+        num_states=NCSD_NUM_STATES, num_iter=NCSD_NUM_ITER, force=False,
+        progress=True, cluster_submit=False, walltime=None,
+        remove_tmp_files=True, dpath_templates=DPATH_TEMPLATES,
+        dpath_results=DPATH_RESULTS,
 ):
     """For each A in a_range, does the NCSD calculation for A=Aeff.
     For example he4_4, he5_5, he6_6, etc.
@@ -718,12 +717,10 @@ def ncsd_exact_calculations(
             '\nInvalid Nmax: %d. Nmax must be even.' % nmax)
     return ncsd_multiple_calculations(
         z=z, a_values=a_range, a_presc_list=[a_range],
-        nmax=nmax, n1=n1, n2=n2, nshell=nshell,
-        scalefactor=int_scalefactor, remove_protons=remove_protons,
-        beta_cm=beta_cm, num_states=num_states, num_iter=num_iter,
-        cluster_submit=cluster_submit, walltime=walltime,
-        force=force, progress=progress,
-        remove_tmp_files=remove_tmp_files,
+        nmax=nmax, n1=n1, n2=n2, nshell=nshell, scalefactor=int_scalefactor,
+        remove_protons=remove_protons, beta_cm=beta_cm, num_states=num_states,
+        num_iter=num_iter, cluster_submit=cluster_submit, walltime=walltime,
+        force=force, progress=progress, remove_tmp_files=remove_tmp_files,
         dpath_templates=dpath_templates, dpath_results=dpath_results,
     )
 
@@ -737,11 +734,9 @@ class DirectoryNotFoundException(Exception):
 
 
 def vce_single_calculation(
-        a_values, a_prescription, a_range, z, nmax,
-        a_aeff_dir_map, a_aeff_outfile_map,
-        n1=N1, n2=N1, nshell=-1, ncomponent=-1,
-        int_scalefactor=None, remove_protons=False,
-        force_trdens=False,
+        a_values, a_prescription, a_range, z, nmax, a_aeff_dir_map,
+        a_aeff_outfile_map, n1=N1, n2=N1, nshell=-1, ncomponent=-1,
+        int_scalefactor=None, remove_protons=False, force_trdens=False,
         dpath_results=DPATH_RESULTS, dpath_templates=DPATH_TEMPLATES,
 ):
     """Valence cluster expansion for a single A-prescription
@@ -782,9 +777,9 @@ def vce_single_calculation(
     a_aeff6 = (a_values[2], a_prescription[2])
     dpath_a6 = a_aeff_dir_map[a_aeff6]
     make_trdens_file(
-        a=a_values[2], a0=a_values[0],
-        nshell=nshell, nmax=nmax, nuc_dir=dpath_a6,
-        dpath_results=dpath_results, dpath_temp=dpath_templates
+        a=a_values[2], a0=a_values[0], nshell=nshell, nmax=nmax,
+        nuc_dir=dpath_a6, dpath_results=dpath_results,
+        dpath_temp=dpath_templates
     )
     nhw = nmax + _min_orbitals(z) + _min_orbitals(a_values[2] - z)
     try:
@@ -797,8 +792,8 @@ def vce_single_calculation(
         raise
     # do valence cluster expansion
     vce_dirpath = make_vce_directory(
-        a_prescription=a_prescription, nmax=nmax, n1=n1, n2=n2,
-        nshell=nshell, ncomponent=ncomponent, scalefactor=int_scalefactor,
+        a_prescription=a_prescription, nmax=nmax, n1=n1, n2=n2, nshell=nshell,
+        ncomponent=ncomponent, scalefactor=int_scalefactor,
         remove_protons=remove_protons, dpath_results=dpath_results,
     )
     try:
@@ -813,9 +808,8 @@ def vce_single_calculation(
 
 def _vce_multiple_calculations_t(
         z, a_values, a_presc_list, a_range, nmax, n1, n2, nshell, ncomponent,
-        a_aeff_to_dpath_map, a_aeff_to_out_fpath_map,
-        dpath_templates, dpath_results, force_trdens,
-        int_scalefactor=None, remove_protons=False,
+        a_aeff_to_dpath_map, a_aeff_to_out_fpath_map, dpath_templates,
+        dpath_results, force_trdens, int_scalefactor=None, remove_protons=False,
         max_open_threads=MAX_OPEN_THREADS
 ):
     """Performs the specified TRDENS/VCE calculations in multiple threads on
@@ -854,13 +848,11 @@ def _vce_multiple_calculations_t(
         try:
             ap0 = args
             vce_single_calculation(
-                z=z, a_values=a_values,
-                a_prescription=ap0, a_range=a_range,
+                z=z, a_values=a_values, a_prescription=ap0, a_range=a_range,
                 nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
                 int_scalefactor=int_scalefactor, remove_protons=remove_protons,
-                force_trdens=force_trdens,
-                dpath_templates=dpath_templates, dpath_results=dpath_results,
-                a_aeff_dir_map=a_aeff_to_dpath_map,
+                force_trdens=force_trdens, dpath_templates=dpath_templates,
+                dpath_results=dpath_results, a_aeff_dir_map=a_aeff_to_dpath_map,
                 a_aeff_outfile_map=a_aeff_to_out_fpath_map,
             )
         except EgvFileNotFoundException, e:
@@ -896,17 +888,17 @@ def _vce_multiple_calculations_s(
     # make trdens files
     for trjob in trdens_jobs:
         make_trdens_file(
-            a=trjob[0], a0=a_values[0],
-            nshell=nshell, nmax=nmax, nuc_dir=a_aeff_to_dpath_map[trjob],
-            dpath_results=dpath_results, dpath_temp=dpath_templates,
+            a=trjob[0], a0=a_values[0], nshell=nshell, nmax=nmax,
+            nuc_dir=a_aeff_to_dpath_map[trjob], dpath_results=dpath_results,
+            dpath_temp=dpath_templates,
         )
     # rename egv files
     error_messages = list()
     for trjob in trdens_jobs:
         nhw = nmax + _min_orbitals(z) + _min_orbitals(trjob[0]-z)
         try:
-            rename_egv_file(a6_dir=a_aeff_to_dpath_map[trjob], nhw=nhw,
-                            force=force_trdens)
+            rename_egv_file(
+                a6_dir=a_aeff_to_dpath_map[trjob], nhw=nhw, force=force_trdens)
         except EgvFileNotFoundException, e:
             error_messages.append(str(e))
             continue
@@ -919,13 +911,10 @@ def _vce_multiple_calculations_s(
     if progress:
         print '  Submitting TRDENS job to cluster'
     _ncsd_multiple_calculations_s(
-        a_aeff_set=trdens_jobs,
-        a_aeff_to_dpath_map=a_aeff_to_dpath_map,
+        a_aeff_set=trdens_jobs, a_aeff_to_dpath_map=a_aeff_to_dpath_map,
         a_aeff_to_egvfile_map=a_aeff_to_trdens_out,
-        a_aeff_to_jobfile_map=a_aeff_to_jobfile_map,
-        force=force_trdens,
-        progress=progress,
-        fname_stdout=FNAME_TRDENS_STDOUT,
+        a_aeff_to_jobfile_map=a_aeff_to_jobfile_map, force=force_trdens,
+        progress=progress, fname_stdout=FNAME_TRDENS_STDOUT,
         fname_stderr=FNAME_TRDENS_STDERR,
     )
     # do valence cluster expansion
@@ -940,8 +929,7 @@ def _vce_multiple_calculations_s(
         try:
             _run_vce(
                 a_values=a_values, a_prescription=a_prescription,
-                a_range=a_range,
-                nshell=nshell,
+                a_range=a_range, nshell=nshell,
                 dirpath_aeff6=a_aeff_to_dpath_map[
                     (a_values[2], a_prescription[2])],
                 dirpath_vce=vce_dirpath,
@@ -998,12 +986,11 @@ def _vce_multiple_calculations(
     for ap in a_presc_list:
         try:
             vce_single_calculation(
-                z=z, a_values=a_values,
-                a_prescription=ap, a_range=a_range,
+                z=z, a_values=a_values, a_prescription=ap, a_range=a_range,
                 nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
                 int_scalefactor=int_scalefactor, remove_protons=remove_protons,
-                force_trdens=force_trdens,
-                dpath_results=dpath_results, dpath_templates=dpath_templates,
+                force_trdens=force_trdens, dpath_results=dpath_results,
+                dpath_templates=dpath_templates,
                 a_aeff_outfile_map=a_aeff_to_out_fpath_map,
                 a_aeff_dir_map=a_aeff_to_dpath_map,
             )
@@ -1028,8 +1015,8 @@ def _vce_multiple_calculations(
 def vce_multiple_calculations(
         a_values, a_presc_list, a_range, z, nmax, n1, n2, nshell, ncomponent,
         a_aeff_to_out_fpath_map, a_aeff_to_dpath_map, a_aeff_to_jobfile_map,
-        force_trdens, progress, threading,
-        int_scalefactor=None, remove_protons=False, cluster_submit=True,
+        force_trdens, progress, threading, int_scalefactor=None,
+        remove_protons=False, cluster_submit=True,
         dpath_templates=DPATH_TEMPLATES, dpath_results=DPATH_RESULTS,
 ):
     """For every A prescription in a_presc_list, performs the valence
@@ -1089,8 +1076,8 @@ def vce_multiple_calculations(
             a_values=a_values, a_presc_list=a_presc_list, a_range=a_range,
             z=z, nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
             int_scalefactor=int_scalefactor, remove_protons=remove_protons,
-            force_trdens=force_trdens,
-            dpath_results=dpath_results, dpath_templates=dpath_templates,
+            force_trdens=force_trdens, dpath_results=dpath_results,
+            dpath_templates=dpath_templates,
             a_aeff_to_out_fpath_map=a_aeff_to_out_fpath_map,
             a_aeff_to_dpath_map=a_aeff_to_dpath_map,
         )
@@ -1109,14 +1096,12 @@ def vce_multiple_calculations(
 # TODO: add a check to ensure num_states is great enough for required VCE
 # TODO: calculations
 def ncsd_vce_calculations(
-        a_prescriptions, a_range, z=None,
-        nmax=NMAX, nshell=N_SHELL, ncomponent=N_COMPONENT, n1=N1, n2=N2,
-        int_scalefactor=None, remove_protons=False,
-        beta_cm=BETA_CM, num_states=NCSD_NUM_STATES, num_iter=NCSD_NUM_ITER,
-        force_ncsd=False, force_trdens=False, force_all=False,
-        progress=True, threading=True,
-        cluster_submit=True, walltime=NCSD_CLUSTER_WALLTIME,
-        remove_tmp_files=True,
+        a_prescriptions, a_range, z=None, nmax=NMAX, nshell=N_SHELL,
+        ncomponent=N_COMPONENT, n1=N1, n2=N2, int_scalefactor=None,
+        remove_protons=False, beta_cm=BETA_CM, num_states=NCSD_NUM_STATES,
+        num_iter=NCSD_NUM_ITER, force_ncsd=False, force_trdens=False,
+        force_all=False, progress=True, threading=True, cluster_submit=True,
+        walltime=NCSD_CLUSTER_WALLTIME, remove_tmp_files=True,
         dpath_templates=DPATH_TEMPLATES, dpath_results=DPATH_RESULTS,
 ):
     """Given a sequence or generator of A prescriptions, does the NCSD/VCE
@@ -1163,15 +1148,13 @@ def ncsd_vce_calculations(
         z = int(a_values[0] / ncomponent)
     a_presc_list = list(a_prescriptions)
     a_aeff_maps, completed_job_list = ncsd_multiple_calculations(
-        z=z, a_values=a_values, a_presc_list=a_presc_list,
-        nmax=nmax, n1=n1, n2=n2, nshell=nshell,
-        scalefactor=int_scalefactor, remove_protons=remove_protons,
-        beta_cm=beta_cm, num_states=num_states, num_iter=num_iter,
-        force=force_all or force_ncsd,
-        progress=progress, threading=threading,
-        cluster_submit=cluster_submit, walltime=walltime,
-        remove_tmp_files=remove_tmp_files,
-        dpath_templates=dpath_templates, dpath_results=dpath_results,
+        z=z, a_values=a_values, a_presc_list=a_presc_list, nmax=nmax, n1=n1,
+        n2=n2, nshell=nshell, scalefactor=int_scalefactor,
+        remove_protons=remove_protons, beta_cm=beta_cm, num_states=num_states,
+        num_iter=num_iter, force=force_all or force_ncsd, progress=progress,
+        threading=threading, cluster_submit=cluster_submit, walltime=walltime,
+        remove_tmp_files=remove_tmp_files, dpath_templates=dpath_templates,
+        dpath_results=dpath_results,
     )
     dir_map, egv_map, ncsd_job_map, vce_job_map, outfile_map = a_aeff_maps
     vce_a_presc_list = list()
@@ -1182,16 +1165,13 @@ def ncsd_vce_calculations(
         else:
             vce_a_presc_list.append(presc)
     vce_multiple_calculations(
-        z=z, a_values=a_values, a_presc_list=vce_a_presc_list,
-        a_range=a_range, nmax=nmax, n1=n1, n2=n2,
-        nshell=nshell, ncomponent=ncomponent,
+        z=z, a_values=a_values, a_presc_list=vce_a_presc_list, a_range=a_range,
+        nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
         int_scalefactor=int_scalefactor, remove_protons=remove_protons,
-        force_trdens=force_trdens or force_all,
-        progress=progress, threading=threading,
-        dpath_results=dpath_results, dpath_templates=dpath_templates,
-        cluster_submit=cluster_submit,
-        a_aeff_to_out_fpath_map=outfile_map,
-        a_aeff_to_dpath_map=dir_map,
+        force_trdens=force_trdens or force_all, progress=progress,
+        threading=threading, dpath_results=dpath_results,
+        dpath_templates=dpath_templates, cluster_submit=cluster_submit,
+        a_aeff_to_out_fpath_map=outfile_map, a_aeff_to_dpath_map=dir_map,
         a_aeff_to_jobfile_map=vce_job_map,
     )
 
@@ -1299,18 +1279,18 @@ if __name__ == "__main__":
         ncsd_vce_calculations(
             a_prescriptions=a_prescriptions0, a_range=a_range0, z=z_0,
             int_scalefactor=scalefactor0, remove_protons=rm_prot0,
-            force_ncsd=f_ncsd, force_trdens=f_trdens,
-            force_all=f_all, progress=progress0,
-            cluster_submit=cluster_submit0, walltime=walltime0,
+            force_ncsd=f_ncsd, force_trdens=f_trdens, force_all=f_all,
+            progress=progress0, cluster_submit=cluster_submit0,
+            walltime=walltime0,
         )
     elif len(other_args) == 2:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
         ncsd_vce_calculations(
             a_prescriptions=a_prescriptions0, a_range=a_range0, z=z_0,
             int_scalefactor=scalefactor0, remove_protons=rm_prot0,
-            force_ncsd=f_ncsd, force_trdens=f_trdens,
-            force_all=f_all, progress=progress0,
-            cluster_submit=cluster_submit0, walltime=walltime0,
+            force_ncsd=f_ncsd, force_trdens=f_trdens, force_all=f_all,
+            progress=progress0, cluster_submit=cluster_submit0,
+            walltime=walltime0,
         )
     elif len(other_args) == 3:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
@@ -1318,20 +1298,19 @@ if __name__ == "__main__":
         ncsd_vce_calculations(
             a_prescriptions=a_prescriptions0, a_range=a_range0, z=z_0,
             nmax=nmax_0, int_scalefactor=scalefactor0, remove_protons=rm_prot0,
-            force_ncsd=f_ncsd, force_trdens=f_trdens,
-            force_all=f_all, progress=progress0,
-            cluster_submit=cluster_submit0, walltime=walltime0,
+            force_ncsd=f_ncsd, force_trdens=f_trdens, force_all=f_all,
+            progress=progress0, cluster_submit=cluster_submit0,
+            walltime=walltime0,
         )
     elif len(other_args) == 4:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
         nmax_0, nshell_0 = [int(x) for x in other_args[2:]]
         ncsd_vce_calculations(
             a_prescriptions=a_prescriptions0, a_range=a_range0, z=z_0,
-            nmax=nmax_0, nshell=nshell_0,
-            int_scalefactor=scalefactor0, remove_protons=rm_prot0,
-            force_ncsd=f_ncsd, force_trdens=f_trdens,
-            force_all=f_all, progress=progress0,
-            cluster_submit=cluster_submit0, walltime=walltime0,
+            nmax=nmax_0, nshell=nshell_0, int_scalefactor=scalefactor0,
+            remove_protons=rm_prot0, force_ncsd=f_ncsd, force_trdens=f_trdens,
+            force_all=f_all, progress=progress0, cluster_submit=cluster_submit0,
+            walltime=walltime0,
         )
     elif len(other_args) == 5:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
@@ -1340,9 +1319,9 @@ if __name__ == "__main__":
             a_prescriptions=a_prescriptions0, a_range=a_range0, z=z_0,
             nmax=nmax_0, nshell=nshell_0, ncomponent=ncomponent_0,
             int_scalefactor=scalefactor0, remove_protons=rm_prot0,
-            force_ncsd=f_ncsd, force_trdens=f_trdens,
-            force_all=f_all, progress=progress0,
-            cluster_submit=cluster_submit0, walltime=walltime0,
+            force_ncsd=f_ncsd, force_trdens=f_trdens, force_all=f_all,
+            progress=progress0, cluster_submit=cluster_submit0,
+            walltime=walltime0,
         )
     elif len(other_args) == 6:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
@@ -1352,9 +1331,9 @@ if __name__ == "__main__":
             a_prescriptions=a_prescriptions0, a_range=a_range0, z=z_0,
             nmax=nmax_0, nshell=nshell_0, ncomponent=ncomponent_0,
             int_scalefactor=scalefactor0, remove_protons=rm_prot0,
-            force_ncsd=f_ncsd, force_trdens=f_trdens,
-            force_all=f_all, progress=progress0,
-            cluster_submit=cluster_submit0, walltime=walltime0,
+            force_ncsd=f_ncsd, force_trdens=f_trdens, force_all=f_all,
+            progress=progress0, cluster_submit=cluster_submit0,
+            walltime=walltime0,
         )
     elif len(other_args) == 8:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
@@ -1362,12 +1341,11 @@ if __name__ == "__main__":
         nmax_0, nshell_0, ncomponent_0, z_0, n1_0, n2_0 = rest_args
         ncsd_vce_calculations(
             a_prescriptions=a_prescriptions0, a_range=a_range0, z=z_0,
-            nmax=nmax_0, n1=n1_0, n2=n2_0,
-            nshell=nshell_0, ncomponent=ncomponent_0,
-            int_scalefactor=scalefactor0, remove_protons=rm_prot0,
-            force_ncsd=f_ncsd, force_trdens=f_trdens,
-            force_all=f_all, progress=progress0,
-            cluster_submit=cluster_submit0, walltime=walltime0,
+            nmax=nmax_0, n1=n1_0, n2=n2_0, nshell=nshell_0,
+            ncomponent=ncomponent_0, int_scalefactor=scalefactor0,
+            remove_protons=rm_prot0, force_ncsd=f_ncsd, force_trdens=f_trdens,
+            force_all=f_all, progress=progress0, cluster_submit=cluster_submit0,
+            walltime=walltime0,
         )
     elif len(other_args) == 9:
         a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
@@ -1375,11 +1353,10 @@ if __name__ == "__main__":
         nmax_0, nshell_0, ncomponent_0, z_0, n1_0, n2_0, rm_prot0 = rest_args
         ncsd_vce_calculations(
             a_prescriptions=a_prescriptions0, a_range=a_range0, z=z_0,
-            nmax=nmax_0, n1=n1_0, n2=n2_0,
-            nshell=nshell_0, ncomponent=ncomponent_0,
-            int_scalefactor=scalefactor0, remove_protons=bool(int(rm_prot0)),
-            force_ncsd=f_ncsd, force_trdens=f_trdens,
-            force_all=f_all, progress=progress0,
+            nmax=nmax_0, n1=n1_0, n2=n2_0, nshell=nshell_0,
+            ncomponent=ncomponent_0, int_scalefactor=scalefactor0,
+            remove_protons=bool(int(rm_prot0)), force_ncsd=f_ncsd,
+            force_trdens=f_trdens, force_all=f_all, progress=progress0,
             cluster_submit=cluster_submit0, walltime=walltime0,
         )
     else:
