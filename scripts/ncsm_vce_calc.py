@@ -1123,11 +1123,9 @@ def _vce_multiple_calculations(
 
 def vce_multiple_calculations(
         a_values, a_presc_list, a_range, z, nmax, n1, n2, nshell, ncomponent,
-        a_aeff_to_out_fpath_map, a_aeff_to_dpath_map,
-        a_aeff_to_jobfile_map,
+        a_aeff_to_out_fpath_map, a_aeff_to_dpath_map, a_aeff_to_jobfile_map,
         force_trdens, progress, threading,
-        int_scalefactor=None, remove_protons=False,
-        cluster_submit=True,
+        int_scalefactor=None, remove_protons=False, cluster_submit=True,
         dpath_templates=DPATH_TEMPLATES, dpath_results=DPATH_RESULTS,
 ):
     """For every A prescription in a_presc_list, performs the valence
@@ -1292,12 +1290,12 @@ def ncsd_vce_calculations(
     )
 
 
-def _exact(sequence, r):
+def generate_exact(sequence, r):
     for s in sequence:
         yield [s] * r
 
 
-def _combinations(sequence, r):
+def generate_combinations(sequence, r):
     """Given a sequence of unique elements, yields all unique length-r
     combinations of those elements WITHOUT repeats
     :param sequence: sequence of unique elements
@@ -1308,12 +1306,12 @@ def _combinations(sequence, r):
     else:
         n = len(sequence)
         for i in range(n):
-            m = _combinations(sequence[i+1:], r-1)
+            m = generate_combinations(sequence[i + 1:], r - 1)
             for mi in m:
                 yield [sequence[i]] + mi
 
 
-def _multicombinations(sequence, r):
+def generate_multicombinations(sequence, r):
     """Given a sequence, yields all possible length-r multi-combinations
     of items of the sequence, where a multi-combination is
     a unique combination of elements where repeats ARE allowd
@@ -1326,7 +1324,7 @@ def _multicombinations(sequence, r):
     else:
         n = len(sequence)
         for i in range(n):
-            m = _multicombinations(sequence[i:], r-1)
+            m = generate_multicombinations(sequence[i:], r - 1)
             for mi in m:
                 yield [sequence[i]] + mi
 
@@ -1381,11 +1379,11 @@ if __name__ == "__main__":
         ap_min, ap_max = [int(x) for x in user_args[0:2]]
         ap_range = range(ap_min, ap_max+1)
         if com:
-            a_prescriptions0 = _combinations(ap_range, 3)
+            a_prescriptions0 = generate_combinations(ap_range, 3)
         elif multicom:
-            a_prescriptions0 = _multicombinations(ap_range, 3)
+            a_prescriptions0 = generate_multicombinations(ap_range, 3)
         else:
-            a_prescriptions0 = _exact(ap_range, 3)
+            a_prescriptions0 = generate_exact(ap_range, 3)
         other_args = user_args[2:]
     else:
         a_prescriptions0 = [tuple([int(x) for x in user_args[0:3]])]

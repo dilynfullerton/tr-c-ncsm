@@ -1,11 +1,11 @@
 #!/usr/bin/python
 
 from ncsm_vce_calc import ncsd_vce_calculations, ncsd_exact_calculations
-from ncsm_vce_calc import _exact
+from ncsm_vce_calc import generate_exact
 
 # Script
 AP_RANGE = range(16, 22+1)
-A_PRESCRIPTIONS = list(_exact(AP_RANGE, 3)) + [[16, 17, 18]]
+A_PRESCRIPTIONS = list(generate_exact(AP_RANGE, 3)) + [[16, 17, 18]]
 Z = 8  # Oxygen
 NMAX = 2
 N_SHELL = 2  # sd shell
