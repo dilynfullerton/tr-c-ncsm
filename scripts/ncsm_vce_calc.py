@@ -193,11 +193,14 @@ def _generating_a_values(n_shell, n_component, z):
     (16, 17, 18)
     :param n_shell: major oscillator shell
     """
-    if z is None:
-        a_0 = int((n_shell + 2) * (n_shell + 1) * n_shell / 3 * n_component)
-        return a_0, a_0 + 1, a_0 + 2
-    else:
-        return 2*z, 2*z + 1, 2*z + 2
+    # if z is None:
+    #     a_0 = int((n_shell + 2) * (n_shell + 1) * n_shell / 3 * n_component)
+    #     return a_0, a_0 + 1, a_0 + 2
+    # else:
+    #     return 2*z, 2*z + 1, 2*z + 2
+    a_0 = int((n_shell + 2) * (n_shell + 1) * n_shell / 3 * n_component)
+    return a_0, a_0 + 1, a_0 + 2
+
 
 
 def _min_orbitals(z):
