@@ -10,7 +10,7 @@ available functionality in the form of a UNIX-style command.
 To run as a script (assuming this file has been added to PATH):
 
     $ ncsm_single_calc.py [-f] [-e] [-v] [-s SCALEFACTOR] [-t WALLTIME]
-    Z A [Aeff [nmax [nshell [rm_prot [n1 n2]]]]]
+    Z A [AEFF [NMAX [NSHELL [RM_PROT [N1 N2]]]]]
 
 In the current directory run NCSD for a single element with a single A
 value and Aeff value, or (if -e) run NCSD for a range of A values with

@@ -138,6 +138,7 @@ from os import path, remove, link
 from subprocess import Popen, PIPE
 from sys import argv
 from threading import Thread, currentThread
+from collections import deque
 from FdoVCE import run as vce_calculation
 from InvalidNumberOfArgumentsException import InvalidNumberOfArgumentsException
 
@@ -1241,6 +1242,11 @@ if __name__ == "__main__":
     scalefactor0 = None
     rm_prot0 = False
     z_0 = None
+    nmax_0 = NMAX
+    nshell_0 = N_SHELL
+    ncomponent_0 = N_COMPONENT
+    n1_0 = N1
+    n2_0 = N2
     while True:
         a0 = user_args[0]
         if a0 == '-f' or a0 == '--force':
@@ -1277,94 +1283,35 @@ if __name__ == "__main__":
     else:
         a_prescriptions0 = [tuple([int(x) for x in user_args[0:3]])]
         other_args = user_args[3:]
-    if len(other_args) == 1:
-        a_range0 = [int(other_args[0])]
-        ncsd_vce_calculations(
-            a_prescriptions=a_prescriptions0, a_range=a_range0, z=z_0,
-            int_scalefactor=scalefactor0, remove_protons=rm_prot0,
-            force_ncsd=f_ncsd, force_trdens=f_trdens, force_all=f_all,
-            progress=progress0, cluster_submit=cluster_submit0,
-            walltime=walltime0,
-        )
-    elif len(other_args) == 2:
-        a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
-        ncsd_vce_calculations(
-            a_prescriptions=a_prescriptions0, a_range=a_range0, z=z_0,
-            int_scalefactor=scalefactor0, remove_protons=rm_prot0,
-            force_ncsd=f_ncsd, force_trdens=f_trdens, force_all=f_all,
-            progress=progress0, cluster_submit=cluster_submit0,
-            walltime=walltime0,
-        )
-    elif len(other_args) == 3:
-        a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
-        nmax_0 = int(other_args[2])
-        ncsd_vce_calculations(
-            a_prescriptions=a_prescriptions0, a_range=a_range0, z=z_0,
-            nmax=nmax_0, int_scalefactor=scalefactor0, remove_protons=rm_prot0,
-            force_ncsd=f_ncsd, force_trdens=f_trdens, force_all=f_all,
-            progress=progress0, cluster_submit=cluster_submit0,
-            walltime=walltime0,
-        )
-    elif len(other_args) == 4:
-        a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
-        nmax_0, nshell_0 = [int(x) for x in other_args[2:]]
-        ncsd_vce_calculations(
-            a_prescriptions=a_prescriptions0, a_range=a_range0, z=z_0,
-            nmax=nmax_0, nshell=nshell_0, int_scalefactor=scalefactor0,
-            remove_protons=rm_prot0, force_ncsd=f_ncsd, force_trdens=f_trdens,
-            force_all=f_all, progress=progress0, cluster_submit=cluster_submit0,
-            walltime=walltime0,
-        )
-    elif len(other_args) == 5:
-        a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
-        nmax_0, nshell_0, ncomponent_0 = [int(x) for x in other_args[2:]]
-        ncsd_vce_calculations(
-            a_prescriptions=a_prescriptions0, a_range=a_range0, z=z_0,
-            nmax=nmax_0, nshell=nshell_0, ncomponent=ncomponent_0,
-            int_scalefactor=scalefactor0, remove_protons=rm_prot0,
-            force_ncsd=f_ncsd, force_trdens=f_trdens, force_all=f_all,
-            progress=progress0, cluster_submit=cluster_submit0,
-            walltime=walltime0,
-        )
-    elif len(other_args) == 6:
-        a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
-        rest_args = [int(x) for x in other_args[2:]]
-        nmax_0, nshell_0, ncomponent_0, z_0 = rest_args
-        ncsd_vce_calculations(
-            a_prescriptions=a_prescriptions0, a_range=a_range0, z=z_0,
-            nmax=nmax_0, nshell=nshell_0, ncomponent=ncomponent_0,
-            int_scalefactor=scalefactor0, remove_protons=rm_prot0,
-            force_ncsd=f_ncsd, force_trdens=f_trdens, force_all=f_all,
-            progress=progress0, cluster_submit=cluster_submit0,
-            walltime=walltime0,
-        )
-    elif len(other_args) == 8:
-        a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
-        rest_args = [int(x) for x in other_args[2:]]
-        nmax_0, nshell_0, ncomponent_0, z_0, n1_0, n2_0 = rest_args
-        ncsd_vce_calculations(
-            a_prescriptions=a_prescriptions0, a_range=a_range0, z=z_0,
-            nmax=nmax_0, n1=n1_0, n2=n2_0, nshell=nshell_0,
-            ncomponent=ncomponent_0, int_scalefactor=scalefactor0,
-            remove_protons=rm_prot0, force_ncsd=f_ncsd, force_trdens=f_trdens,
-            force_all=f_all, progress=progress0, cluster_submit=cluster_submit0,
-            walltime=walltime0,
-        )
-    elif len(other_args) == 9:
-        a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
-        rest_args = [int(x) for x in other_args[2:]]
-        nmax_0, nshell_0, ncomponent_0, z_0, n1_0, n2_0, rm_prot0 = rest_args
-        ncsd_vce_calculations(
-            a_prescriptions=a_prescriptions0, a_range=a_range0, z=z_0,
-            nmax=nmax_0, n1=n1_0, n2=n2_0, nshell=nshell_0,
-            ncomponent=ncomponent_0, int_scalefactor=scalefactor0,
-            remove_protons=bool(int(rm_prot0)), force_ncsd=f_ncsd,
-            force_trdens=f_trdens, force_all=f_all, progress=progress0,
-            cluster_submit=cluster_submit0, walltime=walltime0,
-        )
-    else:
+    if len(other_args) < 1:
         raise InvalidNumberOfArgumentsException(
             '%d' % (len(argv) - 1,) +
             ' is not a valid number of arguments for ncsm_vce_calc.py.' +
-            'Please enter 3-10 arguments.'
+            'Please enter at least 3 arguments.'
         )
+    elif len(other_args) == 1:
+        a_range0 = [int(other_args[0])]
+    else:
+        a_range0 = list(range(int(other_args[0]), int(other_args[1])+1))
+        other_args = deque(other_args[2:])
+        if len(other_args) is not 0:
+            nmax_0 = other_args.popleft()
+        if len(other_args) is not 0:
+            nshell_0 = other_args.popleft()
+        if len(other_args) is not 0:
+            ncomponent_0 = other_args.popleft()
+        if len(other_args) is not 0:
+            z_0 = other_args.popleft()
+        if len(other_args) > 1:
+            n1_0 = other_args.popleft()
+            n2_0 = other_args.popleft()
+        if len(other_args) is not 0:
+            rm_prot0 = other_args.popleft()
+    ncsd_vce_calculations(
+        a_prescriptions=a_prescriptions0, a_range=a_range0, z=z_0,
+        nmax=nmax_0, n1=n1_0, n2=n2_0, nshell=nshell_0,
+        ncomponent=ncomponent_0, int_scalefactor=scalefactor0,
+        remove_protons=bool(int(rm_prot0)), force_ncsd=f_ncsd,
+        force_trdens=f_trdens, force_all=f_all, progress=progress0,
+        cluster_submit=cluster_submit0, walltime=walltime0,
+    )
