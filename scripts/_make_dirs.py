@@ -717,16 +717,18 @@ def prepare_directories(
         a_aeff_to_vce_map = dict()
     # make stuff
     if progress:
-        print '  Making directories...'
+        print '  Making directories'
     _make_base_directories(a_aeff_to_dpath_map=a_aeff_to_dir_map)
-    if progress:
-        print '  Truncating interaction to N1=%d N2=%d...' % (n1, n2)
+    if progress and (n1, n2) != (15, 15):
+        print '  Truncating interaction to N1=%d N2=%d' % (n1, n2)
+    if progress and (scalefactor is not None) and (scalefactor != 1.0):
+        print '  Scaling interaction by %3.2f' % scalefactor
     fname_tbme, lname_tbme = _truncate_spaces(
         nshell=nshell, n1=n1, n2=n2, dirpaths=a_aeff_to_dir_map.values(),
         scalefactor=scalefactor, remove_protons=remove_protons, force=force
     )
     if progress:
-        print '  Writing mfdp files...'
+        print '  Writing mfdp files'
     _make_mfdp_files(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
         a_aeff_to_dpath_map=a_aeff_to_dir_map,
@@ -737,7 +739,7 @@ def prepare_directories(
     )
     if cluster_submit:
         if progress:
-            print '  Writing cluster submit files...'
+            print '  Writing cluster submit files'
         _make_job_submit_files(
             a_aeff_to_jobsub_fpath_map=a_aeff_to_ncsd_map, walltime=walltime,
             fname_tmp_jobsub=FNAME_TMP_JOBSUB_NCSD
