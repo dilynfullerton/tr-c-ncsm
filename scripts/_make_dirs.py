@@ -722,7 +722,7 @@ def prepare_directories(
     if progress and (n1, n2) != (15, 15):
         print '  Truncating interaction to N1=%d N2=%d' % (n1, n2)
     if progress and (scalefactor is not None) and (scalefactor != 1.0):
-        print '  Scaling interaction by %3.2f' % scalefactor
+        print '  Scaling interaction off diagonal terms by %3.2f' % scalefactor
     fname_tbme, lname_tbme = _truncate_spaces(
         nshell=nshell, n1=n1, n2=n2, dirpaths=a_aeff_to_dir_map.values(),
         scalefactor=scalefactor, remove_protons=remove_protons, force=force
