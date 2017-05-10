@@ -19,7 +19,7 @@ ncsd_vce_calculations(
     nshell=N_SHELL,
     ncomponent=2,
     n1=15, n2=15,
-    int_scalefactor=0.00,
+    int_scalefactor=None,
     cluster_submit=True,
     walltime='4:00:00',
     remove_protons=False,
