@@ -5,6 +5,7 @@ from ncsm_vce_calc import generate_exact
 
 # Script
 AP_RANGE = range(4, 9+1)
+EX_RANGE = list(AP_RANGE)[3:]
 A_PRESCRIPTIONS = list(generate_exact(AP_RANGE, 3)) + [[4, 5, 6]]
 Z = 2  # Helium
 NMAX = 0
@@ -30,7 +31,7 @@ ncsd_vce_calculations(
 )
 
 ncsd_exact_calculations(
-    a_range=AP_RANGE,
+    a_range=EX_RANGE,
     z=Z,
     nmax=NMAX,
     nshell=N_SHELL,
