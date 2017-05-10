@@ -6,8 +6,8 @@ prescriptions.
 ##### Form:
    ```bash
    ncsm_vce_calc.py [-f [F_ARGS]] [-v] [-s SCALEFACTOR] [-t WALLTIME]
-   ( AEFF4 AEFF5 AEFF6 | (-e|-m|-M) AP_MIN AP_MAX )
-   A_MIN [A_MAX [NMAX [NSHELL [NCOMPONENT [Z [N1 N2 [RM_PROT]]]]]]]
+       ( AEFF4 AEFF5 AEFF6 | (-e|-m|-M) AP_MIN AP_MAX )
+       A_MIN [A_MAX [NMAX [NSHELL [NCOMPONENT [Z [N1 N2 [RM_PROT]]]]]]]
    ```
 
 ##### Flags:
@@ -84,7 +84,7 @@ Perform `NCSD` calculations only for a single mass number or for a range.
 ##### Form:
    ```bash
    ncsm_single_calc.py [-f] [-e] [-v] [-s SCALEFACTOR] [-t WALLTIME]
-   Z A [AEFF [NMAX [NSHELL [RM_PROT [N1 N2]]]]]
+       Z A [AEFF [NMAX [NSHELL [RM_PROT [N1 N2]]]]]
    ```
 
 ##### Flags:

@@ -23,45 +23,45 @@ However, this python file is also configured to run as a UNIX-style command.
 
 To run as a script (assuming this file has been added to PATH):
 
-    $ ncsm_vce_calc.py [-f [nt]] [-v] [-s scalefactor] [-t walltime]
-    ( Aeff4 Aeff5 Aeff6 | [-m|-M|-e] Ap_min Ap_max) Amin
-    [Amax [nmax [nshell [ncomponent [Z [n1 n2 [rm_prot]]]]]]]
+    $ ncsm_vce_calc.py [-f [nt]] [-v] [-s SCALEFACTOR] [-t WALLTIME]
+        ( AEFF4 AEFF5 AEFF6 | [-m|-M|-e] AP_MIN AP_MAX) AMIN
+        [AMAX [NMAX [NSHELL [NCOMPONENT [Z [N1 N2 [RM_PROT]]]]]]]
 
 In the current directory, creates a RESULTS directory in which the
 Valence Cluster Expansion is performed according to the A-prescription(s)
-given by (Aeff4, Aeff5, and Aeff6) or the range of A prescriptions
-specified by Ap_min and Ap_max if -m or -M precedes the arguments.
+given by (AEFF4, AEFF5, and AEFF6) or the range of A prescriptions
+specified by AP_MIN and AP_MAX if -m or -M precedes the arguments.
 
 Note that unlike typical UNIX commands, string arguments cannot be strung
 together following a single '-'. Each argument must be provided separately.
 (TODO: Fix this)
 
---force
+( -f | --force )
     force recalculation of all steps (NCSD, TRDENS)
--f [nt]*
+( -f | --force ) [nt]*
     n
         force recalculation of NCSD; this also forces TRDENS
     t
         force recalculation of TRDENS
 -m or -M or -e
     The first two arguments are used to determine a range of A prescriptions
-    -m
+    ( -m | --combinations ) AP_MIN APM_AX
         Prescriptions are all increasing length-3 combinations
-          of integers in the range [Ap_min, Ap_max]
-    -M
+          of integers in the range [AP_MIN, AP_MAX]
+    ( -M | --multicombinations ) AP_MIN APM_AX
         Prescriptions are all increasing length-3 combinations with repetition
-          of integers in the range [Ap_min, Ap_max]
-    -e
-         Prescriptions are all (A, A, A) for A in the range [Ap_min, Ap_max]
--s scalefactor
+          of integers in the range [AP_MIN, AP_MAX]
+    ( -e | --exact ) AP_MIN APM_AX
+         Prescriptions are all (A, A, A) for A in the range [AP_MIN, AP_MAX]
+( -s | --scale-int ) SCALEFACTOR
     Off-diagonal valence space coupling terms in the interaction file are
-      scaled by scalefactor
--t walltime
+      scaled by SCALEFACTOR
+( -t | --walltime ) WALLTIME
     NCSD jobs (submitted to cluster) are allotted the given amount of walltime,
       a string in the format hh:mm:ss
 
 If additional arguments are provided, in order they are taken to be
-    Amax Nmax Nshell Ncomponent Z n1 n2 rm_prot
+    AMAX NMAX NSHELL NCOMPONENT Z N1 N2 RM_PROT
 
 Example: Sample calculation in the p-shell.
     $ ncsm_vce_calc.py -ft -s 0.0 -t 01:00:00 -e 4 10 4 10 6
@@ -79,7 +79,7 @@ Example: Sample calculation in the p-shell.
     head node.
 
     The fourth argument, -e (exact), prompts the script to interpret the next
-    two items as Ap_min and Ap_max. This will perform NCSD and VCE
+    two items as AP_MIN and AP_MAX. This will perform NCSD and VCE
     calculations for A=Aeff (exact) prescription
     (4,4,4),(5,5,5),...(10,10,10), as indicated by the first 4 and 10.
 

@@ -10,7 +10,7 @@ available functionality in the form of a UNIX-style command.
 To run as a script (assuming this file has been added to PATH):
 
     $ ncsm_single_calc.py [-f] [-e] [-v] [-s SCALEFACTOR] [-t WALLTIME]
-    Z A [AEFF [NMAX [NSHELL [RM_PROT [N1 N2]]]]]
+        Z A [AEFF [NMAX [NSHELL [RM_PROT [N1 N2]]]]]
 
 In the current directory run NCSD for a single element with a single A
 value and Aeff value, or (if -e) run NCSD for a range of A values with
@@ -20,8 +20,8 @@ Aeff = A.
     force recalculation of NCSD, even if
       outfiles already exist. Otherwise, calculations are not repeated.
 ( -e | --exact )
-    A and Aeff are interpreted as Amin and Amax,
-      which define a range [Amin, Amax] on which exact calculations (A=Aeff)
+    A and AEFF are interpreted as AMIN and AMAX,
+      which define a range [AMIN, AMAX] on which exact calculations (A=Aeff)
       are done.
 ( -v | --verbose )
     regular verbose output of NCSD is printed to
@@ -29,7 +29,7 @@ Aeff = A.
 ( -s | --scale-int ) SCALEFACTOR
     off-diagonal valence coupling terms of the TBME interaction are scaled
     by the value of SCALEFACTOR
-( -t | --walltime ) TIME
+( -t | --walltime ) WALLTIME
     NCSD jobs are allotted the given walltime, a string in format hh:mm:ss
 """
 from __future__ import division
