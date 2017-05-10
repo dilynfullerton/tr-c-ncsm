@@ -578,9 +578,11 @@ def ncsd_multiple_calculations(
         aeff_list.append(aeff)
         nhw_list.append(nhw)
     if progress:
-        print 'Doing NCSD calculations for (A, Aeff):'
-        for a, aeff in sorted(zip(a_list, aeff_list)):
-            print '  (%2d, %2d)' % (a, aeff)
+        print '  Doing NCSD calculations for (A, Aeff):'
+        print '    ' + ' '.join(
+            ['(%2d, %2d)' % (a, aeff)
+             for a, aeff in sorted(zip(a_list, aeff_list))]
+        )
     # prepare directories and get maps
     a_aeff_maps = prepare_directories(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
