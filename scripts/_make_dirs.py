@@ -384,8 +384,11 @@ def _truncate_space(
     if force or not path.exists(dst_path):
         if path.exists(dst_path):
             remove(dst_path)
-        truncate_interaction(src_path, n1, n2, tmp_path)
-        if (scalefactor is not None) or remove_protons:
+        if n1 != 15 or n2 != 15:
+            truncate_interaction(src_path, n1, n2, tmp_path)
+        else:
+            symlink(src_path, tmp_path)
+        if (scalefactor is not None and scalefactor != 1) or remove_protons:
             if scalefactor is None:
                 scalefactor = 1.0
             scale_int(

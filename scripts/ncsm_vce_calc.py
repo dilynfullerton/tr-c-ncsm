@@ -203,7 +203,6 @@ def _generating_a_values(n_shell, n_component, z):
     return a_0, a_0 + 1, a_0 + 2
 
 
-
 def _min_orbitals(z):
     """Get the minimum number of harmonic oscillator orbitals for a given Z.
     This is a port from the function Nmin_HO in it-code-111815.f.
