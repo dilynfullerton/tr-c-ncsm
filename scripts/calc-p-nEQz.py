@@ -24,16 +24,16 @@ for z0 in range(2, 7):
         progress=False,
     )
 
-    ncsd_exact_calculations(
-        a_range=[2*z0],
-        z=z0,
-        nmax=NMAX,
-        nshell=N_SHELL,
-        n1=15, n2=15,
-        int_scalefactor=None,
-        cluster_submit=True,
-        walltime='12:00:00',
-        force=False,
-        progress=False,
-        remove_protons=False,
-    )
+    # ncsd_exact_calculations(
+    #     a_range=[2*z0],
+    #     z=z0,
+    #     nmax=NMAX,
+    #     nshell=N_SHELL,
+    #     n1=15, n2=15,
+    #     int_scalefactor=None,
+    #     cluster_submit=True,
+    #     walltime='12:00:00',
+    #     force=False,
+    #     progress=False,
+    #     remove_protons=False,
+    # )
