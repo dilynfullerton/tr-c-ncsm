@@ -579,7 +579,7 @@ def ncsd_multiple_calculations(
         nhw_list.append(nhw)
     if progress:
         print '  Doing NCSD calculations for (A, Aeff):'
-        print '    ' + ' '.join(
+        print '    ' + ' ,'.join(
             ['(%2d, %2d)' % (a, aeff)
              for a, aeff in sorted(zip(a_list, aeff_list))]
         )
@@ -1059,9 +1059,8 @@ def vce_multiple_calculations(
     :param dpath_results: path to the results directory
     """
     if progress:
-        print 'Doing VCE calculations for prescriptions:'
-        for presc in a_presc_list:
-            print '  %s' % str(presc)
+        print '  Doing VCE calculations for prescriptions:'
+        print '    ' + ' ,'.join([str(presc) for presc in a_presc_list])
     if nmax % 2:
         raise InvalidNmaxException(
             '\nInvalid Nmax: %d. Nmax must be even.' % nmax)
