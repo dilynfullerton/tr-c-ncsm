@@ -124,7 +124,7 @@ if __name__ == "__main__":
                 n1_, n2_ = user_args[:2]
         ncsd_exact_calculations(
             z=z0, a_range=arange0, nmax=nmax0, nshell=nshell0, n1=n1_, n2=n2_,
-            int_scalefactor=scalefactor0, force=force0, progress=progress0,
+            int_scalefactor=scalefactor0, force=force0, verbose=progress0,
             cluster_submit=cluster_submit0, walltime=walltime0,
             remove_protons=rm_prot0,
         )

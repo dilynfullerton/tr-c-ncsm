@@ -665,7 +665,7 @@ def remove_ncsd_tmp_files(dpaths_list):
 def prepare_directories(
         a_list, aeff_list, nhw_list, z, n1, n2, nshell, scalefactor,
         remove_protons, beta_cm, num_states, num_iter, dpath_templates,
-        dpath_results, cluster_submit=False, walltime=None, progress=False,
+        dpath_results, cluster_submit=False, walltime=None, verbose=False,
         force=False,
 ):
     """Creates directories and files necessary to run NCSD calculations.
@@ -689,7 +689,7 @@ def prepare_directories(
     :param num_iter: number of iterations for lanczos algorithm
     :param dpath_templates: path to the templates directory
     :param dpath_results: path to the results directory
-    :param progress: if true, shows a progress bar
+    :param verbose: if true, prints progress to stdout
     :param cluster_submit: if true, submits the job to the OpenMP cluster
     using qsub
     :param walltime: walltime to be allotted to a cluster submission
@@ -721,18 +721,18 @@ def prepare_directories(
         a_aeff_to_ncsd_map = dict()
         a_aeff_to_vce_map = dict()
     # make stuff
-    if progress:
+    if verbose:
         print '  Making directories'
     _make_base_directories(a_aeff_to_dpath_map=a_aeff_to_dir_map)
-    if progress and (n1, n2) != (15, 15):
+    if verbose and (n1, n2) != (15, 15):
         print '  Truncating interaction to N1=%d N2=%d' % (n1, n2)
-    if progress and (scalefactor is not None) and (scalefactor != 1.0):
+    if verbose and (scalefactor is not None) and (scalefactor != 1.0):
         print '  Scaling interaction off diagonal terms by %3.2f' % scalefactor
     fname_tbme, lname_tbme = _truncate_spaces(
         nshell=nshell, n1=n1, n2=n2, dirpaths=a_aeff_to_dir_map.values(),
         scalefactor=scalefactor, remove_protons=remove_protons, force=force
     )
-    if progress:
+    if verbose:
         print '  Writing mfdp files'
     _make_mfdp_files(
         a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
@@ -743,7 +743,7 @@ def prepare_directories(
         num_iter=num_iter,
     )
     if cluster_submit:
-        if progress:
+        if verbose:
             print '  Writing cluster submit files'
         _make_job_submit_files(
             a_aeff_to_jobsub_fpath_map=a_aeff_to_ncsd_map, walltime=walltime,

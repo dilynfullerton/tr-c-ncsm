@@ -26,7 +26,7 @@ ncsd_vce_calculations(
     force_ncsd=False,
     force_trdens=False,
     force_all=False,
-    progress=True,
+    verbose=True,
 )
 
 ncsd_exact_calculations(
@@ -39,6 +39,6 @@ ncsd_exact_calculations(
     cluster_submit=True,
     walltime='6:00:00',
     force=False,
-    progress=True,
+    verbose=True,
     remove_protons=False,
 )

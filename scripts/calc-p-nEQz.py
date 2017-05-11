@@ -21,7 +21,7 @@ for z0 in range(2, 7):
         force_ncsd=False,
         force_trdens=True,
         force_all=False,
-        progress=False,
+        verbose=False,
     )
 
     # ncsd_exact_calculations(
@@ -34,6 +34,6 @@ for z0 in range(2, 7):
     #     cluster_submit=True,
     #     walltime='12:00:00',
     #     force=False,
-    #     progress=False,
+    #     verbose=False,
     #     remove_protons=False,
     # )
