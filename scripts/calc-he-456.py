@@ -25,7 +25,7 @@ ncsd_vce_calculations(
     walltime='4:00:00',
     remove_protons=False,
     force_ncsd=False,
-    force_trdens=True,
+    force_trdens=False,
     force_all=False,
     progress=False,
 )

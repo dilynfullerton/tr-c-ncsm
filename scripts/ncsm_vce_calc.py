@@ -782,7 +782,7 @@ def vce_single_calculation(
     a_aeff6 = (a_values[2], a_prescription[2])
     dpath_a6 = a_aeff_dir_map[a_aeff6]
     make_trdens_file(
-        a=a_values[2], a0=a_values[0], nshell=nshell, nmax=nmax,
+        a=a_values[2], a0=a_values[0], nshell=nshell, z=z,
         nuc_dir=dpath_a6, dpath_results=dpath_results,
         dpath_temp=dpath_templates
     )
@@ -893,7 +893,7 @@ def _vce_multiple_calculations_s(
     # make trdens files
     for trjob in trdens_jobs:
         make_trdens_file(
-            a=trjob[0], a0=a_values[0], nshell=nshell, nmax=nmax,
+            a=trjob[0], a0=a_values[0], nshell=nshell, z=z,
             nuc_dir=a_aeff_to_dpath_map[trjob], dpath_results=dpath_results,
             dpath_temp=dpath_templates,
         )

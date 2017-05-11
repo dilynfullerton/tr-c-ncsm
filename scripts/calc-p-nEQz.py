@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-from ncsm_vce_calc import ncsd_vce_calculations, ncsd_exact_calculations
+from ncsm_vce_calc import ncsd_vce_calculations
 
 NMAX = 0
 N_SHELL = 1  # p shell
