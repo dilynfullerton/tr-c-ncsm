@@ -282,24 +282,29 @@ class UnknownNumStatesException(Exception):
 # TODO: IMPORTANT write this method to be general
 # This should determine 'nhw_mod' and 'dim_nhw_mod'. These are the names
 # of the variables in trdens-kernels.f, which are retrieved from trdens.in.
-# I am only somewhat confident that this works when A - A0 = 0
+# I am only somewhat confident that this works when A - A0 = 2
 # (he6 in p shell, o18 in sd shell, etc). For anything else, I would not trust
 # it.
-def _get_num_states(a, a0, nshell, nmax):
+def _get_num_states(a, a0, nshell, z):
     """Given a mass number, the first mass number in the shell, and the shell,
     returns the model space Nhw and model space dimension for use in the
     trdens.in input file
     :param a: mass number (A)
     :param a0: first mass in the shell
     :param nshell: major oscillator shell (0=s, 1=p, 2=sd,...)
-    :param nmax: shell truncation
+    :param z: proton number
     """
-    nhw_mod = (a - a0) * nshell  # + nmax TODO: is this correct generally
-    dim_nhw_mod = 0
-    for j1_2 in range(1, nhw_mod+2, 2):
-        dim_nhw_mod += (j1_2 + 1)/2
-        for j2_2 in range(j1_2+1, nhw_mod+2, 2):
-            dim_nhw_mod += j1_2 + 1
+    nhw_mod = (a - a0) * nshell  # TODO: is this correct generally?
+    # known exceptions?
+    if z == 3:
+        dim_nhw_mod = 3
+    else:
+        # TODO: figure out why this algorithm gets the correct number
+        dim_nhw_mod = 0
+        for j1_2 in range(1, nhw_mod+2, 2):
+            dim_nhw_mod += (j1_2 + 1)/2
+            for j2_2 in range(j1_2+1, nhw_mod+2, 2):
+                dim_nhw_mod += j1_2 + 1
     return nhw_mod, dim_nhw_mod
 
 
