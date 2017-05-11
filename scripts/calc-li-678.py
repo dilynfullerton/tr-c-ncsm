@@ -4,11 +4,11 @@ from ncsm_vce_calc import ncsd_vce_calculations, ncsd_exact_calculations
 from ncsm_vce_calc import generate_exact
 
 # Script
-AP_RANGE = range(4, 11+1)
+AP_RANGE = range(6, 11+1)
 EX_RANGE = list(AP_RANGE)[3:]
 A_PRESCRIPTIONS = list(generate_exact(AP_RANGE, 3)) + [[6, 7, 8]]
 Z = 3  # Lithium
-NMAX = 0
+NMAX = 2
 N_SHELL = 1  # p shell
 
 ncsd_vce_calculations(
