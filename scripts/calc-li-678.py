@@ -6,9 +6,10 @@ from ncsm_vce_calc import generate_exact
 # Script
 AP_RANGE = range(6, 11+1)
 EX_RANGE = list(AP_RANGE)[3:]
-A_PRESCRIPTIONS = list(generate_exact(AP_RANGE, 3)) + [[6, 7, 8]]
+# A_PRESCRIPTIONS = list(generate_exact(AP_RANGE, 3)) + [[6, 7, 8]]
+A_PRESCRIPTIONS = list(generate_exact(AP_RANGE, 3)) + [[4, 5, 6]]
 Z = 3  # Lithium
-NMAX = 2
+NMAX = 0
 N_SHELL = 1  # p shell
 
 ncsd_vce_calculations(

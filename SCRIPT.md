@@ -12,7 +12,7 @@ prescriptions.
 
 ##### Flags:
 * `(-v | --verbose)`:  
-Print regular `NCSD` and `TRDENS` output to standard out.
+Print progress messages to `stdout`
 * `(-f | --force) [FARGS]`:  
 Forces recalculation of `NCSD`, `TRDENS`, and VCE even if output
 files exist. If `t` in `FARGS`, only recalculates `TRDENS` and VCE.
