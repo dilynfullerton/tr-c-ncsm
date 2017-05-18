@@ -8,9 +8,12 @@ AP_RANGE = range(4, 9+1)
 EX_RANGE = list(AP_RANGE)[3:]
 A_PRESCRIPTIONS = list(generate_exact(AP_RANGE, 3)) + [[4, 5, 6]]
 Z = 2  # Helium
-NMAX = 2
+NMAX = 4
 N_SHELL = 1  # p shell
 NCSD_NUM_STATES = 30
+SCALEFACTOR = None
+BETA_CM = 10.0
+NCSD_NUM_ITER = 500
 
 
 ncsd_vce_calculations(
@@ -22,7 +25,9 @@ ncsd_vce_calculations(
     ncomponent=2,
     n1=15, n2=15,
     num_states=NCSD_NUM_STATES,
-    int_scalefactor=None,
+    int_scalefactor=SCALEFACTOR,
+    beta_cm=BETA_CM,
+    num_iter=NCSD_NUM_ITER,
     cluster_submit=True,
     walltime='4:00:00',
     remove_protons=False,
@@ -39,7 +44,9 @@ ncsd_exact_calculations(
     nshell=N_SHELL,
     n1=15, n2=15,
     num_states=NCSD_NUM_STATES,
-    int_scalefactor=None,
+    int_scalefactor=SCALEFACTOR,
+    beta_cm=BETA_CM,
+    num_iter=NCSD_NUM_ITER,
     cluster_submit=True,
     walltime='4:00:00',
     force=False,

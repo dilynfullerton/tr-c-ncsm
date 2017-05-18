@@ -4,13 +4,17 @@ from ncsm_vce_calc import ncsd_vce_calculations, ncsd_exact_calculations
 from ncsm_vce_calc import generate_exact
 
 # Script
+# AP_RANGE = range(6, 11+1)
 AP_RANGE = range(6, 11+1)
 EX_RANGE = list(AP_RANGE)[3:]
 # A_PRESCRIPTIONS = list(generate_exact(AP_RANGE, 3)) + [[6, 7, 8]]
-A_PRESCRIPTIONS = list(generate_exact(AP_RANGE, 3)) + [[4, 5, 6]]
+# A_PRESCRIPTIONS = list(generate_exact(AP_RANGE, 3)) + [[4, 5, 6]]
+A_PRESCRIPTIONS = list(generate_exact(AP_RANGE, 3)) + [[4, 5, 6], [6, 7, 8]]
 Z = 3  # Lithium
-NMAX = 0
+NMAX = 2
 N_SHELL = 1  # p shell
+BETA_CM = 10.0
+SCALEFACTOR = None
 
 ncsd_vce_calculations(
     a_prescriptions=A_PRESCRIPTIONS,
@@ -20,7 +24,8 @@ ncsd_vce_calculations(
     nshell=N_SHELL,
     ncomponent=2,
     n1=15, n2=15,
-    int_scalefactor=None,
+    int_scalefactor=SCALEFACTOR,
+    beta_cm=BETA_CM,
     cluster_submit=True,
     walltime='4:00:00',
     remove_protons=False,
@@ -36,7 +41,8 @@ ncsd_exact_calculations(
     nmax=NMAX,
     nshell=N_SHELL,
     n1=15, n2=15,
-    int_scalefactor=None,
+    int_scalefactor=SCALEFACTOR,
+    beta_cm=BETA_CM,
     cluster_submit=True,
     walltime='6:00:00',
     force=False,
