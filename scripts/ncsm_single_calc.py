@@ -41,6 +41,7 @@ from InvalidNumberOfArgumentsException import InvalidNumberOfArgumentsException
 from scripts.ncsm_vce_calc import ncsd_single_calculation
 from scripts.ncsm_vce_calc import ncsd_exact_calculations
 from scripts.ncsm_vce_calc import NCSD_CLUSTER_WALLTIME, NMAX, N_SHELL, N1, N2
+from scripts.ncsm_vce_calc import USE_MPI
 
 # TODO: this script section is some really smelly code
 if __name__ == "__main__":
@@ -55,6 +56,7 @@ if __name__ == "__main__":
     nshell0 = N_SHELL
     n1_ = N1
     n2_ = N2
+    use_mpi0 = USE_MPI
     while True:
         a0 = user_args[0]
         if '-f' == a0.lower() or '--force' == a0:
@@ -98,7 +100,7 @@ if __name__ == "__main__":
             z=z0, a=a0, aeff=aeff0, nmax=nmax0, n1=n1_, n2=n2_, nshell=nshell0,
             scalefactor=scalefactor0, force=force0,
             cluster_submit=cluster_submit0, walltime=walltime0,
-            remove_protons=rm_prot0,
+            use_mpi=use_mpi0, remove_protons=rm_prot0,
         )
     else:
         if len(user_args) < 2:
@@ -126,5 +128,5 @@ if __name__ == "__main__":
             z=z0, a_range=arange0, nmax=nmax0, nshell=nshell0, n1=n1_, n2=n2_,
             int_scalefactor=scalefactor0, force=force0, verbose=progress0,
             cluster_submit=cluster_submit0, walltime=walltime0,
-            remove_protons=rm_prot0,
+            use_mpi=use_mpi0, remove_protons=rm_prot0,
         )

@@ -10,5 +10,6 @@ export OMP_NUM_THREADS=${NTHREADS}
 
 cd ${PBS_O_WORKDIR}
 
-mpirun -np 12 NCSD
+<<PRECOMMAND>> NCSD
+# mpirun -np 12 NCSD
 # NCSD

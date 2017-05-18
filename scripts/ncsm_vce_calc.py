@@ -148,7 +148,7 @@ from _make_dirs import prepare_directories, remove_ncsd_tmp_files
 from _make_dirs import EgvFileNotFoundException
 
 
-# CONSTANTS
+# Default constants
 N_SHELL = 1  # 0=s, 1=p, 2=sd, ...
 N_COMPONENT = 2  # 1=neutrons, 2=protons and neutrons
 NMAX = 0
@@ -159,6 +159,7 @@ BETA_CM = 10.0
 # TODO: it-code still exhibits beta dependence
 NCSD_NUM_STATES = 30
 NCSD_NUM_ITER = 200
+USE_MPI = True
 
 # files
 FNAME_FMT_VCE_INT = 'A%d.int'  # A value
@@ -524,8 +525,9 @@ def ncsd_multiple_calculations(
         scalefactor=None, remove_protons=False, beta_cm=BETA_CM,
         num_states=NCSD_NUM_STATES, num_iter=NCSD_NUM_ITER,
         force=False, verbose=True, threading=True,
-        cluster_submit=False, walltime=None, remove_tmp_files=True,
-        dpath_templates=DPATH_TEMPLATES, dpath_results=DPATH_RESULTS,
+        cluster_submit=False, walltime=None, use_mpi=USE_MPI,
+        remove_tmp_files=True, dpath_templates=DPATH_TEMPLATES,
+        dpath_results=DPATH_RESULTS,
 ):
     """For a given list of A prescriptions, do the NCSD calculations
     necessary for doing a valence cluster expansion
@@ -554,6 +556,8 @@ def ncsd_multiple_calculations(
     :param walltime: if cluster submit is true, this string in the format
     hh:mm:ss specifies how much time is to be allotted each NCSD
     calculation
+    :param use_mpi: if true (and cluster submit), use mpirun prefix in
+    submit command
     :param remove_tmp_files: if true, removes all of the remnant *.tmp files
     following the NCSD calculation
     :param dpath_templates: path to the templates directory
@@ -588,9 +592,9 @@ def ncsd_multiple_calculations(
         z=z, n1=n1, n2=n2, nshell=nshell,
         beta_cm=beta_cm, num_states=num_states, num_iter=num_iter,
         scalefactor=scalefactor, remove_protons=remove_protons,
-        cluster_submit=cluster_submit, walltime=walltime, verbose=verbose,
-        dpath_results=dpath_results, dpath_templates=dpath_templates,
-        force=force,
+        cluster_submit=cluster_submit, walltime=walltime, use_mpi=use_mpi,
+        verbose=verbose, dpath_results=dpath_results,
+        dpath_templates=dpath_templates, force=force,
     )
     dir_map, egv_map, ncsd_job_map, vce_job_map, outfile_map = a_aeff_maps
     # make (A, Aeff) set and do NCSD
@@ -618,12 +622,11 @@ def ncsd_multiple_calculations(
 
 
 def ncsd_single_calculation(
-        a, aeff, z, nmax=NMAX, nshell=N_SHELL, n1=N1, n2=N1,
-        scalefactor=None, remove_protons=False, beta_cm=BETA_CM,
-        num_states=NCSD_NUM_STATES, num_iter=NCSD_NUM_ITER, force=False,
-        verbose=True, cluster_submit=False, walltime=None,
-        remove_tmp_files=True, dpath_templates=DPATH_TEMPLATES,
-        dpath_results=DPATH_RESULTS,
+        a, aeff, z, nmax=NMAX, nshell=N_SHELL, n1=N1, n2=N1, scalefactor=None,
+        remove_protons=False, beta_cm=BETA_CM, num_states=NCSD_NUM_STATES,
+        num_iter=NCSD_NUM_ITER, force=False, verbose=True, cluster_submit=False,
+        walltime=None, use_mpi=USE_MPI, remove_tmp_files=True,
+        dpath_templates=DPATH_TEMPLATES, dpath_results=DPATH_RESULTS,
 ):
     """Performs a single NCSD calculation for the given (A, Aeff) pair
     :param a: actual mass number A
@@ -645,6 +648,8 @@ def ncsd_single_calculation(
     :param cluster_submit: if true, submits the job to the OpenMP cluster
     using qsub
     :param walltime: walltime to be allotted to a cluster submission
+    :param use_mpi: if true (and cluster submit), use `mpirun` prefix before
+    command
     :param remove_tmp_files: if true, removes remnant *.tmp files following
     the NCSD calculation (Note this will not be the case for a job submitted
     to the cluster)
@@ -660,9 +665,9 @@ def ncsd_single_calculation(
         z=z, n1=n1, n2=n2, nshell=nshell,
         scalefactor=scalefactor, remove_protons=remove_protons,
         beta_cm=beta_cm, num_states=num_states, num_iter=num_iter,
-        cluster_submit=cluster_submit, walltime=walltime, verbose=verbose,
-        dpath_templates=dpath_templates, dpath_results=dpath_results,
-        force=force,
+        cluster_submit=cluster_submit, walltime=walltime, use_mpi=use_mpi,
+        verbose=verbose, dpath_templates=dpath_templates,
+        dpath_results=dpath_results, force=force,
     )[:3]
     if cluster_submit:
         completed_job_list = _ncsd_multiple_calculations_s(
@@ -687,7 +692,7 @@ def ncsd_exact_calculations(
         z, a_range, nmax=NMAX, nshell=N_SHELL, n1=N1, n2=N2,
         int_scalefactor=None, remove_protons=False, beta_cm=BETA_CM,
         num_states=NCSD_NUM_STATES, num_iter=NCSD_NUM_ITER, force=False,
-        verbose=True, cluster_submit=False, walltime=None,
+        verbose=True, cluster_submit=False, walltime=None, use_mpi=USE_MPI,
         remove_tmp_files=True, dpath_templates=DPATH_TEMPLATES,
         dpath_results=DPATH_RESULTS,
 ):
@@ -711,6 +716,8 @@ def ncsd_exact_calculations(
     :param cluster_submit: if true, submit job to cluster
     :param walltime: if cluster_submit is true, this string hh:mm:ss specifies
     how much wall time is to be allotted each NCSD calculation
+    :param use_mpi: if true (and cluster submit), submit command with 
+    `mpirun` prefix
     :param remove_tmp_files: if true, removes all of the remnant *.tmp files
     following the NCSD calculation
     :param dpath_templates: path to the templates directory
@@ -724,8 +731,9 @@ def ncsd_exact_calculations(
         nmax=nmax, n1=n1, n2=n2, nshell=nshell, scalefactor=int_scalefactor,
         remove_protons=remove_protons, beta_cm=beta_cm, num_states=num_states,
         num_iter=num_iter, cluster_submit=cluster_submit, walltime=walltime,
-        force=force, verbose=verbose, remove_tmp_files=remove_tmp_files,
-        dpath_templates=dpath_templates, dpath_results=dpath_results,
+        use_mpi=use_mpi, force=force, verbose=verbose,
+        remove_tmp_files=remove_tmp_files, dpath_templates=dpath_templates,
+        dpath_results=dpath_results,
     )
 
 
@@ -1099,12 +1107,13 @@ def vce_multiple_calculations(
 # TODO: add a check to ensure num_states is great enough for required VCE
 # TODO: calculations
 def ncsd_vce_calculations(
-        a_prescriptions, a_range, z=None, nmax=NMAX, nshell=N_SHELL,
+        a_prescriptions, a_range,
+        z=None, nmax=NMAX, nshell=N_SHELL,
         ncomponent=N_COMPONENT, n1=N1, n2=N2, int_scalefactor=None,
         remove_protons=False, beta_cm=BETA_CM, num_states=NCSD_NUM_STATES,
         num_iter=NCSD_NUM_ITER, force_ncsd=False, force_trdens=False,
         force_all=False, verbose=True, threading=True, cluster_submit=True,
-        walltime=NCSD_CLUSTER_WALLTIME, remove_tmp_files=True,
+        walltime=NCSD_CLUSTER_WALLTIME, use_mpi=USE_MPI, remove_tmp_files=True,
         dpath_templates=DPATH_TEMPLATES, dpath_results=DPATH_RESULTS,
 ):
     """Given a sequence or generator of A prescriptions, does the NCSD/VCE
@@ -1138,6 +1147,8 @@ def ncsd_vce_calculations(
     undone.
     :param walltime: if cluster_submit, this string hh:mm:ss specifies how
     much wall time is to be allotted each NCSD calculation
+    :param use_mpi: if true (and cluster submit), submit job command with
+    prefix `mpirun`
     :param remove_tmp_files: if true, removes all of the *.tmp files following
     the ncsd calculations
     :param dpath_templates: path to the templates directory
@@ -1156,8 +1167,8 @@ def ncsd_vce_calculations(
         remove_protons=remove_protons, beta_cm=beta_cm, num_states=num_states,
         num_iter=num_iter, force=force_all or force_ncsd, verbose=verbose,
         threading=threading, cluster_submit=cluster_submit, walltime=walltime,
-        remove_tmp_files=remove_tmp_files, dpath_templates=dpath_templates,
-        dpath_results=dpath_results,
+        use_mpi=use_mpi, remove_tmp_files=remove_tmp_files,
+        dpath_templates=dpath_templates, dpath_results=dpath_results,
     )
     dir_map, egv_map, ncsd_job_map, vce_job_map, outfile_map = a_aeff_maps
     vce_a_presc_list = list()
@@ -1246,6 +1257,7 @@ if __name__ == "__main__":
     ncomponent_0 = N_COMPONENT
     n1_0 = N1
     n2_0 = N2
+    use_mpi0 = USE_MPI
     while True:
         a0 = user_args[0]
         if a0 == '-f' or a0 == '--force':
@@ -1313,4 +1325,5 @@ if __name__ == "__main__":
         remove_protons=bool(int(rm_prot0)), force_ncsd=f_ncsd,
         force_trdens=f_trdens, force_all=f_all, verbose=verbose0,
         cluster_submit=cluster_submit0, walltime=walltime0,
+        use_mpi=use_mpi0,
     )

@@ -405,32 +405,42 @@ def _truncate_space(
     return dst_path, link_path
 
 
-def _get_job_replace_map(walltime):
+def _get_job_replace_map(walltime, use_mpi):
     """Returns a map from placeholder string in the job.sh template file to
     the string that is to replace it
     :param walltime: string in format hh:mm:ss that represents the amount of
     walltime a job is to be given when submitted to the cluster
+    :param use_mpi: if true, submit with mpirun; otherwise without
     """
-    return {'<<WALLTIME>>': str(walltime)}
+    if use_mpi:
+        precommand = 'mpirun -np 12'
+    else:
+        precommand = ''
+    return {
+        '<<WALLTIME>>': str(walltime),
+        '<<PRECOMMAND>>': precommand
+    }
 
 
 def _make_job_submit_file(
-        dst_fpath, walltime, fname_tmp_jobsub, dpath_temp=DPATH_TEMPLATES,
+        dst_fpath, walltime, use_mpi, fname_tmp_jobsub,
+        dpath_temp=DPATH_TEMPLATES,
 ):
     """For the given walltime, writes the job.sh submit file to the given
     destination (dst_fpath)
     :param dst_fpath: destination file path
     :param walltime: string representation of the allotted time on the cluster
+    :param use_mpi: if true, submit job with mpirun prefix
     :param dpath_temp: directory in which the job.sh template file is stored
     :param fname_tmp_jobsub: name of the job.sh template file
     """
     src_fpath = path.join(dpath_temp, fname_tmp_jobsub)
-    rep_map = _get_job_replace_map(walltime=walltime)
+    rep_map = _get_job_replace_map(walltime=walltime, use_mpi=use_mpi)
     _rewrite_file(src=src_fpath, dst=dst_fpath, replace_map=rep_map)
 
 
 def _make_job_submit_files(
-        a_aeff_to_jobsub_fpath_map, walltime, fname_tmp_jobsub
+        a_aeff_to_jobsub_fpath_map, walltime, use_mpi, fname_tmp_jobsub
 ):
     """For each jobsub_fpath in a_aeff_to_jobsub_fpath_map, makes the job.sh
     file for submission to the cluster. As these are all the same for a given
@@ -439,11 +449,14 @@ def _make_job_submit_files(
     file
     :param walltime: string representation of the allowed walltime in the
     format hh:mm:ss
+    :param use_mpi: if true, submit to cluster with mpirun prefix
     """
     job_files = list(a_aeff_to_jobsub_fpath_map.values())
     dst = job_files.pop()
     _make_job_submit_file(
-        dst_fpath=dst, walltime=walltime, fname_tmp_jobsub=fname_tmp_jobsub)
+        dst_fpath=dst, walltime=walltime, use_mpi=use_mpi,
+        fname_tmp_jobsub=fname_tmp_jobsub
+    )
     # link this file to rest of destination paths
     for dst2 in job_files:
         if path.exists(dst2):
@@ -665,8 +678,8 @@ def remove_ncsd_tmp_files(dpaths_list):
 def prepare_directories(
         a_list, aeff_list, nhw_list, z, n1, n2, nshell, scalefactor,
         remove_protons, beta_cm, num_states, num_iter, dpath_templates,
-        dpath_results, cluster_submit=False, walltime=None, verbose=False,
-        force=False,
+        dpath_results, cluster_submit=False, walltime=None, use_mpi=True,
+        verbose=False, force=False,
 ):
     """Creates directories and files necessary to run NCSD calculations.
     Returns maps to the important files and directories.
@@ -693,6 +706,8 @@ def prepare_directories(
     :param cluster_submit: if true, submits the job to the OpenMP cluster
     using qsub
     :param walltime: walltime to be allotted to a cluster submission
+    :param use_mpi: if true (and cluster submit is true), submit job to 
+    cluster with mpirun prefix
     :param force: if true, forces re-truncation of the TBME interaction file
     :return (A,Aeff)->dir, (A,Aeff)->*.egv, (A,Aeff)->*.sh, (A,Aeff)->*.out
     """
@@ -747,11 +762,11 @@ def prepare_directories(
             print '  Writing cluster submit files'
         _make_job_submit_files(
             a_aeff_to_jobsub_fpath_map=a_aeff_to_ncsd_map, walltime=walltime,
-            fname_tmp_jobsub=FNAME_TMP_JOBSUB_NCSD
+            use_mpi=use_mpi, fname_tmp_jobsub=FNAME_TMP_JOBSUB_NCSD
         )
         _make_job_submit_files(
             a_aeff_to_jobsub_fpath_map=a_aeff_to_vce_map, walltime=walltime,
-            fname_tmp_jobsub=FNAME_TMP_JOBSUB_TRDENS
+            use_mpi=False, fname_tmp_jobsub=FNAME_TMP_JOBSUB_TRDENS
         )
     return (a_aeff_to_dir_map, a_aeff_to_egvfile_map, a_aeff_to_ncsd_map,
             a_aeff_to_vce_map, a_aeff_to_outfile_map)
