@@ -14,6 +14,8 @@ NCSD_NUM_STATES = 30
 SCALEFACTOR = None
 BETA_CM = 10.0
 NCSD_NUM_ITER = 500
+WALLTIME_PRESC = '4:00:00'
+WALLTIME_EXACT = '8:00:00'
 
 
 ncsd_vce_calculations(
@@ -29,7 +31,7 @@ ncsd_vce_calculations(
     beta_cm=BETA_CM,
     num_iter=NCSD_NUM_ITER,
     cluster_submit=True,
-    walltime='4:00:00',
+    walltime=WALLTIME_PRESC,
     remove_protons=False,
     force_ncsd=False,
     force_trdens=False,
@@ -48,7 +50,7 @@ ncsd_exact_calculations(
     beta_cm=BETA_CM,
     num_iter=NCSD_NUM_ITER,
     cluster_submit=True,
-    walltime='4:00:00',
+    walltime=WALLTIME_EXACT,
     force=False,
     verbose=True,
     remove_protons=False,
