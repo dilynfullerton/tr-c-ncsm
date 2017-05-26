@@ -15,6 +15,10 @@ NMAX = 2
 N_SHELL = 1  # p shell
 BETA_CM = 10.0
 SCALEFACTOR = None
+NUM_ITER = 500
+WALLTIME_PRESC = '4:00:00'
+WALLTIME_EXACT = '8:00:00'
+USE_MPI = True
 
 ncsd_vce_calculations(
     a_prescriptions=A_PRESCRIPTIONS,
@@ -26,8 +30,10 @@ ncsd_vce_calculations(
     n1=15, n2=15,
     int_scalefactor=SCALEFACTOR,
     beta_cm=BETA_CM,
+    num_iter=NUM_ITER,
     cluster_submit=True,
-    walltime='4:00:00',
+    walltime=WALLTIME_PRESC,
+    use_mpi=USE_MPI,
     remove_protons=False,
     force_ncsd=False,
     force_trdens=False,
@@ -43,8 +49,10 @@ ncsd_exact_calculations(
     n1=15, n2=15,
     int_scalefactor=SCALEFACTOR,
     beta_cm=BETA_CM,
+    num_iter=NUM_ITER,
     cluster_submit=True,
-    walltime='6:00:00',
+    walltime=WALLTIME_EXACT,
+    use_mpi=USE_MPI,
     force=False,
     verbose=True,
     remove_protons=False,
