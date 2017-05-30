@@ -2286,7 +2286,7 @@ c      comft = 2.*hbomeg/real(Aeff)   !SRS This should be changed nucleons -> Ae
 c      comft = 2.*hbomeg/real(nucleons)   !SRS This should be changed nucleons -> Aeff
 c     DRF comft2 factor for Aeff-dependent part of Trel
       comft2 = (comft/8.0)*(real(Aeff)-real(nucleons))/
-     &        (real(nucleons)-1.0)
+     &        (real(nucleons-1))
       comfspe = 0.0 !real(ispe)/real(nucleons-1)
 cSRS      comfcm1 = strcm*hbomeg/real(nucleons-1)
 cSRS      comfcm2 = strcm*2.*hbomeg/real(nucleons) 
