@@ -2377,80 +2377,79 @@ cSRS Here is where trel gets added to the tbme
      &           + comft * (itrel*trel + ihrel*hrel)
          enddo
 c     DRF Add additional Aeff-dependent part of Trel
-         do jset = 0, nsetm1, 1
-            trelaeff = 0.0
-            jmx0 = (j2x(ia)+j2x(ib))/2.0
-            jmn0 = abs(j2x(ia)-j2x(ib))/2.0
+         trelaeff = 0.0
+         jmx0 = (j2x(ia)+j2x(ib))/2.0
+         jmn0 = abs(j2x(ia)-j2x(ib))/2.0
 c     DRF Adding four terms to trel:
 c     DRF   (<a|t|c><b|d> + <b|t|d><a|c> - <a|t|d><b|c> - <b|t|c><a|d>)
-            do ii = 1, 4
+         do ii = 1, 4
 c     DRF Cycle indices
-               if (ii.eq.1) then
-                  iaa = ia
-                  ibb = ic
-                  dd = ib.eq.id
-                  phse0 = 1.0
-                  phse1 = 1.0
-               elseif (ii.eq.2) then
-                  iaa = ib
-                  ibb = id
-                  dd = ia.eq.ic
-                  phse0 = 1.0
-                  phse1 = 1.0
-               elseif (ii.eq.3) then
-                  iaa = ia
-                  dd = ib.eq.ic
-                  phse0 = -1.0
-                  phse1 = -1.0
-               elseif (ii.eq.4) then
-                  iaa = ib
-                  ibb = ic
-                  dd = ia.eq.id
-                  phse0 = -1.0
-                  phse1 = -1.0
-               endif
+            if (ii.eq.1) then
+               iaa = ia
+               ibb = ic
+               dd = ib.eq.id
+               phse0 = 1.0
+               phse1 = 1.0
+            elseif (ii.eq.2) then
+               iaa = ib
+               ibb = id
+               dd = ia.eq.ic
+               phse0 = 1.0
+               phse1 = 1.0
+            elseif (ii.eq.3) then
+               iaa = ia
+               dd = ib.eq.ic
+               phse0 = -1.0
+               phse1 = -1.0
+            elseif (ii.eq.4) then
+               iaa = ib
+               ibb = ic
+               dd = ia.eq.id
+               phse0 = -1.0
+               phse1 = -1.0
+            endif
 c     DRF Determine term to add
-               if (dd.eq..true.) then
-                  naa = nnl(iaa)-1
-                  nbb = nnl(ibb)-1
-                  laa = lx(iaa)
-                  lbb = lx(ibb)
-                  jaa = j2x(iaa)
-                  jbb = j2x(ibb)
-                  pp = phse0*phse1**(jmx0-jt+1-it)
-                  if (laa.eq.lbb.and.jaa.eq.jbb) then
-                     if (naa.eq.nbb) then
-                        trelaeff = trelaeff +
-     &                       pp*(2*naa+laa+1.5)/2.0
-                     elseif (naa.eq.nbb+1) then
-                        trelaeff = trelaeff +
-     &                       pp*sqrt(naa*(naa+laa+0.5))/2.0
-                     elseif (nbb.eq.naa+1) then
-                        trelaeff = trelaeff +
-     &                       pp*sqrt(nbb*(nbb+lbb+0.5))/2.0
-                     endif
+            if (dd.eq..true.) then
+               naa = nnl(iaa)-1
+               nbb = nnl(ibb)-1
+               laa = lx(iaa)
+               lbb = lx(ibb)
+               jaa = j2x(iaa)
+               jbb = j2x(ibb)
+               pp = phse0*phse1**(jmx0-jt+1-it)
+               if (laa.eq.lbb.and.jaa.eq.jbb) then
+                  if (naa.eq.nbb) then
+                     trelaeff = trelaeff +
+     &                    pp*(2*naa+laa+1.5)/2.0
+                  elseif (naa.eq.nbb+1) then
+                     trelaeff = trelaeff +
+     &                    pp*sqrt(naa*(naa+laa+0.5))/2.0
+                  elseif (nbb.eq.naa+1) then
+                     trelaeff = trelaeff +
+     &                    pp*sqrt(nbb*(nbb+lbb+0.5))/2.0
                   endif
                endif
-            enddo
+            endif
+         enddo
 c     DRF Get normalization factor
-            if (ia.eq.ib) then
-               delab = 1.0
-            else
-               delab = 0.0
-            endif
-            if (ic.eq.id) then
-               delcd = 1.0
-            else
-               delcd = 0.0
-            endif
-            norm0 = sqrt((1.0+delab)*(1.0+delcd))
+         if (ia.eq.ib) then
+            delab = 1.0
+         else
+            delab = 0.0
+         endif
+         if (ic.eq.id) then
+            delcd = 1.0
+         else
+            delcd = 0.0
+         endif
+         norm0 = sqrt((1.0+delab)*(1.0+delcd))
 c     DRF Add triangular condition (is this necessary?)
-            tri0 = 1.0
-            if (jt.lt.jmn0.or.jmx0.lt.jt) then
-               tri0 = 0.0
-            elseif (it.lt.0.or.1.lt.it) then
-               tri0 = 0.0
-            endif
+         tri0 = 1.0
+         if (jt.lt.jmn0.or.jmx0.lt.jt) then
+            tri0 = 0.0
+         elseif (it.lt.0.or.1.lt.it) then
+            tri0 = 0.0
+         endif
 c$$$            if (trelaeff.ne.trel) then
 c$$$               if (2.le.ia.and.2.lt.ic.and.ib.le.3.and.id.le.3) then
 c$$$                  print *,'a,b,c,d,J,T = ',ia,ib,ic,id,jt,it
@@ -2468,6 +2467,7 @@ c$$$                  print *,'  comft2    = ',comft2
 c$$$               endif
 c$$$            endif
 c     DRF Add result to matrix element
+         do jset = 0, nsetm1, 1
             gful(idx,jset) = gful(idx,jset) +
      &           comft2*itrel*tri0*trelaeff/norm0
          enddo
