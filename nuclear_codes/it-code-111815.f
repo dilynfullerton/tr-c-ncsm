@@ -2285,7 +2285,7 @@ c      comft = 2.*hbomeg/real(Aeff)   !SRS This should be changed nucleons -> Ae
       comft = 2.*hbomeg/real(Aeff)
 c      comft = 2.*hbomeg/real(nucleons)   !SRS This should be changed nucleons -> Aeff
 c     DRF comft2 factor for Aeff-dependent part of Trel
-      comft2 = comft*(real(Aeff)-real(nucleons))/(real(nucleons)-1)
+      comft2 = (comft/8)*(real(Aeff)-real(nucleons))/(real(nucleons)-1)
       comfspe = 0.0 !real(ispe)/real(nucleons-1)
 cSRS      comfcm1 = strcm*hbomeg/real(nucleons-1)
 cSRS      comfcm2 = strcm*2.*hbomeg/real(nucleons) 
@@ -2394,6 +2394,8 @@ c     DRF Cycle indices
                   iaa = ib
                   ibb = id
                   dd = ia.eq.ic
+                  phse0 = 1.0
+                  phse1 = 1.0
                elseif (ii.eq.3) then
                   iaa = ia
                   dd = ib.eq.ic
@@ -2403,6 +2405,8 @@ c     DRF Cycle indices
                   iaa = ib
                   ibb = ic
                   dd = ia.eq.id
+                  phse0 = -1.0
+                  phse1 = -1.0
                endif
 c     DRF Determine term to add
                if (dd.eq..true.) then
@@ -2416,13 +2420,13 @@ c     DRF Determine term to add
                   if (laa.eq.lbb.and.jaa.eq.jbb) then
                      if (naa.eq.nbb) then
                         trelaeff = trelaeff +
-     &                       pp*(2*naa+laa+1.5)/16.0
+     &                       pp*(2*naa+laa+1.5)/2.0
                      elseif (naa.eq.nbb+1) then
                         trelaeff = trelaeff +
-     &                       pp*sqrt(naa*(naa+laa+0.5))/16.0
+     &                       pp*sqrt(naa*(naa+laa+0.5))/2.0
                      elseif (nbb.eq.naa+1) then
                         trelaeff = trelaeff +
-     &                       pp*sqrt(nbb*(nbb+lbb+0.5))/16.0
+     &                       pp*sqrt(nbb*(nbb+lbb+0.5))/2.0
                      endif
                   endif
                endif
