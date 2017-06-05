@@ -10,8 +10,6 @@ To run as a script:
 Generates an interaction file based on He4, He5, and He6 output files.
 """
 
-from sys import argv
-from InvalidNumberOfArgumentsException import InvalidNumberOfArgumentsException
 from itertools import chain
 
 
@@ -105,7 +103,8 @@ def get_header_string(aeff_str, e0, spe_n, spe_p, j2_range, a_values):
     term and single particle energies
     :param aeff_str: Aeff for header line
     :param e0: zero body term
-    :param spe_n: list of single particle energies ordered by increasing j
+    :param spe_n: list of neutron SPEs ordered by increasing J
+    :param spe_p: lsit of proton SPEs ordered by increasing J
     :param j2_range: list of 2*j values for single particle energies, in the
     order they are to be printed
     :param a_values: first 3 exact A values corresponding to the A-prescription
@@ -204,7 +203,11 @@ def write_interaction(
     """Writes interaction file based on Valence Cluster Expansion
     :param aeff: Aeff used for 3rd NCSD (helium6 if Nshell=1)
     :param e0: core energy
-    :param spe_n: list of single particle energies (in order of increasing j)
+    :param spe_n: list of neutron SPEs in order of increasing j
+    :param spe_p: list of proton SPEs in order of increasing j
+    :param tbme_nn: dict of neutron-neutron TBMEs
+    :param tbme_pn: dict of proton-neutron TBMEs
+    :param tbme_pp: dict of proton-proton TBMEs
     :param j2_range: ordered list of 2*j values for which SPE's exist for
     the shell. This should be listed in the order SPE's are to be written
     in the interaction file.

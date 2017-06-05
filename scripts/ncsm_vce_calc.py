@@ -139,7 +139,7 @@ from subprocess import Popen, PIPE
 from sys import argv
 from threading import Thread, currentThread
 from collections import deque
-from FdoVCE import run as vce_calculation
+from FdoVCE import make_interaction_file as vce_calculation
 from InvalidNumberOfArgumentsException import InvalidNumberOfArgumentsException
 
 from _make_dirs import DPATH_TEMPLATES, DPATH_RESULTS
@@ -317,8 +317,9 @@ def _run_trdens(
 
 
 def _run_vce(
-        a_values, a_prescription, a_range, nshell,
-        a_aeff_to_outfile_fpath_map, dirpath_aeff6, dirpath_vce,
+        a_values, a_prescription, a_range, nshell, dirpath_vce,
+        fpath_core, fpath_spe_n, fpath_spe_p,
+        fpath_tbme_nn, fpath_tbme_pn, fpath_tbme_pp,
 ):
     """Do the VCE expansion calculation for each Aeff value in aeff_range
     :param a_values: A values used to form the effective Hamiltonian
@@ -328,20 +329,16 @@ def _run_vce(
     Note: All generated interaction files will be the same (linked), the
     only difference is their file names, such that the shell_calc.py
     script interprets them as interactions for different A values.
-    :param a_aeff_to_outfile_fpath_map: Map from A values to their
-    respective NCSD output files
-    :param dirpath_aeff6: Directory for the 3rd A value
     :param dirpath_vce: Path to the directory in which to put generated
     interaction files
     :raises NcsdOutfileNotFoundException: if any of the NCSD *.out files
     or Heff_OLS are not found, this exception is raise
     """
-    a4_fpath = a_aeff_to_outfile_fpath_map[(a_values[0], a_prescription[0])]
-    a5_fpath = a_aeff_to_outfile_fpath_map[(a_values[1], a_prescription[1])]
-    heff_fpath = path.join(dirpath_aeff6, FNAME_HEFF)
     # Check that files exist
-    for f in [a4_fpath, a5_fpath, heff_fpath]:
-        if not path.exists(f):
+    vce_files = [fpath_core, fpath_spe_n, fpath_spe_p,
+                 fpath_tbme_nn, fpath_tbme_pn, fpath_tbme_pp]
+    for f in vce_files:
+        if f is not None and not path.exists(f):
             raise OutfileNotFoundException(
                 'NCSD outfile not found: %s' % f)
     # Do vce
@@ -349,8 +346,16 @@ def _run_vce(
     a_0 = a_range.pop()
     fpath_fmt = path.join(dirpath_vce, FNAME_FMT_VCE_INT)
     fpath = fpath_fmt % a_0
-    vce_calculation(a_prescription, fpath, a4_fpath, a5_fpath, heff_fpath,
-                    nshell=nshell, a_values=a_values)
+    vce_calculation(
+        presc=a_prescription, fpath_write_int=fpath,
+        fpath_core=fpath_core,
+        fpath_spe_n=fpath_spe_n,
+        fpath_spe_p=fpath_spe_p,
+        fpath_tbme_nn=fpath_tbme_nn,
+        fpath_tbme_pn=fpath_tbme_pn,
+        fpath_tbme_pp=fpath_tbme_pp,
+        nshell=nshell, a_values=a_values
+    )
     # Same interaction is used for all masses
     for a in a_range:
         next_fpath = fpath_fmt % a
@@ -404,15 +409,19 @@ def _threaded_calculation(fn, todo_list, max_open_threads):
 
 
 def _ncsd_multiple_calculations_t(
-        a_aeff_set, a_aeff_to_dpath_map, a_aeff_to_egvfile_map,
-        force, max_open_threads=MAX_OPEN_THREADS
+        z_a_aeff_set,
+        z_a_aeff_to_dpath_map,
+        z_a_aeff_to_egvfile_map,
+        force,
+        max_open_threads=MAX_OPEN_THREADS
 ):
     """Runs given NCSD calculations on the head node using multi-threading
-    :param a_aeff_set: set of (A, Aeff) for which to run NCSD calculations
-    :param a_aeff_to_dpath_map: map from (A, Aeff) to the directory in which
-    calculations are to be run
-    :param a_aeff_to_egvfile_map: map from (A, Aeff) to the *.egv file path,
-    which, if it exists, signifies that the calculation has already been done
+    :param z_a_aeff_set: set of (Z, A, Aeff) for which to run NCSD calculations
+    :param z_a_aeff_to_dpath_map: map from (Z, A, Aeff) to the directory 
+    in which calculations are to be run
+    :param z_a_aeff_to_egvfile_map: map from (Z, A, Aeff) to the *.egv 
+    file path, which, if it exists, signifies that the calculation has 
+    already been done
     :param force: if true, redoes the NCSD calculation even if the
     associated *.egv file already exists
     :param max_open_threads: maximum number of threads to be allowed to open
@@ -421,53 +430,57 @@ def _ncsd_multiple_calculations_t(
     """
     def _r(args, q, em):
         try:
-            a_, aeff_ = args
+            z_, a_, aeff_ = args
             _run_ncsd(
-                dpath=a_aeff_to_dpath_map[(a_, aeff_)],
-                fpath_egv=a_aeff_to_egvfile_map[(a_, aeff_)], force=force)
+                dpath=z_a_aeff_to_dpath_map[(z_, a_, aeff_)],
+                fpath_egv=z_a_aeff_to_egvfile_map[(z_, a_, aeff_)],
+                force=force
+            )
         except NcsdRunException, e:
             em.put(str(e))
         return q.put(currentThread())
     completed_job_list, error_messages, exit_code = _threaded_calculation(
-        fn=_r, todo_list=list(a_aeff_set), max_open_threads=max_open_threads)
+        fn=_r, todo_list=list(z_a_aeff_set), max_open_threads=max_open_threads)
     while not error_messages.empty():
         print error_messages.get()
     return completed_job_list
 
 
 def _ncsd_multiple_calculations_s(
-        a_aeff_set, a_aeff_to_dpath_map, a_aeff_to_egvfile_map,
-        a_aeff_to_jobfile_map, force, verbose, fname_stdout=FNAME_QSUB_STDOUT,
+        z_a_aeff_set, z_a_aeff_to_dpath_map, z_a_aeff_to_egvfile_map,
+        z_a_aeff_to_jobfile_map, force, verbose, fname_stdout=FNAME_QSUB_STDOUT,
         fname_stderr=FNAME_QSUB_STDERR,
 ):
     """Does specified NCSD calculations by submitting them to the cluster
     using qsub.
-    :param a_aeff_set: set of (A, Aeff) for which to run NCSD calculations
-    :param a_aeff_to_dpath_map: map from (A, Aeff) to the directory in which
-    calculations are to be run
-    :param a_aeff_to_egvfile_map: map from (A, Aeff) to the *.egv file path,
-    which, if it exists, signifies that the calculation has already been done
-    :param a_aeff_to_jobfile_map: map from (A, Aeff) to the *.sh file path,
-    which is the job file that is submitted to the cluster
+    :param z_a_aeff_set: set of (Z, A, Aeff) for which to run NCSD 
+    calculations
+    :param z_a_aeff_to_dpath_map: map from (Z, A, Aeff) to the directory 
+    in which calculations are to be run
+    :param z_a_aeff_to_egvfile_map: Map from (Z, A, Aeff) to the *.egv 
+    file path, which, if it exists, signifies that the calculation has 
+    already been done
+    :param z_a_aeff_to_jobfile_map: map from (Z, A, Aeff) to the *.sh 
+    file path, which is the job file that is submitted to the cluster
     :param force: if true, submits the job even if the *.egv file exists
     :param verbose: show verbose output
     :param fname_stdout: file name in which standard output of the qsub
     command is saved
     :param fname_stderr: file name in which standard error of the qsub
     command is saved
-    :return: list of (A, Aeff) pairs for which the job is ALREADY complete
+    :return: list of (Z, A, Aeff) pairs for which the job is ALREADY complete
     """
     submitted_jobs = 0
-    if verbose and len(a_aeff_set) > 0:
+    if verbose and len(z_a_aeff_set) > 0:
         print '  Submitting jobs...'
     completed_job_list = list()
-    for a, aeff in a_aeff_set:
-        fpath_egv = a_aeff_to_egvfile_map[(a, aeff)]
+    for z_a_aeff in z_a_aeff_set:
+        fpath_egv = z_a_aeff_to_egvfile_map[z_a_aeff]
         if path.exists(fpath_egv) and not force:
-            completed_job_list.append((a, aeff))
+            completed_job_list.append(z_a_aeff)
         else:
-            job = a_aeff_to_jobfile_map[(a, aeff)]
-            dpath = a_aeff_to_dpath_map[(a, aeff)]
+            job = z_a_aeff_to_jobfile_map[z_a_aeff]
+            dpath = z_a_aeff_to_dpath_map[z_a_aeff]
             args = ['qsub', '%s' % job]
             p = Popen(args=args, cwd=dpath, stdout=PIPE, stderr=PIPE)
             out, err = p.communicate()
@@ -489,29 +502,32 @@ def _ncsd_multiple_calculations_s(
 
 
 def _ncsd_multiple_calculations(
-        a_aeff_set, a_aeff_to_dpath_map, a_aeff_to_egvfile_map, force
+        z_a_aeff_set, z_a_aeff_to_dpath_map, z_a_aeff_to_egvfile_map, force
 ):
-    """Does the specified NCSD calculations on the head node without threading.
-    :param a_aeff_set: set of (A, Aeff) for which to run NCSD calculations
-    :param a_aeff_to_dpath_map: map from (A, Aeff) to the directory in which
-    calculations are to be run
-    :param a_aeff_to_egvfile_map: map from (A, Aeff) to the *.egv file path,
-    which, if it exists, signifies that the calculation has already been done
-    :param force: if true, submits the job even if the *.egv file exists
-    :return: list of (A, Aeff) pairs for which the job is ALREADY complete
+    """Does the specified NCSD calculations on the head node without 
+    threading.
+    :param z_a_aeff_set: Set of (Z, A, Aeff) for which to run NCSD 
+    calculations
+    :param z_a_aeff_to_dpath_map: map from (Z, A, Aeff) to the directory 
+    in which calculations are to be run
+    :param z_a_aeff_to_egvfile_map: map from (Z, A, Aeff) to the *.egv 
+    file path, which, if it exists, signifies that the calculation has 
+    already been done
+    :param force: If true, submits the job even if the *.egv file exists
+    :return: List of (Z, A, Aeff) pairs for which the job is ALREADY complete
     """
     # do ncsd
     jobs_completed = 0
     completed_job_list = list()
-    for a, aeff in sorted(a_aeff_set):
-        dpath = a_aeff_to_dpath_map[(a, aeff)]
+    for z_a_aeff in sorted(z_a_aeff_set):
+        dpath = z_a_aeff_to_dpath_map[z_a_aeff]
         try:
-            _run_ncsd(dpath=dpath, fpath_egv=a_aeff_to_egvfile_map[(a, aeff)],
+            _run_ncsd(dpath=dpath, fpath_egv=z_a_aeff_to_egvfile_map[z_a_aeff],
                       force=force)
         except NcsdRunException, e:
             print e
             continue
-        completed_job_list.append((a, aeff))
+        completed_job_list.append(z_a_aeff)
         jobs_completed += 1
     return completed_job_list
 
@@ -566,59 +582,71 @@ def ncsd_multiple_calculations(
     if nmax % 2:
         raise InvalidNmaxException(
             '\nInvalid Nmax: %d. Nmax must be even.' % nmax)
-    # make (A, Aeff, Nhw) set
-    a_aeff_nhw_set = set()
+    # Make (Z, A, Aeff, Nhw) set
+    z0 = a_values[0]
+    z_a_aeff_nhw_set = set()
     for ap in a_presc_list:
         nhw_tuple = list()
         for a in a_values:
             min_num_orbitals = _min_orbitals(z) + _min_orbitals(a - z)
             nhw_tuple.append(nmax + min_num_orbitals)
-        a_aeff_nhw_set |= set(zip(a_values, ap, nhw_tuple))
-    # separate set into lists
-    a_list, aeff_list, nhw_list = list(), list(), list(),
-    for a, aeff, nhw in a_aeff_nhw_set:
+        z_a_aeff_nhw_set |= set(zip((z0, z0, z0), a_values, ap, nhw_tuple))
+        if z >= z0+1:  # include SPE_p and TBME_pn
+            z_a_aeff_nhw_set |= set([
+                (z0+1, a_values[1], ap[1], nhw_tuple[1]),
+                (z0+1, a_values[2], ap[2], nhw_tuple[2])
+            ])
+        if z >= z0+2:  # include TBME_pp
+            z_a_aeff_nhw_set |= set([
+                (z0+2, a_values[2], ap[2], nhw_tuple[2])
+            ])
+    # Separate set into lists
+    z_list, a_list, aeff_list, nhw_list = [], [], [], []
+    for z, a, aeff, nhw in z_a_aeff_nhw_set:
+        z_list.append(z)
         a_list.append(a)
         aeff_list.append(aeff)
         nhw_list.append(nhw)
     if verbose:
-        print 'Doing NCSD calculations for (A, Aeff):'
+        print 'Doing NCSD calculations for (Z, A, Aeff):'
         print '    ' + ', '.join(
-            ['(%2d, %2d)' % (a, aeff)
-             for a, aeff in sorted(zip(a_list, aeff_list))]
+            ['(%2d, %2d, %2d)' % (z, a, aeff)
+             for z, a, aeff in sorted(zip(z_list, a_list, aeff_list))]
         )
     # prepare directories and get maps
-    a_aeff_maps = prepare_directories(
-        a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
-        z=z, n1=n1, n2=n2, nshell=nshell,
+    z_a_aeff_maps = prepare_directories(
+        z_list=z_list, a_list=a_list, aeff_list=aeff_list, nhw_list=nhw_list,
+        n1=n1, n2=n2, nshell=nshell,
         beta_cm=beta_cm, num_states=num_states, num_iter=num_iter,
         scalefactor=scalefactor, remove_protons=remove_protons,
         cluster_submit=cluster_submit, walltime=walltime, use_mpi=use_mpi,
         verbose=verbose, dpath_results=dpath_results,
         dpath_templates=dpath_templates, force=force,
     )
-    dir_map, egv_map, ncsd_job_map, vce_job_map, outfile_map = a_aeff_maps
-    # make (A, Aeff) set and do NCSD
-    a_aeff_set = set([(a, aeff) for a, aeff, nhw in a_aeff_nhw_set])
+    dir_map, egv_map, ncsd_job_map, vce_job_map, outfile_map = z_a_aeff_maps
+    # Make (Z, A, Aeff) set and do NCSD
+    z_a_aeff_set = set([(z, a, aeff) for z, a, aeff, nhw in z_a_aeff_nhw_set])
     if cluster_submit:
         completed_job_list = _ncsd_multiple_calculations_s(
-            a_aeff_set=a_aeff_set, a_aeff_to_dpath_map=dir_map,
-            a_aeff_to_egvfile_map=egv_map, a_aeff_to_jobfile_map=ncsd_job_map,
+            z_a_aeff_set=z_a_aeff_set, z_a_aeff_to_dpath_map=dir_map,
+            z_a_aeff_to_egvfile_map=egv_map,
+            z_a_aeff_to_jobfile_map=ncsd_job_map,
             verbose=verbose, force=force,
         )
-    elif threading and len(a_aeff_nhw_set) > 1:
+    elif threading and len(z_a_aeff_nhw_set) > 1:
         completed_job_list = _ncsd_multiple_calculations_t(
-            a_aeff_set=a_aeff_set, a_aeff_to_dpath_map=dir_map,
-            a_aeff_to_egvfile_map=egv_map, force=force,
+            z_a_aeff_set=z_a_aeff_set, z_a_aeff_to_dpath_map=dir_map,
+            z_a_aeff_to_egvfile_map=egv_map, force=force,
         )
     else:
         completed_job_list = _ncsd_multiple_calculations(
-            a_aeff_set=a_aeff_set, a_aeff_to_dpath_map=dir_map,
-            a_aeff_to_egvfile_map=egv_map, force=force,
+            z_a_aeff_set=z_a_aeff_set, z_a_aeff_to_dpath_map=dir_map,
+            z_a_aeff_to_egvfile_map=egv_map, force=force,
         )
     if remove_tmp_files:
         remove_ncsd_tmp_files(
             [dir_map[job] for job in completed_job_list])
-    return a_aeff_maps, completed_job_list
+    return z_a_aeff_maps, completed_job_list
 
 
 def ncsd_single_calculation(
@@ -660,9 +688,9 @@ def ncsd_single_calculation(
         raise InvalidNmaxException(
             'Invalid Nmax=%d. Nmax must be even.' % nmax)
     nhw = nmax + _min_orbitals(z) + _min_orbitals(a - z)
-    a_aeff_to_dpath, a_aeff_to_egv, a_aeff_to_job = prepare_directories(
-        a_list=[a], aeff_list=[aeff], nhw_list=[nhw],
-        z=z, n1=n1, n2=n2, nshell=nshell,
+    z_a_aeff_to_dpath, z_a_aeff_to_egv, z_a_aeff_to_job = prepare_directories(
+        z_list=[z], a_list=[a], aeff_list=[aeff], nhw_list=[nhw],
+        n1=n1, n2=n2, nshell=nshell,
         scalefactor=scalefactor, remove_protons=remove_protons,
         beta_cm=beta_cm, num_states=num_states, num_iter=num_iter,
         cluster_submit=cluster_submit, walltime=walltime, use_mpi=use_mpi,
@@ -671,20 +699,21 @@ def ncsd_single_calculation(
     )[:3]
     if cluster_submit:
         completed_job_list = _ncsd_multiple_calculations_s(
-            a_aeff_set=set([(a, aeff)]),
-            a_aeff_to_dpath_map=a_aeff_to_dpath,
-            a_aeff_to_egvfile_map=a_aeff_to_egv,
-            a_aeff_to_jobfile_map=a_aeff_to_job,
+            z_a_aeff_set=set([(a, aeff)]),
+            z_a_aeff_to_dpath_map=z_a_aeff_to_dpath,
+            z_a_aeff_to_egvfile_map=z_a_aeff_to_egv,
+            z_a_aeff_to_jobfile_map=z_a_aeff_to_job,
             force=force, verbose=verbose,
         )
     else:
         completed_job_list = _ncsd_multiple_calculations(
-            a_aeff_set=set([(a, aeff)]), a_aeff_to_dpath_map=a_aeff_to_dpath,
-            a_aeff_to_egvfile_map=a_aeff_to_egv, force=force,
+            z_a_aeff_set=set([(z, a, aeff)]),
+            z_a_aeff_to_dpath_map=z_a_aeff_to_dpath,
+            z_a_aeff_to_egvfile_map=z_a_aeff_to_egv, force=force,
         )
     if remove_tmp_files:
         remove_ncsd_tmp_files(
-            [a_aeff_to_dpath[job] for job in completed_job_list])
+            [z_a_aeff_to_dpath[job] for job in completed_job_list])
     return completed_job_list
 
 
@@ -745,9 +774,38 @@ class DirectoryNotFoundException(Exception):
     pass
 
 
+def _get_vce_files(z_a_aeff_to_out, z_a_aeff_to_dir,
+                   z, a_values, a_prescription):
+    """Get the filepaths to the *.out files required to perform the 
+    valence cluster expansion (core, spe_n, spe_p, tbme_nn, tbme_pn, tbme_pp).
+    :param z_a_aeff_to_out: Map from (Z, A, Aeff) -> NCSD *.out filepath
+    :param z_a_aeff_to_dir: Map from (Z, A, Aeff) -> NCSD directory
+    :param z: Proton number
+    :param a_values: Base A-values for the shell (CORE, SPE, TBME)
+    :param a_prescription: Aeff-prescription (CORE, SPE, TBME)
+    :return: filepaths: (core, spe_n, spe_p, tbme_nn, tbme_pn, tbme_pp)
+    """
+    z0 = a_values[0]
+    fpath_core = z_a_aeff_to_out[(z0, a_values[0], a_prescription[0])]
+    fpath_spe_n = z_a_aeff_to_out[(z0, a_values[1], a_prescription[1])]
+    fpath_tbme_nn = path.join(
+        z_a_aeff_to_dir[(z0, a_values[2], a_prescription[2])], FNAME_HEFF)
+    fpath_spe_p, fpath_tbme_pn, fpath_tbme_pp = (None,) * 3
+    if z >= z0 + 1:
+        fpath_spe_p = z_a_aeff_to_out[(z0+1, a_values[1], a_prescription[1])]
+        fpath_tbme_pn = path.join(
+            z_a_aeff_to_dir[(z0+1, a_values[2], a_prescription[2])], FNAME_HEFF)
+    if z >= z0 + 2:
+        fpath_tbme_pp = path.join(
+            z_a_aeff_to_dir[(z0+2, a_values[2], a_prescription[2])], FNAME_HEFF)
+    return (fpath_core, fpath_spe_n, fpath_spe_p,
+            fpath_tbme_nn, fpath_tbme_pn, fpath_tbme_pp)
+
+
 def vce_single_calculation(
-        a_values, a_prescription, a_range, z, nmax, a_aeff_dir_map,
-        a_aeff_outfile_map, n1=N1, n2=N1, nshell=-1, ncomponent=-1,
+        a_values, a_prescription, a_range, z, nmax,
+        z_a_aeff_to_dir, z_a_aeff_to_out,
+        n1=N1, n2=N1, nshell=-1, ncomponent=-1,
         int_scalefactor=None, remove_protons=False, force_trdens=False,
         dpath_results=DPATH_RESULTS, dpath_templates=DPATH_TEMPLATES,
 ):
@@ -764,9 +822,9 @@ def vce_single_calculation(
     :param ncomponent: dimension (1 = neutrons, 2 = protons and neutrons)
     :param n1: max allowed single particle state (for TBME truncation)
     :param n2: max allowed two-particle state (for TBME truncation)
-    :param a_aeff_dir_map: map from (A, Aeff) tuple to the directory in which
+    :param z_a_aeff_to_dir: map from (A, Aeff) tuple to the directory in which
     this calculation is being done
-    :param a_aeff_outfile_map: map from (A, Aeff) tuple to the *.out file
+    :param z_a_aeff_to_out: map from (A, Aeff) tuple to the *.out file
     produced by NCSD for this pair
     :param int_scalefactor: factor by which to scale the off-diagonal
     valence coupling terms of the TBME interaction
@@ -781,38 +839,55 @@ def vce_single_calculation(
         raise InvalidNmaxException(
             '\nInvalid Nmax: %d. Nmax must be even.' % nmax)
     # check that files exist
-    for f in a_aeff_outfile_map.values():
+    for f in z_a_aeff_to_out.values():
         if not path.exists(f):
             raise OutfileNotFoundException(
                 'NCSD outfile not found: %s' % f)
-    # for the 3rd a value, make trdens file and run TRDENS
-    a_aeff6 = (a_values[2], a_prescription[2])
-    dpath_a6 = a_aeff_dir_map[a_aeff6]
-    make_trdens_file(
-        a=a_values[2], a0=a_values[0], nshell=nshell, z=z,
-        nuc_dir=dpath_a6, dpath_results=dpath_results,
-        dpath_temp=dpath_templates
-    )
-    nhw = nmax + _min_orbitals(z) + _min_orbitals(a_values[2] - z)
-    try:
-        rename_egv_file(a6_dir=dpath_a6, nhw=nhw, force=force_trdens)
-    except EgvFileNotFoundException:
-        raise
-    try:
-        _run_trdens(dpath_a6=dpath_a6, force=force_trdens)
-    except TrdensRunException:
-        raise
+    # For the 3rd a value, make trdens file and run TRDENS
+    z0 = a_values[0]  # proton number of CORE atom
+    tbme_dirs = [z_a_aeff_to_dir[(z0, a_values[2], a_prescription[2])]]
+    if z >= z0 + 1:
+        tbme_dirs.append(
+            z_a_aeff_to_dir[(z0 + 1, a_values[2], a_prescription[2])]
+        )
+    if z >= z0 + 2:
+        tbme_dirs.append(
+            z_a_aeff_to_dir[(z0 + 2, a_values[2], a_prescription[2])]
+        )
+    # Run TRDENS in all TBME dirs
+    for dpath_a6 in tbme_dirs:
+        make_trdens_file(
+            a=a_values[2], a0=a_values[0], nshell=nshell, z=z,
+            nuc_dir=dpath_a6, dpath_results=dpath_results,
+            dpath_temp=dpath_templates
+        )
+        nhw = nmax + _min_orbitals(z) + _min_orbitals(a_values[2] - z)
+        try:
+            rename_egv_file(a6_dir=dpath_a6, nhw=nhw, force=force_trdens)
+        except EgvFileNotFoundException:
+            raise
+        try:
+            _run_trdens(dpath_a6=dpath_a6, force=force_trdens)
+        except TrdensRunException:
+            raise
     # do valence cluster expansion
     vce_dirpath = make_vce_directory(
         a_prescription=a_prescription, nmax=nmax, n1=n1, n2=n2, nshell=nshell,
         ncomponent=ncomponent, scalefactor=int_scalefactor,
         remove_protons=remove_protons, dpath_results=dpath_results,
     )
+    # Get file paths
+    f_core, f_spe_n, f_spe_p, f_tbme_nn, f_tbme_pn, f_tbme_pp = _get_vce_files(
+        z_a_aeff_to_out=z_a_aeff_to_out, z_a_aeff_to_dir=z_a_aeff_to_dir,
+        z=z, a_values=a_values, a_prescription=a_prescription
+    )
     try:
         _run_vce(
             a_values=a_values, a_prescription=a_prescription, a_range=a_range,
-            nshell=nshell, dirpath_aeff6=dpath_a6, dirpath_vce=vce_dirpath,
-            a_aeff_to_outfile_fpath_map=a_aeff_outfile_map,
+            nshell=nshell, dirpath_vce=vce_dirpath,
+            fpath_core=f_core, fpath_spe_n=f_spe_n,
+            fpath_spe_p=f_spe_p, fpath_tbme_nn=f_tbme_nn,
+            fpath_tbme_pn=f_tbme_pn, fpath_tbme_pp=f_tbme_pp,
         )
     except OutfileNotFoundException:
         raise
@@ -820,7 +895,7 @@ def vce_single_calculation(
 
 def _vce_multiple_calculations_t(
         z, a_values, a_presc_list, a_range, nmax, n1, n2, nshell, ncomponent,
-        a_aeff_to_dpath_map, a_aeff_to_out_fpath_map, dpath_templates,
+        z_a_aeff_to_dpath_map, z_a_aeff_to_out_fpath_map, dpath_templates,
         dpath_results, force_trdens, int_scalefactor=None, remove_protons=False,
         max_open_threads=MAX_OPEN_THREADS
 ):
@@ -842,10 +917,10 @@ def _vce_multiple_calculations_t(
     :param ncomponent: dimension (1 = neutrons, 2 = protons and neutrons)
     :param n1: max allowed single particle state (for TBME truncation)
     :param n2: max allowed two-particle state (for TBME truncation)
-    :param a_aeff_to_dpath_map: map from (A, Aeff) tuple to the directory in
-    which this calculation is being done
-    :param a_aeff_to_out_fpath_map: map from (A, Aeff) tuple to the *.out file
-    produced by NCSD for this pair
+    :param z_a_aeff_to_dpath_map: map from (Z, A, Aeff) tuple to the 
+    directory in which this calculation is being done
+    :param z_a_aeff_to_out_fpath_map: map from (Z, A, Aeff) tuple to 
+    the *.out file produced by NCSD for this pair
     :param dpath_templates: path to the templates directory
     :param dpath_results: path to the results directory
     :param int_scalefactor: factor by which to scale the off-diagonal
@@ -864,8 +939,9 @@ def _vce_multiple_calculations_t(
                 nmax=nmax, n1=n1, n2=n2, nshell=nshell, ncomponent=ncomponent,
                 int_scalefactor=int_scalefactor, remove_protons=remove_protons,
                 force_trdens=force_trdens, dpath_templates=dpath_templates,
-                dpath_results=dpath_results, a_aeff_dir_map=a_aeff_to_dpath_map,
-                a_aeff_outfile_map=a_aeff_to_out_fpath_map,
+                dpath_results=dpath_results,
+                z_a_aeff_to_dir=z_a_aeff_to_dpath_map,
+                z_a_aeff_to_out=z_a_aeff_to_out_fpath_map,
             )
         except EgvFileNotFoundException, e:
             em.put(str(e))
@@ -883,49 +959,70 @@ def _vce_multiple_calculations_t(
     return completed_job_list
 
 
+def _get_trdens_jobs(a_values, a_presc_list, z):
+    """Given the list of A-prescriptions, gets the list of necessary
+    TRDENS jobs specified by (Z, A, Aeff)
+    :param a_values: Base A values (core, SPE, TBME) for the given shell
+    e.g. for p-shell (4,5,6)
+    :param a_presc_list: List of Aeff-prescriptions
+    :param z: proton number
+    """
+    trdens_jobs = list()
+    z0 = a_values[0]  # Proton number of CORE atom
+    for ap in a_presc_list:
+        if z >= z0:
+            trdens_jobs.append((z0, a_values[2], ap[2]))
+        if z >= z0+1:
+            trdens_jobs.append((z0+1, a_values[2], ap[2]))
+        if z >= z0+2:
+            trdens_jobs.append((z0+2, a_values[2], ap[2]))
+    return trdens_jobs
+
+
 def _vce_multiple_calculations_s(
         z, a_values, a_presc_list, a_range, nmax, n1, n2, nshell, ncomponent,
-        a_aeff_to_out_fpath_map, a_aeff_to_dpath_map, a_aeff_to_jobfile_map,
-        dpath_templates, dpath_results, force_trdens, verbose,
-        int_scalefactor=None, remove_protons=False,
+        z_a_aeff_to_out_fpath_map, z_a_aeff_to_dpath_map,
+        z_a_aeff_to_jobfile_map, dpath_templates, dpath_results, force_trdens,
+        verbose, int_scalefactor=None, remove_protons=False,
 ):
     """Perform the specified TRDENS/VCE calculations, with TRDENS performed
     on the cluster.
     See _vce_multiple_calculations for parameter descriptions
     """
-    # get list of TRDENS jobs specified by (A, Aeff)
-    trdens_jobs = list()
-    for ap in a_presc_list:
-        trdens_jobs.append((a_values[2], ap[2]))
+    # Get TRDENS jobs specified by (Z, A, Aeff)
+    trdens_jobs = _get_trdens_jobs(
+        a_values=a_values, a_presc_list=a_presc_list, z=z)
     # make trdens files
     for trjob in trdens_jobs:
         make_trdens_file(
             a=trjob[0], a0=a_values[0], nshell=nshell, z=z,
-            nuc_dir=a_aeff_to_dpath_map[trjob], dpath_results=dpath_results,
+            nuc_dir=z_a_aeff_to_dpath_map[trjob], dpath_results=dpath_results,
             dpath_temp=dpath_templates,
         )
     # rename egv files
     error_messages = list()
     for trjob in trdens_jobs:
-        nhw = nmax + _min_orbitals(z) + _min_orbitals(trjob[0]-z)
+        nhw = nmax + _min_orbitals(z) + _min_orbitals(trjob[1]-z)
         try:
             rename_egv_file(
-                a6_dir=a_aeff_to_dpath_map[trjob], nhw=nhw, force=force_trdens)
+                a6_dir=z_a_aeff_to_dpath_map[trjob], nhw=nhw,
+                force=force_trdens
+            )
         except EgvFileNotFoundException, e:
             error_messages.append(str(e))
             continue
     # make marker files map
-    a_aeff_to_trdens_out = dict()
+    z_a_aeff_to_trdens_out = dict()
     for trjob in trdens_jobs:
-        a_aeff_to_trdens_out[trjob] = path.join(
-            a_aeff_to_dpath_map[trjob], FNAME_TRDENS_OUT)
+        z_a_aeff_to_trdens_out[trjob] = path.join(
+            z_a_aeff_to_dpath_map[trjob], FNAME_TRDENS_OUT)
     # submit TRDENS jobs to cluster
     if verbose:
         print '  Submitting TRDENS job to cluster'
     _ncsd_multiple_calculations_s(
-        a_aeff_set=trdens_jobs, a_aeff_to_dpath_map=a_aeff_to_dpath_map,
-        a_aeff_to_egvfile_map=a_aeff_to_trdens_out,
-        a_aeff_to_jobfile_map=a_aeff_to_jobfile_map, force=force_trdens,
+        z_a_aeff_set=trdens_jobs, z_a_aeff_to_dpath_map=z_a_aeff_to_dpath_map,
+        z_a_aeff_to_egvfile_map=z_a_aeff_to_trdens_out,
+        z_a_aeff_to_jobfile_map=z_a_aeff_to_jobfile_map, force=force_trdens,
         verbose=verbose, fname_stdout=FNAME_TRDENS_STDOUT,
         fname_stderr=FNAME_TRDENS_STDERR,
     )
@@ -938,14 +1035,19 @@ def _vce_multiple_calculations_s(
             nshell=nshell, ncomponent=ncomponent, scalefactor=int_scalefactor,
             remove_protons=remove_protons, dpath_results=dpath_results,
         )
+        f_c, f_spe_n, f_spe_p, f_tbme_nn, f_tbme_pn, f_tbme_pp = _get_vce_files(
+            z_a_aeff_to_out=z_a_aeff_to_out_fpath_map,
+            z_a_aeff_to_dir=z_a_aeff_to_dpath_map, z=z, a_values=a_values,
+            a_prescription=a_prescription
+        )
         try:
             _run_vce(
                 a_values=a_values, a_prescription=a_prescription,
                 a_range=a_range, nshell=nshell,
-                dirpath_aeff6=a_aeff_to_dpath_map[
-                    (a_values[2], a_prescription[2])],
                 dirpath_vce=vce_dirpath,
-                a_aeff_to_outfile_fpath_map=a_aeff_to_out_fpath_map,
+                fpath_core=f_c, fpath_spe_n=f_spe_n, fpath_spe_p=f_spe_p,
+                fpath_tbme_nn=f_tbme_nn, fpath_tbme_pn=f_tbme_pn,
+                fpath_tbme_pp=f_tbme_pp
             )
         except OutfileNotFoundException, e:
             error_messages.append(str(e))
@@ -957,7 +1059,7 @@ def _vce_multiple_calculations_s(
 
 def _vce_multiple_calculations(
         z, a_values, a_presc_list, a_range, nmax, n1, n2, nshell, ncomponent,
-        a_aeff_to_out_fpath_map, a_aeff_to_dpath_map, dpath_templates,
+        z_a_aeff_to_out_fpath_map, z_a_aeff_to_dpath_map, dpath_templates,
         dpath_results, force_trdens, int_scalefactor=None, remove_protons=False,
 ):
     """Perform the specified TRDENS/VCE calculations on the head node without
@@ -978,10 +1080,10 @@ def _vce_multiple_calculations(
     :param ncomponent: dimension (1 = neutrons, 2 = protons and neutrons)
     :param n1: max allowed single particle state (for TBME truncation)
     :param n2: max allowed two-particle state (for TBME truncation)
-    :param a_aeff_to_dpath_map: map from (A, Aeff) tuple to the directory in
-    which this calculation is being done
-    :param a_aeff_to_out_fpath_map: map from (A, Aeff) tuple to the *.out file
-    produced by NCSD for this pair
+    :param z_a_aeff_to_dpath_map: map from (Z, A, Aeff) tuple to 
+    the directory in which this calculation is being done
+    :param z_a_aeff_to_out_fpath_map: map from (A, Aeff) tuple to the 
+    *.out file produced by NCSD for this pair
     :param dpath_templates: path to the templates directory
     :param dpath_results: path to the results directory
     :param int_scalefactor: factor by which to scale the off-diagonal
@@ -1003,8 +1105,8 @@ def _vce_multiple_calculations(
                 int_scalefactor=int_scalefactor, remove_protons=remove_protons,
                 force_trdens=force_trdens, dpath_results=dpath_results,
                 dpath_templates=dpath_templates,
-                a_aeff_outfile_map=a_aeff_to_out_fpath_map,
-                a_aeff_dir_map=a_aeff_to_dpath_map,
+                z_a_aeff_to_out=z_a_aeff_to_out_fpath_map,
+                z_a_aeff_to_dir=z_a_aeff_to_dpath_map,
             )
             jobs_completed += 1
         except OutfileNotFoundException, e:
@@ -1026,9 +1128,9 @@ def _vce_multiple_calculations(
 
 def vce_multiple_calculations(
         a_values, a_presc_list, a_range, z, nmax, n1, n2, nshell, ncomponent,
-        a_aeff_to_out_fpath_map, a_aeff_to_dpath_map, a_aeff_to_jobfile_map,
-        force_trdens, verbose, threading, int_scalefactor=None,
-        remove_protons=False, cluster_submit=True,
+        z_a_aeff_to_out_fpath_map, z_a_aeff_to_dpath_map,
+        z_a_aeff_to_jobfile_map, force_trdens, verbose, threading,
+        int_scalefactor=None, remove_protons=False, cluster_submit=True,
         dpath_templates=DPATH_TEMPLATES, dpath_results=DPATH_RESULTS,
 ):
     """For every A prescription in a_presc_list, performs the valence
@@ -1047,12 +1149,12 @@ def vce_multiple_calculations(
     :param nshell: shell number (0=s, 1=p, 2=sd, ...)
     :param ncomponent: number of components
     (1 -> neutrons, 2 -> protons and neutrons)
-    :param a_aeff_to_out_fpath_map: map from (A, Aeff) to the *.out file
-    produced by NCSD for this pair
-    :param a_aeff_to_dpath_map: map from (A, Aeff) to the directory in which
-    this calculation is being done
-    :param a_aeff_to_jobfile_map: map from (A, Aeff) to the *.sh job file for
-    submitting the TRDENS job
+    :param z_a_aeff_to_out_fpath_map: map from (Z, A, Aeff) to the 
+    *.out file produced by NCSD for this pair
+    :param z_a_aeff_to_dpath_map: map from (Z, A, Aeff) to the directory 
+    in which this calculation is being done
+    :param z_a_aeff_to_jobfile_map: map from (Z, A, Aeff) to the *.sh 
+    job file for submitting the TRDENS job
     :param int_scalefactor: factor by which TBME interaction file was scaled
     (for directory naming purposes); if None, directory will be named as
     usual
@@ -1078,9 +1180,9 @@ def vce_multiple_calculations(
             int_scalefactor=int_scalefactor, remove_protons=remove_protons,
             force_trdens=force_trdens, verbose=verbose,
             dpath_results=dpath_results, dpath_templates=dpath_templates,
-            a_aeff_to_out_fpath_map=a_aeff_to_out_fpath_map,
-            a_aeff_to_dpath_map=a_aeff_to_dpath_map,
-            a_aeff_to_jobfile_map=a_aeff_to_jobfile_map,
+            z_a_aeff_to_out_fpath_map=z_a_aeff_to_out_fpath_map,
+            z_a_aeff_to_dpath_map=z_a_aeff_to_dpath_map,
+            z_a_aeff_to_jobfile_map=z_a_aeff_to_jobfile_map,
         )
     elif threading and len(a_presc_list) > 1:
         _vce_multiple_calculations_t(
@@ -1089,8 +1191,8 @@ def vce_multiple_calculations(
             int_scalefactor=int_scalefactor, remove_protons=remove_protons,
             force_trdens=force_trdens, dpath_results=dpath_results,
             dpath_templates=dpath_templates,
-            a_aeff_to_out_fpath_map=a_aeff_to_out_fpath_map,
-            a_aeff_to_dpath_map=a_aeff_to_dpath_map,
+            z_a_aeff_to_out_fpath_map=z_a_aeff_to_out_fpath_map,
+            z_a_aeff_to_dpath_map=z_a_aeff_to_dpath_map,
         )
     else:
         return _vce_multiple_calculations(
@@ -1099,8 +1201,8 @@ def vce_multiple_calculations(
             int_scalefactor=int_scalefactor, remove_protons=remove_protons,
             force_trdens=force_trdens, dpath_results=dpath_results,
             dpath_templates=dpath_templates,
-            a_aeff_to_out_fpath_map=a_aeff_to_out_fpath_map,
-            a_aeff_to_dpath_map=a_aeff_to_dpath_map,
+            z_a_aeff_to_out_fpath_map=z_a_aeff_to_out_fpath_map,
+            z_a_aeff_to_dpath_map=z_a_aeff_to_dpath_map,
         )
 
 
@@ -1161,7 +1263,7 @@ def ncsd_vce_calculations(
     if z is None:
         z = int(a_values[0] / ncomponent)
     a_presc_list = list(a_prescriptions)
-    a_aeff_maps, completed_job_list = ncsd_multiple_calculations(
+    z_a_aeff_maps, completed_job_list = ncsd_multiple_calculations(
         z=z, a_values=a_values, a_presc_list=a_presc_list, nmax=nmax, n1=n1,
         n2=n2, nshell=nshell, scalefactor=int_scalefactor,
         remove_protons=remove_protons, beta_cm=beta_cm, num_states=num_states,
@@ -1170,7 +1272,7 @@ def ncsd_vce_calculations(
         use_mpi=use_mpi, remove_tmp_files=remove_tmp_files,
         dpath_templates=dpath_templates, dpath_results=dpath_results,
     )
-    dir_map, egv_map, ncsd_job_map, vce_job_map, outfile_map = a_aeff_maps
+    dir_map, egv_map, ncsd_job_map, vce_job_map, outfile_map = z_a_aeff_maps
     vce_a_presc_list = list()
     for presc in a_presc_list:
         for a, aeff in zip(a_values, presc):
@@ -1185,8 +1287,8 @@ def ncsd_vce_calculations(
         force_trdens=force_trdens or force_all, verbose=verbose,
         threading=threading, dpath_results=dpath_results,
         dpath_templates=dpath_templates, cluster_submit=cluster_submit,
-        a_aeff_to_out_fpath_map=outfile_map, a_aeff_to_dpath_map=dir_map,
-        a_aeff_to_jobfile_map=vce_job_map,
+        z_a_aeff_to_out_fpath_map=outfile_map, z_a_aeff_to_dpath_map=dir_map,
+        z_a_aeff_to_jobfile_map=vce_job_map,
     )
 
 
