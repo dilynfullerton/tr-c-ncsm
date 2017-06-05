@@ -543,7 +543,7 @@ def ncsd_multiple_calculations(
         force=False, verbose=True, threading=True,
         cluster_submit=False, walltime=None, use_mpi=USE_MPI,
         remove_tmp_files=True, dpath_templates=DPATH_TEMPLATES,
-        dpath_results=DPATH_RESULTS,
+        dpath_results=DPATH_RESULTS, proton_neutron=True,
 ):
     """For a given list of A prescriptions, do the NCSD calculations
     necessary for doing a valence cluster expansion
@@ -578,15 +578,21 @@ def ncsd_multiple_calculations(
     following the NCSD calculation
     :param dpath_templates: path to the templates directory
     :param dpath_results: path to the results directory
+    :param proton_neutron: If True, do VCE for neutron AND proton 
+    interactions
     """
     if nmax % 2:
         raise InvalidNmaxException(
             '\nInvalid Nmax: %d. Nmax must be even.' % nmax)
     # Make (Z, A, Aeff, Nhw) set
-    z0 = int(a_values[0] / 2)
+    if proton_neutron:
+        z0 = int(a_values[0] / 2)
+        z1 = z0 + 2
+    else:
+        z0, z1 = z, z
     z_a_aeff_nhw_set = set()
     for ap in a_presc_list:
-        for zi in range(z0, z0+2+1):
+        for zi in range(z0, z1+1):
             if zi > z:
                 break
             nhw_tuple = []
@@ -757,7 +763,7 @@ def ncsd_exact_calculations(
         num_iter=num_iter, cluster_submit=cluster_submit, walltime=walltime,
         use_mpi=use_mpi, force=force, verbose=verbose,
         remove_tmp_files=remove_tmp_files, dpath_templates=dpath_templates,
-        dpath_results=dpath_results,
+        dpath_results=dpath_results, proton_neutron=False,
     )
 
 
