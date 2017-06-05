@@ -536,6 +536,28 @@ class InvalidNmaxException(Exception):
     pass
 
 
+def _get_required_z_a_aeff_nhw_for_presc(a_values, a_presc_list, z, nmax,
+                                         proton_neutron=True):
+    # Make (Z, A, Aeff, Nhw) set
+    if proton_neutron:
+        z0 = int(a_values[0] / 2)
+        z1 = z0 + 2
+    else:
+        z0, z1 = z, z
+    z_a_aeff_nhw_set = set()
+    for ap in a_presc_list:
+        for zi in range(z0, z1+1):
+            if zi > z:
+                break
+            nhw_tuple = []
+            for a in a_values:
+                min_num_orbitals = _min_orbitals(zi) + _min_orbitals(a - zi)
+                nhw_tuple.append(nmax + min_num_orbitals)
+            for i in range(zi-z0, 2+1):
+                z_a_aeff_nhw_set.add((zi, a_values[i], ap[i], nhw_tuple[i]))
+    return z_a_aeff_nhw_set
+
+
 def ncsd_multiple_calculations(
         a_presc_list, a_values, z, nmax=NMAX, nshell=N_SHELL, n1=N1, n2=N1,
         scalefactor=None, remove_protons=False, beta_cm=BETA_CM,
@@ -584,25 +606,12 @@ def ncsd_multiple_calculations(
     if nmax % 2:
         raise InvalidNmaxException(
             '\nInvalid Nmax: %d. Nmax must be even.' % nmax)
-    # Make (Z, A, Aeff, Nhw) set
-    if proton_neutron:
-        z0 = int(a_values[0] / 2)
-        z1 = z0 + 2
-    else:
-        z0, z1 = z, z
-    z_a_aeff_nhw_set = set()
-    for ap in a_presc_list:
-        for zi in range(z0, z1+1):
-            if zi > z:
-                break
-            nhw_tuple = []
-            for a in a_values:
-                min_num_orbitals = _min_orbitals(zi) + _min_orbitals(a - zi)
-                nhw_tuple.append(nmax + min_num_orbitals)
-            for i in range(zi-z0, 2+1):
-                z_a_aeff_nhw_set.add((zi, a_values[i], ap[i], nhw_tuple[i]))
     # Separate set into lists
     z_list, a_list, aeff_list, nhw_list = [], [], [], []
+    z_a_aeff_nhw_set = _get_required_z_a_aeff_nhw_for_presc(
+        a_values=a_values, a_presc_list=a_presc_list, z=z, nmax=nmax,
+        proton_neutron=proton_neutron
+    )
     for z, a, aeff, nhw in z_a_aeff_nhw_set:
         z_list.append(z)
         a_list.append(a)
@@ -1276,8 +1285,11 @@ def ncsd_vce_calculations(
     dir_map, egv_map, ncsd_job_map, vce_job_map, outfile_map = z_a_aeff_maps
     vce_a_presc_list = list()
     for presc in a_presc_list:
-        for a, aeff in zip(a_values, presc):
-            if (a, aeff) not in completed_job_list:
+        for zi, a, aeff, nhw in _get_required_z_a_aeff_nhw_for_presc(
+                a_values=a_values, a_presc_list=[presc], z=z, nmax=nmax,
+                proton_neutron=True
+        ):
+            if (zi, a, aeff) not in completed_job_list:
                 break
         else:
             vce_a_presc_list.append(presc)
