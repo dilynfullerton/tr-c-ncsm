@@ -1003,16 +1003,17 @@ def _vce_multiple_calculations_s(
     trdens_jobs = _get_trdens_jobs(
         a_values=a_values, a_presc_list=a_presc_list, z=z)
     # make trdens files
-    for trjob in trdens_jobs:
+    for zi, a, aeff in trdens_jobs:
         make_trdens_file(
-            a=trjob[0], a0=a_values[0], nshell=nshell, z=z,
-            nuc_dir=z_a_aeff_to_dpath_map[trjob], dpath_results=dpath_results,
-            dpath_temp=dpath_templates,
+            a=a, a0=a_values[0], nshell=nshell, z=zi,
+            nuc_dir=z_a_aeff_to_dpath_map[(zi, a, aeff)],
+            dpath_results=dpath_results, dpath_temp=dpath_templates,
         )
     # rename egv files
     error_messages = list()
     for trjob in trdens_jobs:
-        nhw = nmax + _min_orbitals(z) + _min_orbitals(trjob[1]-z)
+        zi, a, aeff = trjob
+        nhw = nmax + _min_orbitals(zi) + _min_orbitals(a-zi)
         try:
             rename_egv_file(
                 a6_dir=z_a_aeff_to_dpath_map[trjob], nhw=nhw,
