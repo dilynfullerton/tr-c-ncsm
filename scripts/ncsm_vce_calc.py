@@ -586,20 +586,15 @@ def ncsd_multiple_calculations(
     z0 = a_values[0]
     z_a_aeff_nhw_set = set()
     for ap in a_presc_list:
-        nhw_tuple = list()
-        for a in a_values:
-            min_num_orbitals = _min_orbitals(z) + _min_orbitals(a - z)
-            nhw_tuple.append(nmax + min_num_orbitals)
-        z_a_aeff_nhw_set |= set(zip((z0, z0, z0), a_values, ap, nhw_tuple))
-        if z >= z0+1:  # include SPE_p and TBME_pn
-            z_a_aeff_nhw_set |= set([
-                (z0+1, a_values[1], ap[1], nhw_tuple[1]),
-                (z0+1, a_values[2], ap[2], nhw_tuple[2])
-            ])
-        if z >= z0+2:  # include TBME_pp
-            z_a_aeff_nhw_set |= set([
-                (z0+2, a_values[2], ap[2], nhw_tuple[2])
-            ])
+        for zi in range(z0, z0+2+1):
+            if zi < z:
+                break
+            nhw_tuple = []
+            for a in a_values:
+                min_num_orbitals = _min_orbitals(zi) + _min_orbitals(a - zi)
+                nhw_tuple.append(nmax + min_num_orbitals)
+            for i in range(zi-z0, 2+1):
+                z_a_aeff_nhw_set.add((zi, a_values[i], ap[i], nhw_tuple[i]))
     # Separate set into lists
     z_list, a_list, aeff_list, nhw_list = [], [], [], []
     for z, a, aeff, nhw in z_a_aeff_nhw_set:
