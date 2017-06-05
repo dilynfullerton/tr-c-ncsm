@@ -587,7 +587,7 @@ def ncsd_multiple_calculations(
     z_a_aeff_nhw_set = set()
     for ap in a_presc_list:
         for zi in range(z0, z0+2+1):
-            if zi < z:
+            if zi > z:
                 break
             nhw_tuple = []
             for a in a_values:
