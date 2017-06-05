@@ -12,6 +12,7 @@ Generates an interaction file based on He4, He5, and He6 output files.
 
 from sys import argv
 from InvalidNumberOfArgumentsException import InvalidNumberOfArgumentsException
+from itertools import chain
 
 
 class GroundStateEnergyNotFoundException(Exception):
@@ -48,16 +49,16 @@ def get_j2_range(nshell):
     return j2_range, idx_range
 
 
-def get_e0(fpath):
+def get_e0(fpath_core):
     """Given the file path to the first NCSD outfile (helium 4 for Nshell=1),
     returns the first energy with J=0
-    :param fpath: file path to the first NCSD outfile (for Nshell=1, this
+    :param fpath_core: file path to the first NCSD outfile (for Nshell=1, this
     would be helium 4)
     :return: first energy whose angular momentum is 0.0
     :raises GroundStateEnergyNotFoundException: raised when a state with J=0
     is not found in the given file
     """
-    f = open(fpath)
+    f = open(fpath_core)
     for line in f:
         if 'State #' in line:
             ldat = line.split()
@@ -66,7 +67,7 @@ def get_e0(fpath):
                 return float(ldat[5])
     else:
         raise GroundStateEnergyNotFoundException(
-            '\nA ground state could not be retrieved from %s' % fpath)
+            '\nA ground state could not be retrieved from %s' % fpath_core)
 
 
 def get_spe(fpath, e0, j2_range):
@@ -78,7 +79,7 @@ def get_spe(fpath, e0, j2_range):
     the shell. This should be listed in the order SPE's are to be written
     in the interaction file
     """
-    spe_list = [999.] * len(j2_range)
+    spe_list = [None] * len(j2_range)
     f = open(fpath)
     for line in f:
         if 'State # ' not in line:
@@ -88,9 +89,9 @@ def get_spe(fpath, e0, j2_range):
         j = int(2 * float(ldat[8]))
         if j in j2_range:
             ii = j2_range.index(j)
-            if spe_list[ii] == 999.:
+            if spe_list[ii] is None:
                 spe_list[ii] = e - e0
-        if 999. not in spe_list:
+        if None not in spe_list:
             break
     else:
         raise SingleParticleEnergyNotFoundException(
@@ -99,12 +100,12 @@ def get_spe(fpath, e0, j2_range):
     return spe_list
 
 
-def get_header_string(aeff_str, e0, spe, j2_range, a_values):
+def get_header_string(aeff_str, e0, spe_n, spe_p, j2_range, a_values):
     """Returns the header to the interaction file, along with the zero body
     term and single particle energies
     :param aeff_str: Aeff for header line
     :param e0: zero body term
-    :param spe: list of single particle energies ordered by increasing j
+    :param spe_n: list of single particle energies ordered by increasing j
     :param j2_range: list of 2*j values for single particle energies, in the
     order they are to be printed
     :param a_values: first 3 exact A values corresponding to the A-prescription
@@ -116,44 +117,38 @@ def get_header_string(aeff_str, e0, spe, j2_range, a_values):
         '%s' % str(aeff_str))
     header_lines.append('!  Zero body term: %10.6f' % (e0,))
     header_lines.append('!  Index  n  l  j tz')
-    for j, idx in zip(j2_range, range(len(spe))):
+    for j, idx in zip(j2_range, range(len(j2_range))):
         header_lines.append('!  %d     %d  %d  %d  %d' % (idx+1, 0, 1, j, 1))
     header_lines.append('! ')
-    spe_line = '-999 ' + '  '.join(['%10.6f' % e for e in spe])
+    # Add single particle energy line
+    if spe_p is None:
+        spe_line = '-999 ' + '  '.join(['%10.6f' % e for e in spe_n])
+    elif spe_n is None:
+        spe_line = '-999 ' + '  '.join(['%10.6f' % e for e in spe_p])
+    else:  # both spe_n and spe_p not None
+        # TODO: ensure the chain order is correct
+        spe_line = '-999 ' + '  '.join(
+            ['%10.6f' % e for e in chain(spe_n, spe_p)])
     spe_line += '  %d  %d  0.000000' % (a_values[0], a_values[2])
     header_lines.append(spe_line)
     return '\n'.join(header_lines)
 
 
-def get_tbme(aeff, e0, spe, j2_range, idx_range, a_values,
-             fpath_write_int, fpath_heff, presc=None):
-    """Writes interaction file based on Valence Cluster Expansion
-    :param aeff: Aeff used for 3rd NCSD (helium6 if Nshell=1)
-    :param e0: core energy
-    :param spe: list of single particle energies (in order of increasing j)
-    :param j2_range: ordered list of 2*j values for which SPE's exist for
-    the shell. This should be listed in the order SPE's are to be written
-    in the interaction file.
-    :param idx_range: list of indices numbered according to increasing j and 
+def get_tbme(fpath_heff, idx_range, e0, spe_n, spe_p):
+    """Gets the two-body matrix elements from the given effective interaction,
+    core energy e0, and single particle energies spe_n (neutron) and 
+    spe_p (proton). Both spe_n and spe_p should not be None
+    :param fpath_heff: Full filepath to the Heff_OLS.dat interaction matrix
+    :param idx_range: List of indices numbered according to increasing j and 
     ordered according to the same convention as j2_range.
     For example if the ordering of j's was [j=7/2, j=1/2, j=3/2, j=5/2],
     idx_range would be [4, 1, 2, 3].
-    :param a_values: first 3 exact A values corresponding to the A-prescription
-    :param fpath_write_int: file path for NuShellX interaction file to write
-    :param fpath_heff: file path of Heff_OLS matrix
-    :param presc: 3-tuple representing the A-prescription. If None, assumed to
-    be (aeff, aeff, aeff)
+    :param e0: Core energy
+    :param spe_n: Single particle energies due to neutron excitation
+    :param spe_p: Single particle energies due to proton excitation
+    :return: 
     """
-    # get the top header lines to write to *.int file
-    write_lines = list()
-    if presc is not None and (presc[0] != aeff or presc[1] != aeff):
-        aeff_str = str(presc)
-    else:
-        aeff_str = str(aeff)
-    write_lines.append(get_header_string(
-        aeff_str=aeff_str, e0=e0, spe=spe, j2_range=j2_range, a_values=a_values
-    ))
-    # open Heff_OLS file for reading
+    # Open Heff_OLS file for reading
     f = open(fpath_heff)
     line = f.readline()
     dim = int(line.split()[0])
@@ -174,7 +169,14 @@ def get_tbme(aeff, e0, spe, j2_range, idx_range, a_values,
                 continue
             v = float(ldat[j])
             if i == j:
-                v -= (e0 + spe[kets[i]['p'] - 1] + spe[kets[i]['q'] - 1])
+                v -= e0  # subtract core
+                if spe_n is None:
+                    v -= (spe_p[kets[i]['p']-1] + spe_p[kets[i]['q']-1])
+                elif spe_p is None:
+                    v -= (spe_n[kets[i]['p']-1] + spe_n[kets[i]['q']-1])
+                else:  # both not None
+                    v -= .5 * (spe_n[kets[i]['p']-1] + spe_n[kets[i]['q']-1])
+                    v -= .5 * (spe_p[kets[i]['p']-1] + spe_p[kets[i]['q']-1])
             tbme_list.append((
                 kets[i]['p'], kets[i]['q'], kets[j]['p'], kets[j]['q'],
                 kets[i]['J'], kets[i]['T'], v))
@@ -192,8 +194,37 @@ def get_tbme(aeff, e0, spe, j2_range, idx_range, a_values,
         next_tbme_list.append((a, b, c, d, j, t, v))
     # sort TBME's by j, t, a, b, c, d
     next_tbme_list = sorted(next_tbme_list, key=lambda e: (e[4], e[5], e[:4]))
-    # make lines
-    for tbme in next_tbme_list:
+    return next_tbme_list
+
+
+def write_interaction(
+        e0, spe_n, spe_p, tbme_nn, tbme_pn, tbme_pp,
+        aeff, j2_range, a_values, fpath_write_int, presc=None
+):
+    """Writes interaction file based on Valence Cluster Expansion
+    :param aeff: Aeff used for 3rd NCSD (helium6 if Nshell=1)
+    :param e0: core energy
+    :param spe_n: list of single particle energies (in order of increasing j)
+    :param j2_range: ordered list of 2*j values for which SPE's exist for
+    the shell. This should be listed in the order SPE's are to be written
+    in the interaction file.
+    :param a_values: first 3 exact A values corresponding to the A-prescription
+    :param fpath_write_int: file path for NuShellX interaction file to write
+    :param presc: 3-tuple representing the A-prescription. If None, assumed to
+    be (aeff, aeff, aeff)
+    """
+    # get the top header lines to write to *.int file
+    write_lines = list()
+    if presc is not None and (presc[0] != aeff or presc[1] != aeff):
+        aeff_str = str(presc)
+    else:
+        aeff_str = str(aeff)
+    write_lines.append(get_header_string(
+        aeff_str=aeff_str, e0=e0, spe_n=spe_n, spe_p=spe_p,
+        j2_range=j2_range, a_values=a_values
+    ))
+    # Write two-body matrix elements
+    for tbme in chain(tbme_nn, tbme_pn, tbme_pp):
         next_line = '%3d %3d %3d %3d  %3d %3d  %10.6f' % tbme
         write_lines.append(next_line)
     # write the file
@@ -202,58 +233,88 @@ def get_tbme(aeff, e0, spe, j2_range, idx_range, a_values,
     outfile.close()
 
 
-def run(presc, fpath_write_int, fpath_he4, fpath_he5, fpath_heff_ols, nshell,
-        a_values):
+def make_interaction_file(
+        presc, fpath_write_int,
+        fpath_core, fpath_spe_n, fpath_spe_p,
+        fpath_tbme_nn, fpath_tbme_pn, fpath_tbme_pp,
+        nshell, a_values
+):
     """Do the full valence cluster expansion based on the given A-prescription
     and NCSD file paths
     :param presc: 3-tuple representing the A-prescription
-    :param fpath_write_int: path to the NuShellX interaction file to write
-    :param fpath_he4: path to the 1st NCSD out file (helium 4 if Nshell=1)
-    :param fpath_he5: path to the 2nd NCSD out file (helium 5 if Nshell=1)
-    :param fpath_heff_ols: path to the Heff file generated by TRDENS
-    :param nshell: major oscillator shell (0=s, 1=p, 2=sd,...)
-    :param a_values: first 3 exact A values
+    :param fpath_write_int: Path to the NuShellX interaction file to write
+    :param fpath_core: Path to the core NCSD out file (eg. helium 4 if Nshell=1)
+    :param fpath_spe_n: Path to the neutron SPE NCSD out file 
+    (eg. helium 5 if Nshell=1)
+    :param fpath_spe_p: Path to the proton SPE NCSD out file
+    :param fpath_tbme_nn: Path to the Heff file generated by TRDENS for 
+    neutron-neutron interactions
+    :param fpath_tbme_pn: Same as above for proton-neutron interactions
+    :param fpath_tbme_pp: Same as above for proton-proton interactions
+    :param nshell: Major oscillator shell (0=s, 1=p, 2=sd,...)
+    :param a_values: First 3 exact A values
     """
-    e0 = get_e0(fpath=fpath_he4)
+    # Get core energy
+    e0 = get_e0(fpath_core=fpath_core)
     j2_range, idx_range = get_j2_range(nshell=nshell)
-    spe = get_spe(fpath=fpath_he5, e0=e0, j2_range=j2_range)
-    get_tbme(
-        aeff=presc[2], e0=e0, spe=spe, presc=presc,
-        j2_range=j2_range, idx_range=idx_range,
-        fpath_write_int=fpath_write_int, fpath_heff=fpath_heff_ols,
-        a_values=a_values,
+    # Get single particle energies
+    spe_n, spe_p = None, None
+    if fpath_spe_n is not None:
+        spe_n = get_spe(fpath=fpath_spe_n, e0=e0, j2_range=j2_range)
+    if fpath_spe_p is not None:
+        spe_p = get_spe(fpath=fpath_spe_p, e0=e0, j2_range=j2_range)
+    # Get TBME's
+    tbme_nn, tbme_pn, tbme_pp = (None,)*3
+    if fpath_tbme_nn is not None:
+        tbme_nn = get_tbme(
+            fpath_heff=fpath_tbme_nn, idx_range=idx_range,
+            e0=e0, spe_n=spe_n, spe_p=spe_p
+        )
+    if fpath_tbme_pn is not None:
+        tbme_pn = get_tbme(
+            fpath_heff=fpath_tbme_pn, idx_range=idx_range,
+            e0=e0, spe_n=spe_n, spe_p=spe_p
+        )
+    if fpath_tbme_pp is not None:
+        tbme_pp = get_tbme(
+            fpath_heff=fpath_tbme_pp, idx_range=idx_range,
+            e0=e0, spe_n=spe_n, spe_p=spe_p
+        )
+    # Write interaction file
+    write_interaction(
+        e0=e0, spe_n=spe_n, spe_p=spe_p,
+        tbme_nn=tbme_nn, tbme_pn=tbme_pn, tbme_pp=tbme_pp,
+        presc=presc, j2_range=j2_range, fpath_write_int=fpath_write_int,
+        aeff=presc[2], a_values=a_values,
     )
-
-    # Do the inconsistent/universal way
-    # Aeff = 6
-    # E0 = GetE0(Aeff-2)
-    # SPE = GetSPE(Aeff-1,E0)
-    # GetTBME(Aeff,E0,SPE)
 
 
 if __name__ == "__main__":
-    nshell0 = 1
-    if len(argv) == 11:
-        a_prescription0 = tuple([int(x) for x in argv[1:4]])
-        a_values0 = tuple([int(x) for x in argv[4:7]])
-        out_fname = argv[7]
-        he4_fname = argv[8]
-        he5_fname = argv[9]
-        he6_fname = argv[10]
-    elif len(argv) == 12:
-        a_prescription0 = tuple([int(x) for x in argv[1:4]])
-        a_values0 = tuple([int(x) for x in argv[4:7]])
-        out_fname = argv[7]
-        he4_fname = argv[8]
-        he5_fname = argv[9]
-        he6_fname = argv[10]
-        nshell0 = int(argv[11])
-    else:
-        raise InvalidNumberOfArgumentsException(
-            '\nFdoVCE.py called with %d arguments. ' % (len(argv)-1,) +
-            'Please call with 10, or 11 arguments.\n'
-        )
-    # TODO: make this script behavior better
-    run(presc=a_prescription0, a_values=a_values0, fpath_write_int=out_fname,
-        fpath_he4=he4_fname, fpath_he5=he5_fname, fpath_heff_ols=he6_fname,
-        nshell=nshell0)
+    print 'Script behavior is currently unsupported'
+    # nshell0 = 1
+    # if len(argv) == 11:
+    #     a_prescription0 = tuple([int(x) for x in argv[1:4]])
+    #     a_values0 = tuple([int(x) for x in argv[4:7]])
+    #     out_fname = argv[7]
+    #     he4_fname = argv[8]
+    #     he5_fname = argv[9]
+    #     he6_fname = argv[10]
+    # elif len(argv) == 12:
+    #     a_prescription0 = tuple([int(x) for x in argv[1:4]])
+    #     a_values0 = tuple([int(x) for x in argv[4:7]])
+    #     out_fname = argv[7]
+    #     he4_fname = argv[8]
+    #     he5_fname = argv[9]
+    #     he6_fname = argv[10]
+    #     nshell0 = int(argv[11])
+    # else:
+    #     raise InvalidNumberOfArgumentsException(
+    #         '\nFdoVCE.py called with %d arguments. ' % (len(argv)-1,) +
+    #         'Please call with 10, or 11 arguments.\n'
+    #     )
+    # # TODO: make this script behavior better
+    # make_interaction_file(
+    #     presc=a_prescription0, a_values=a_values0, fpath_write_int=out_fname,
+    #     fpath_core=he4_fname, fpath_spe_n=he5_fname, fpath_tbme_nn=he6_fname,
+    #     nshell=nshell0
+    # )
