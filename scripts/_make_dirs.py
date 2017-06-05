@@ -562,7 +562,7 @@ def get_z_a_aeff_to_dpath_map(
         args = (_get_name(z), a, aeff, nhw, n1, n2)
         if scalefactor is not None:
             args += (scalefactor,)
-        a_paths_map[(a, aeff)] = path_fmt % args
+        a_paths_map[(z, a, aeff)] = path_fmt % args
     return a_paths_map
 
 
