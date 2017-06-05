@@ -583,7 +583,7 @@ def ncsd_multiple_calculations(
         raise InvalidNmaxException(
             '\nInvalid Nmax: %d. Nmax must be even.' % nmax)
     # Make (Z, A, Aeff, Nhw) set
-    z0 = a_values[0]
+    z0 = a_values[0] / 2
     z_a_aeff_nhw_set = set()
     for ap in a_presc_list:
         for zi in range(z0, z0+2+1):
@@ -780,7 +780,7 @@ def _get_vce_files(z_a_aeff_to_out, z_a_aeff_to_dir,
     :param a_prescription: Aeff-prescription (CORE, SPE, TBME)
     :return: filepaths: (core, spe_n, spe_p, tbme_nn, tbme_pn, tbme_pp)
     """
-    z0 = a_values[0]
+    z0 = a_values[0] / 2
     fpath_core = z_a_aeff_to_out[(z0, a_values[0], a_prescription[0])]
     fpath_spe_n = z_a_aeff_to_out[(z0, a_values[1], a_prescription[1])]
     fpath_tbme_nn = path.join(
@@ -839,7 +839,7 @@ def vce_single_calculation(
             raise OutfileNotFoundException(
                 'NCSD outfile not found: %s' % f)
     # For the 3rd a value, make trdens file and run TRDENS
-    z0 = a_values[0]  # proton number of CORE atom
+    z0 = a_values[0] / 2  # proton number of CORE atom
     tbme_dirs = [z_a_aeff_to_dir[(z0, a_values[2], a_prescription[2])]]
     if z >= z0 + 1:
         tbme_dirs.append(
@@ -963,7 +963,7 @@ def _get_trdens_jobs(a_values, a_presc_list, z):
     :param z: proton number
     """
     trdens_jobs = list()
-    z0 = a_values[0]  # Proton number of CORE atom
+    z0 = a_values[0] / 2  # Proton number of CORE atom
     for ap in a_presc_list:
         if z >= z0:
             trdens_jobs.append((z0, a_values[2], ap[2]))
