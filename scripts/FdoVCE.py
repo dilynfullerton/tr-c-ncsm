@@ -137,7 +137,7 @@ def get_header_string(aeff_str, e0, spe_n, spe_p, j2_range, a_values):
     return '\n'.join(header_lines)
 
 
-def get_tbme(fpath_heff, idx_range, e0, spe_n, spe_p):
+def get_tbme(fpath_heff, idx_range, e0, spe_n, spe_p, nucleons=0):
     """Gets the two-body matrix elements from the given effective interaction,
     core energy e0, and single particle energies spe_n (neutron) and 
     spe_p (proton). Both spe_n and spe_p should not be None
@@ -149,6 +149,7 @@ def get_tbme(fpath_heff, idx_range, e0, spe_n, spe_p):
     :param e0: Core energy
     :param spe_n: Single particle energies due to neutron excitation
     :param spe_p: Single particle energies due to proton excitation
+    :param nucleons: 0:nn, 1:pn, 2:pp
     :return: 
     """
     # Open Heff_OLS file for reading
@@ -162,7 +163,8 @@ def get_tbme(fpath_heff, idx_range, e0, spe_n, spe_p):
         p = idx_range.index(p) + 1
         q = idx_range.index(q) + 1
         j, t = [int(dat) for dat in ldat[9:11]]
-        kets.append({'p': p, 'q': q, 'J': j, 'T': t})
+        offset = nucleons * len(idx_range)
+        kets.append({'p': p+offset, 'q': q+offset, 'J': j, 'T': t})
     # get TBMEs
     tbme_list = list()
     for i in range(dim):
@@ -275,17 +277,20 @@ def make_interaction_file(
     if fpath_tbme_nn is not None:
         tbme_nn = get_tbme(
             fpath_heff=fpath_tbme_nn, idx_range=idx_range,
-            e0=e0, spe_n=spe_n, spe_p=None  # TODO: correct?
+            e0=e0, spe_n=spe_n, spe_p=None,  # TODO: correct?
+            nucleons=0
         )
     if fpath_tbme_pn is not None:
         tbme_pn = get_tbme(
             fpath_heff=fpath_tbme_pn, idx_range=idx_range,
-            e0=e0, spe_n=spe_n, spe_p=spe_p
+            e0=e0, spe_n=spe_n, spe_p=spe_p,
+            nucleons=1
         )
     if fpath_tbme_pp is not None:
         tbme_pp = get_tbme(
             fpath_heff=fpath_tbme_pp, idx_range=idx_range,
-            e0=e0, spe_n=None, spe_p=spe_p  # TODO: correct?
+            e0=e0, spe_n=None, spe_p=spe_p,  # TODO: correct?
+            nucleons=2
         )
     # Write interaction file
     write_interaction(
