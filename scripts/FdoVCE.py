@@ -267,7 +267,7 @@ def make_interaction_file(
     if fpath_spe_p is not None:
         spe_p = get_spe(fpath=fpath_spe_p, e0=e0, j2_range=j2_range)
     # Get TBME's
-    tbme_nn, tbme_pn, tbme_pp = (None,)*3
+    tbme_nn, tbme_pn, tbme_pp = [], [], []
     if fpath_tbme_nn is not None:
         tbme_nn = get_tbme(
             fpath_heff=fpath_tbme_nn, idx_range=idx_range,
