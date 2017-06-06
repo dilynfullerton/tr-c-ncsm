@@ -280,7 +280,7 @@ def make_interaction_file(
     if fpath_tbme_nn is not None:
         tbme_nn = get_tbme(
             fpath_heff=fpath_tbme_nn, idx_range=idx_range,
-            e0=e0, spe_n=spe_n, spe_p=None,  # TODO: correct?
+            e0=e0, spe_n=spe_n, spe_p=spe_p,  # TODO: correct?
             nucleons=0
         )
     if fpath_tbme_pn is not None:
@@ -292,7 +292,7 @@ def make_interaction_file(
     if fpath_tbme_pp is not None:
         tbme_pp = get_tbme(
             fpath_heff=fpath_tbme_pp, idx_range=idx_range,
-            e0=e0, spe_n=None, spe_p=spe_p,  # TODO: correct?
+            e0=e0, spe_n=spe_n, spe_p=spe_p,  # TODO: correct?
             nucleons=2
         )
     # Write interaction file
