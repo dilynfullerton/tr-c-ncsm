@@ -84,9 +84,9 @@ def get_spe(fpath, e0, j2_range):
             continue
         ldat = line.split()
         e = float(ldat[5])
-        j = int(2 * float(ldat[8]))
-        if j in j2_range:
-            ii = j2_range.index(j)
+        j2 = int(2 * float(ldat[8]))
+        if j2 in j2_range:
+            ii = j2_range.index(j2)
             if spe_list[ii] is None:
                 spe_list[ii] = e - e0
         if None not in spe_list:
@@ -118,6 +118,10 @@ def get_header_string(aeff_str, e0, spe_n, spe_p, j2_range, a_values):
     header_lines.append('!  Index  n  l  j tz')
     for j, idx in zip(j2_range, range(len(j2_range))):
         header_lines.append('!  %d     %d  %d  %d  %d' % (idx+1, 0, 1, j, 1))
+    if spe_p is not None and spe_n is not None:
+        for j, idx in zip(j2_range, range(len(j2_range), 2*len(j2_range)+1)):
+            header_lines.append(
+                '!  %d     %d  %d  %d  %d' % (idx+1, 0, 1, j, 1))
     header_lines.append('! ')
     # Add single particle energy line
     if spe_p is None:
@@ -271,7 +275,7 @@ def make_interaction_file(
     if fpath_tbme_nn is not None:
         tbme_nn = get_tbme(
             fpath_heff=fpath_tbme_nn, idx_range=idx_range,
-            e0=e0, spe_n=spe_n, spe_p=spe_p
+            e0=e0, spe_n=spe_n, spe_p=None  # TODO: correct?
         )
     if fpath_tbme_pn is not None:
         tbme_pn = get_tbme(
@@ -281,7 +285,7 @@ def make_interaction_file(
     if fpath_tbme_pp is not None:
         tbme_pp = get_tbme(
             fpath_heff=fpath_tbme_pp, idx_range=idx_range,
-            e0=e0, spe_n=spe_n, spe_p=spe_p
+            e0=e0, spe_n=None, spe_p=spe_p  # TODO: correct?
         )
     # Write interaction file
     write_interaction(
