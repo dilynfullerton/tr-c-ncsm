@@ -297,8 +297,10 @@ def _get_num_states(a, a0, nshell, z):
     """
     nhw_mod = (a - a0) * nshell  # TODO: is this correct generally?
     # known exceptions?
-    if z == 3:
+    if z == 3 and a == 8:
         dim_nhw_mod = 3
+    elif z == 3 and a == 6:
+        dim_nhw_mod = 10
     else:
         # TODO: figure out why this algorithm gets the correct number
         dim_nhw_mod = 0
