@@ -157,14 +157,14 @@ def get_tbme(fpath_heff, idx_range, e0, spe_n, spe_p, nucleons=0):
     line = f.readline()
     dim = int(line.split()[0])
     kets = []
+    offset = nucleons * len(idx_range)
     for i in range(dim):
         ldat = f.readline().split()
         p, q = [int(dat) for dat in ldat[1:3]]
         p = idx_range.index(p) + 1
         q = idx_range.index(q) + 1
         j, t = [int(dat) for dat in ldat[9:11]]
-        offset = nucleons * len(idx_range)
-        kets.append({'p': p+offset, 'q': q+offset, 'J': j, 'T': t})
+        kets.append({'p': p, 'q': q, 'J': j, 'T': t})
     # get TBMEs
     tbme_list = list()
     for i in range(dim):
@@ -183,7 +183,10 @@ def get_tbme(fpath_heff, idx_range, e0, spe_n, spe_p, nucleons=0):
                     v -= .5 * (spe_n[kets[i]['p']-1] + spe_n[kets[i]['q']-1])
                     v -= .5 * (spe_p[kets[i]['p']-1] + spe_p[kets[i]['q']-1])
             tbme_list.append((
-                kets[i]['p'], kets[i]['q'], kets[j]['p'], kets[j]['q'],
+                kets[i]['p'] + offset,
+                kets[i]['q'] + offset,
+                kets[j]['p'] + offset,
+                kets[j]['q'] + offset,
                 kets[i]['J'], kets[i]['T'], v))
     f.close()
     # write TBME's in general convention:
